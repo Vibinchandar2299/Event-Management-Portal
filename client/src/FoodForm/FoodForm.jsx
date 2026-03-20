@@ -466,7 +466,7 @@ function FoodForm({ eventData, nextForm }) {
   };
 
   return (
-    <div className="xl:w-full rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 px-4 py-8">
+    <div className="xl:w-full px-2 py-4">
       {isLoading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 shadow-lg z-50">
           <div className="h-16 w-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -474,9 +474,9 @@ function FoodForm({ eventData, nextForm }) {
       )}
       <form
         onSubmit={handleSubmit}
-        className="mx-auto max-w-full overflow-hidden rounded-2xl border border-amber-900/10 bg-white shadow-xl"
+        className="mx-auto max-w-full overflow-hidden"
       >
-        <div className="border-b border-amber-900/10 bg-amber-100/60 px-6 py-3 text-sm font-semibold text-amber-800">
+        <div className="mb-6 rounded-xl bg-amber-100/70 px-4 py-3 text-sm font-medium text-amber-800">
           Form 4: Food Requisition
         </div>
         <Header />
@@ -485,9 +485,11 @@ function FoodForm({ eventData, nextForm }) {
           <EventDetails formData={formData} setFormData={setFormData} />
           <FoodTable formData={formData} setFormData={setFormData} />
         </div>
-        <button type="submit" className="mx-6 mb-6 mt-2 rounded-lg bg-amber-600 px-6 py-2 font-semibold text-white shadow transition hover:bg-amber-700" disabled={!canEdit}>
-          {(localStorage.getItem('isEditMode') === 'true' || localStorage.getItem('endformId')) ? "Update Data" : "Save Data"}
-        </button>
+        <div className="mt-8 flex justify-end px-6 pb-6">
+          <button type="submit" className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2" disabled={!canEdit}>
+            Save and Go Next
+          </button>
+        </div>
       </form>
     </div>
   );

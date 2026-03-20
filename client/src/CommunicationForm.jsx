@@ -415,18 +415,18 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
 
   
   return (
-    <div className="relative rounded-2xl bg-gradient-to-br from-violet-50 to-fuchsia-50 p-4 md:p-6">
+    <div className="relative w-full">
       {isLoading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 shadow-lg z-50">
           <div className="h-16 w-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
-      <div className="flex min-h-[70vh] items-center justify-center p-1">
+      <div className="w-full">
         <form
           onSubmit={handleSubmit}
-          className="w-full rounded-2xl border border-violet-900/10 bg-white p-6 shadow-xl md:p-8"
+          className="w-full p-4 md:p-6"
         >
-          <div className="mb-4 inline-block rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
+          <div className="mb-6 rounded-xl bg-violet-100/70 px-4 py-3 text-sm font-medium text-violet-800">
             Form 2: Communication & Media
           </div>
           <h1 className="mb-6 text-start text-2xl font-bold text-slate-800 md:text-3xl">
@@ -439,10 +439,10 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 name="photography"
                 checked={formData.photography}
                 onChange={handleChange}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                className="mt-0.5 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
                 disabled={!canEdit}
               />
-              <span className="ml-2 text-gray-700">
+              <span className="ml-2 text-gray-700 leading-6">
                 Request for Photography on the day of the event
               </span>
             </label>
@@ -452,10 +452,10 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 name="videography"
                 checked={formData.videography}
                 onChange={handleChange}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                className="mt-0.5 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
                 disabled={!canEdit}
               />
-              <span className="ml-2 text-gray-700">
+              <span className="ml-2 text-gray-700 leading-6">
                 Request for Videography on the day of the event
               </span>
             </label>
@@ -466,11 +466,11 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 <h2 className="mb-4 text-lg font-semibold text-violet-900">
                   {category.category}
                 </h2>
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
                   {category.options.map((option, index) => (
                     <label
                       key={index}
-                      className="flex cursor-pointer items-center space-x-3 rounded-lg border border-violet-900/10 bg-white p-3 transition hover:bg-violet-50"
+                      className="flex min-h-[88px] cursor-pointer items-start gap-2 rounded-lg border border-violet-900/10 bg-white p-3.5 transition hover:bg-violet-50"
                     >
                       <input
                         type="checkbox"
@@ -483,30 +483,30 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                             option
                           ) || false
                         }
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                        className="mt-1 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
                         disabled={!canEdit}
                       />
-                      <span className="text-gray-800">{option}</span>
+                      <span className="block w-full whitespace-normal break-words text-sm text-gray-800 leading-6">{option}</span>
                     </label>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-          <div className="flex justify-end space-x-2 mt-6">
+          <div className="mt-8 flex justify-end gap-3">
             <button
               type="submit"
-              className="h-10 rounded-md bg-violet-600 px-6 text-sm font-medium text-white shadow-sm hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+              className="h-10 rounded-md bg-violet-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
               disabled={!canEdit}
             >
-              {(localStorage.getItem('isEditMode') === 'true' || localStorage.getItem('endformId')) ? "Update Data" : "Save Data"}
+              Save and Go Next
             </button>
             <button
               type="button"
               onClick={() => navigate("/forms/end")}
-              className="h-10 rounded-md bg-rose-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+              className="h-10 rounded-md border border-violet-300 bg-white px-6 py-2 text-sm font-medium text-violet-700 shadow-sm hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2"
             >
-              No, Go to EndForm
+              Go to End Form
             </button>
           </div>
         </form>

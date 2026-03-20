@@ -20,8 +20,8 @@ const BasicInfo = ({ formData, setFormData }) => {
   }, [formData]);
 
   return (
-    <div className="space-y-4 xl:w-full mb-6">
-      <div className="grid grid-cols-3 gap-4">
+    <div className="mb-6 w-full space-y-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div>
           <label className="block text-sm font-medium text-gray-700">
             IQAC Number
@@ -31,7 +31,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="iqacNumber"
             value={formData.iqacNumber || ""}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            className="w-full"
           />
         </div>
         <div>
@@ -43,7 +43,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="requisitionDate"
             value={toDateInputValue(formData.requisitionDate)}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            className="w-full"
           />
         </div>
 
@@ -56,7 +56,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="department"
             value={formData.department || ""}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            className="w-full"
           />
         </div>
 
@@ -69,7 +69,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="requestorName"
             value={formData.requestorName || ""}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            className="w-full"
           />
         </div>
         <div>
@@ -81,7 +81,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="empId"
             value={formData.empId || ""}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            className="w-full"
           />
         </div>
         <div>
@@ -93,7 +93,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="designationDepartment"
             value={formData.designationDepartment || ""}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            className="w-full"
           />
         </div>
         <div>
@@ -105,7 +105,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="mobileNumber"
             value={formData.mobileNumber || ""}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            className="w-full"
           />
         </div>
       </div>

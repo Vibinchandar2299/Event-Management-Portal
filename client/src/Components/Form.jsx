@@ -126,8 +126,21 @@ const Form = () => {
     { to: "/forms/end", icon: Flag, label: "End Form", tone: "from-rose-500 to-red-600" },
   ];
 
+  const formThemes = {
+    "/forms/basic": "bg-emerald-50 border-emerald-200/70",
+    "/forms/communication": "bg-violet-50 border-violet-200/70",
+    "/forms/transport": "bg-sky-50 border-sky-200/70",
+    "/forms/food": "bg-amber-50 border-amber-200/70",
+    "/forms/guest-room": "bg-indigo-50 border-indigo-200/70",
+    "/forms/end": "bg-rose-50 border-rose-200/70",
+  };
+
+  const activeTheme =
+    Object.entries(formThemes).find(([path]) => location.pathname.startsWith(path))?.[1] ||
+    "bg-white border-slate-200";
+
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-emerald-50/80 via-white to-white">
+    <div className="min-h-screen w-full">
       <header className="sticky top-0 z-40 border-b border-emerald-900/10 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 md:px-7">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -165,7 +178,7 @@ const Form = () => {
       </header>
 
       <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-3 py-4 md:px-7 md:py-6">
-        <div className="forms-uniform glass-surface min-h-[72vh] rounded-2xl p-3 md:p-6">
+        <div className={`forms-uniform min-h-[72vh] rounded-2xl border p-3 md:p-6 ${activeTheme}`}>
           <Outlet />
         </div>
       </main>

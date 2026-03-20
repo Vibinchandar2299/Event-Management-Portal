@@ -7,7 +7,7 @@ function toDatetimeLocal(date) {
   return d.toISOString().slice(0, 16);
 }
 
-export function TravelDetails({ data, setDetails }) {
+export function TravelDetails({ data, setDetails, disabled = false }) {
   const [travelData, setTravelData] = useState({
     pickUpDateTime: "",
     pickUpLocation: "",
@@ -41,93 +41,99 @@ export function TravelDetails({ data, setDetails }) {
   };
 
   return (
-    <div className="gap-4 grid grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Pick Up Date & Time
-          </label>
-          <input
-            type="datetime-local"
-            name="pickUpDateTime"
-            value={toDatetimeLocal(travelData.pickUpDateTime)}
-            onChange={handleInputChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Pick Up Location
-          </label>
-          <input
-            type="text"
-            name="pickUpLocation"
-            value={travelData.pickUpLocation}
-            onChange={handleInputChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
-          />
-        </div>
+        <label className="block text-sm font-medium text-gray-700">
+          Pick Up Date & Time
+        </label>
+        <input
+          type="datetime-local"
+          name="pickUpDateTime"
+          value={toDatetimeLocal(travelData.pickUpDateTime)}
+          onChange={handleInputChange}
+          disabled={disabled}
+          className="mt-1"
+        />
       </div>
+
       <div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Drop Date & Time
-          </label>
-          <input
-            type="datetime-local"
-            name="dropDateTime"
-            value={toDatetimeLocal(travelData.dropDateTime)}
-            onChange={handleInputChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Drop Location
-          </label>
-          <input
-            type="text"
-            name="dropLocation"
-            value={travelData.dropLocation}
-            onChange={handleInputChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
-          />
-        </div>
+        <label className="block text-sm font-medium text-gray-700">
+          Pick Up Location
+        </label>
+        <input
+          type="text"
+          name="pickUpLocation"
+          value={travelData.pickUpLocation}
+          onChange={handleInputChange}
+          disabled={disabled}
+          className="mt-1"
+        />
       </div>
+
       <div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Number of Passengers
-          </label>
-          <input
-            type="number"
-            name="numberOfPassengers"
-            value={travelData.numberOfPassengers}
-            onChange={handleInputChange}
-            min="1"
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Type of Vehicle
-          </label>
-          <select
-            name="vehicleType"
-            value={travelData.vehicleType}
-            onChange={handleInputChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
-          >
-            <option value="">Select vehicle type</option>
-            {vehicles.map((vehicle) => (
-              <option key={vehicle} value={vehicle}>
-                {vehicle}
-              </option>
-            ))}
-          </select>
-        </div>
+        <label className="block text-sm font-medium text-gray-700">
+          Drop Date & Time
+        </label>
+        <input
+          type="datetime-local"
+          name="dropDateTime"
+          value={toDatetimeLocal(travelData.dropDateTime)}
+          onChange={handleInputChange}
+          disabled={disabled}
+          className="mt-1"
+        />
       </div>
+
       <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Drop Location
+        </label>
+        <input
+          type="text"
+          name="dropLocation"
+          value={travelData.dropLocation}
+          onChange={handleInputChange}
+          disabled={disabled}
+          className="mt-1"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Number of Passengers
+        </label>
+        <input
+          type="number"
+          name="numberOfPassengers"
+          value={travelData.numberOfPassengers}
+          onChange={handleInputChange}
+          min="1"
+          disabled={disabled}
+          className="mt-1"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Type of Vehicle
+        </label>
+        <select
+          name="vehicleType"
+          value={travelData.vehicleType}
+          onChange={handleInputChange}
+          disabled={disabled}
+          className="mt-1"
+        >
+          <option value="">Select vehicle type</option>
+          {vehicles.map((vehicle) => (
+            <option key={vehicle} value={vehicle}>
+              {vehicle}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="md:col-span-2 xl:col-span-3">
         <label className="block text-sm font-medium text-gray-700">
           Special Requirements
         </label>
@@ -136,7 +142,8 @@ export function TravelDetails({ data, setDetails }) {
           name="specialRequirements"
           value={travelData.specialRequirements}
           onChange={handleInputChange}
-          className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+          disabled={disabled}
+          className="mt-1"
         />
       </div>
     </div>

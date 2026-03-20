@@ -7,7 +7,7 @@ function toDateInputValue(date) {
   return d.toISOString().slice(0, 10);
 }
 
-export function BasicDetails({ data, setDetails }) {
+export function BasicDetails({ data, setDetails, disabled = false }) {
   const [formState, setFormState] = useState({
     iqacNumber: "",
     requisitionDate: "",
@@ -59,7 +59,7 @@ export function BasicDetails({ data, setDetails }) {
 
   return (
     <div className="xl:w-full">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div>
           <label className="block text-sm font-medium text-gray-700">
             IQAC Number
@@ -69,7 +69,8 @@ export function BasicDetails({ data, setDetails }) {
             name="iqacNumber"
             value={formState.iqacNumber}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            disabled={disabled}
+            className="mt-1"
             placeholder="1/2024-25/"
             required
           />
@@ -83,7 +84,8 @@ export function BasicDetails({ data, setDetails }) {
             name="empId"
             value={formState.empId}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            disabled={disabled}
+            className="mt-1"
             required
           />
         </div>
@@ -96,7 +98,8 @@ export function BasicDetails({ data, setDetails }) {
             name="requestorName"
             value={formState.requestorName}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            disabled={disabled}
+            className="mt-1"
             required
           />
         </div>
@@ -109,7 +112,8 @@ export function BasicDetails({ data, setDetails }) {
             name="requisitionDate"
             value={toDateInputValue(formState.requisitionDate)}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            disabled={disabled}
+            className="mt-1"
             required
           />
         </div>
@@ -122,7 +126,8 @@ export function BasicDetails({ data, setDetails }) {
             name="departmentName"
             value={formState.departmentName}
             onChange={handleChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            disabled={disabled}
+            className="mt-1"
             required
           />
         </div>

@@ -78,7 +78,7 @@ body {
 }
 
 /* Unified input sizing for all /forms pages */
-.forms-uniform :is(input, select, textarea) {
+.forms-uniform :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   width: 100%;
   border: 1px solid #d1d5db;
   border-radius: 10px;
@@ -100,14 +100,24 @@ body {
   resize: vertical;
 }
 
-.forms-uniform :is(input, select, textarea):focus {
+.forms-uniform :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
   outline: none;
   border-color: #10b981;
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
 }
 
-.forms-uniform :is(input, select, textarea)::placeholder {
+.forms-uniform :is(input:not([type="checkbox"]):not([type="radio"]), textarea)::placeholder {
   color: #94a3b8;
+}
+
+.forms-uniform :is(input[type="checkbox"], input[type="radio"]) {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  padding: 0;
+  margin: 0;
+  border-radius: 4px;
+  flex: 0 0 auto;
 }
 
 @keyframes fadeInUp {

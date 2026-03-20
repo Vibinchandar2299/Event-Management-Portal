@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { FormHeader } from "./FormHeader";
 import { BasicDetails } from "./BasicDetails";
 import { EventDetails } from "./EventDetails";
 import { TravelDetails } from "./TravelDetails";
@@ -551,26 +550,27 @@ const TransportForm = ({ eventData, nextForm }) => {
   console.log("events:", events);
 
   return (
-    <div className="xl:w-full rounded-2xl bg-gradient-to-br from-sky-50 to-cyan-50 px-4 py-8">
+    <div className="xl:w-full px-2 py-4">
       {isLoading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 shadow-lg z-50">
           <div className="h-16 w-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
-      <form onSubmit={handleSubmit} className="mx-auto max-w-full overflow-hidden rounded-2xl border border-sky-900/10 bg-white shadow-xl">
-        <div className="border-b border-sky-900/10 bg-sky-100/60 px-6 py-3 text-sm font-semibold text-sky-800">
+      <form onSubmit={handleSubmit} className="mx-auto max-w-full overflow-hidden">
+        <div className="mb-6 rounded-xl bg-sky-100/70 px-4 py-3 text-sm font-medium text-sky-800">
           Form 3: Transport Requisition
         </div>
-        <FormHeader />
         <div className="p-6 space-y-6">
           <BasicDetails data={currentEvent.basicDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, basicDetails: data }))} disabled={!canEdit} />
           <EventDetails data={currentEvent.eventDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, eventDetails: data }))} disabled={!canEdit} />
           <TravelDetails data={currentEvent.travelDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, travelDetails: data }))} disabled={!canEdit} />
           <DriverDetails data={currentEvent.driverDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, driverDetails: data }))} disabled={!canEdit} />
         </div>
-        <button type="submit" className="mx-6 mb-6 mt-2 rounded-lg bg-sky-600 px-6 py-2 font-semibold text-white shadow transition hover:bg-sky-700" disabled={!canEdit}>
-          {(localStorage.getItem('isEditMode') === 'true' || localStorage.getItem('endformId')) ? "Update Data" : "Save Data"}
-        </button>
+        <div className="mt-8 flex justify-end px-6 pb-6">
+          <button type="submit" className="h-10 rounded-md bg-sky-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2" disabled={!canEdit}>
+            Save and Go Next
+          </button>
+        </div>
       </form>
 
       {/* Removed duplicate submit button outside the form */}

@@ -10,7 +10,7 @@ const EventDetails = ({ formData, setFormData }) => {
   };
 
   return (
-    <div className="space-y-4 mb-6 grid grid-cols-3">
+    <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <div>
         <label className="block text-sm font-medium text-gray-700">
           Name of the Event
@@ -20,7 +20,7 @@ const EventDetails = ({ formData, setFormData }) => {
           name="eventName"
           value={formData.eventName}
           onChange={handleChange}
-          className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+          className="w-full"
         />
       </div>
 
@@ -33,7 +33,7 @@ const EventDetails = ({ formData, setFormData }) => {
           name="eventType"
           value={formData.eventType}
           onChange={handleChange}
-          className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+          className="w-full"
         />
       </div>
     </div>

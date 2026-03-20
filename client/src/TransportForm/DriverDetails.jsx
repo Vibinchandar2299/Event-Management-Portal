@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-export function DriverDetails({ data, setDetails }) {
+export function DriverDetails({ data, setDetails, disabled = false }) {
   const [driverInfo, setDriverInfo] = useState({
     name: "",
     mobileNumber: "",
@@ -17,19 +17,20 @@ export function DriverDetails({ data, setDetails }) {
   };
 
   return (
-    <div className="">
+    <div>
       <h3 className="text-lg font-medium text-gray-900">
         Driver Information (if required)
       </h3>
-      <div className="grid grid-cols-3">
-        <div className="">
+      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div>
           <h1 className="text-sm font-medium text-gray-700">Name</h1>
           <input
             type="text"
             name="name"
             value={driverInfo.name}
             onChange={handleInputChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            disabled={disabled}
+            className="mt-1"
           />
         </div>
         <div>
@@ -39,7 +40,8 @@ export function DriverDetails({ data, setDetails }) {
             name="mobileNumber"
             value={driverInfo.mobileNumber}
             onChange={handleInputChange}
-            className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+            disabled={disabled}
+            className="mt-1"
           />
         </div>
       </div>

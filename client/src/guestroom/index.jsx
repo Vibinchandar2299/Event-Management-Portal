@@ -746,7 +746,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   console.log("currentEventId in localStorage:", localStorage.getItem('currentEventId'));
   
   return (
-    <div className="min-h-screen rounded-2xl bg-gradient-to-b from-indigo-50 to-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen px-2 py-4 sm:px-4 lg:px-6">
       {isLoading && (
         <div className="flex h-screen items-center justify-center">
           <div className="h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-indigo-500"></div>
@@ -754,13 +754,9 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       )}
 
       <div className="max-w-full mx-auto">
-        <div className="overflow-hidden rounded-2xl border border-indigo-900/10 bg-white shadow-xl">
-          <div className="bg-gradient-to-r from-indigo-600 to-blue-700 px-8 py-6">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-100">Form 5</p>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Building2 className="h-8 w-8" />
-              Guest House Booking Form
-            </h1>
+        <div className="overflow-hidden">
+          <div className="mb-6 rounded-xl bg-indigo-100/70 px-4 py-3 text-sm font-medium text-indigo-800">
+            Form 5: Guest House Booking
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -869,33 +865,22 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               disabled={!canEdit}
             />
 
-            <div className="flex justify-end space-x-4 p-6">
-              {!isUpdating && (
-                <button
-                  type="submit"
-                  className="rounded-lg bg-indigo-600 px-6 py-2 font-semibold text-white shadow transition hover:bg-indigo-700"
-                  disabled={!canEdit}
-                >
-                  Save Data
-                </button>
-              )}
-              {isUpdating && canEdit && (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white shadow transition hover:bg-emerald-700"
-                >
-                  Update Data
-                </button>
-              )}
+            <div className="mt-8 flex justify-end p-6">
+              <button
+                type="submit"
+                className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                disabled={!canEdit}
+              >
+                Save and Go Next
+              </button>
             </div>
           </form>
 
           {["guestroom", "guest deparment", "system admin", "iqac", "IQAC"].includes((userDept || "").toLowerCase()) && (
-            <div className="flex gap-4 mt-4">
+            <div className="mt-2 flex justify-end gap-4">
               <button
                 type="button"
-                className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="h-10 rounded-md border border-indigo-300 bg-white px-6 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2"
                 onClick={() => {
                   if (guestroomData) {
                     setFormData({
@@ -907,7 +892,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 }}
                 disabled={!canEdit}
               >
-                Edit Guest Room Booking
+                Load Existing Guest Data
               </button>
             </div>
           )}

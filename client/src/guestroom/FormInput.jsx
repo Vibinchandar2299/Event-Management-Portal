@@ -11,6 +11,14 @@ const FormInput = ({
   onChange,
   disabled = false,
 }) => {
+  const renderedIcon =
+    icon && React.isValidElement(icon)
+      ? React.cloneElement(icon, {
+          className: "h-4 w-4",
+          strokeWidth: 2,
+        })
+      : icon;
+
   return (
     <div className={className}>
       <label
@@ -20,9 +28,9 @@ const FormInput = ({
         {label}
       </label>
       <div className="relative">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span className="text-gray-500 sm:text-sm">{icon}</span>
+        {renderedIcon && (
+          <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+            <span className="text-gray-500">{renderedIcon}</span>
           </div>
         )}
         <input
@@ -33,9 +41,8 @@ const FormInput = ({
           value={value}
           onChange={onChange}
           disabled={disabled}
-          className={`border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96 ${
-            icon ? "pl-10" : "pl-4"
-          } py-2 border ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+          className={`w-full rounded-lg border border-gray-300 pr-3 py-2 text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+          style={{ paddingLeft: renderedIcon ? "2.6rem" : undefined }}
           placeholder={placeholder}
         />
       </div>

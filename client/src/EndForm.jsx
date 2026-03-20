@@ -333,9 +333,9 @@ const EndForm = () => {
   console.log("About to render EndForm JSX");
 
   return (
-    <div className="min-h-screen rounded-2xl bg-gradient-to-br from-rose-50 to-orange-50 p-4 md:p-8">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-rose-900/10 bg-white p-6 shadow-xl md:p-8">
-        <div className="mb-4 inline-block rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+    <div className="min-h-screen p-2 md:p-4">
+      <div className="mx-auto max-w-3xl p-4 md:p-6">
+        <div className="mb-6 rounded-xl bg-rose-100/70 px-4 py-3 text-sm font-medium text-rose-800">
           Form 6: Final Submission
         </div>
         <h1 className="mb-3 text-2xl font-bold text-slate-800 md:text-3xl">End Form</h1>

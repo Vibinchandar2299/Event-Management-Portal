@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-export function EventDetails({ data, setDetails }) {
+export function EventDetails({ data, setDetails, disabled = false }) {
   const [eventData, setEventData] = useState({
     eventName: "",
     eventType: "",
@@ -19,7 +19,7 @@ export function EventDetails({ data, setDetails }) {
   };
 
   return (
-    <div className="space-y-4 grid grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <div>
         <label className="block text-sm font-medium text-gray-700">
           Name of the Event/Purpose
@@ -29,7 +29,8 @@ export function EventDetails({ data, setDetails }) {
           name="eventName"
           value={eventData.eventName}
           onChange={handleInputChange}
-          className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+          disabled={disabled}
+          className="mt-1"
         />
       </div>
       <div>
@@ -41,7 +42,8 @@ export function EventDetails({ data, setDetails }) {
           name="eventType"
           value={eventData.eventType}
           onChange={handleInputChange}
-          className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+          disabled={disabled}
+          className="mt-1"
         />
       </div>
       <div>
@@ -52,7 +54,8 @@ export function EventDetails({ data, setDetails }) {
           name="travellerDetails"
           value={eventData.travellerDetails}
           onChange={handleInputChange}
-          className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+          disabled={disabled}
+          className="mt-1"
           rows={3}
         />
       </div>

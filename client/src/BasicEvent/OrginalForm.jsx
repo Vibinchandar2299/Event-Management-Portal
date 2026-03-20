@@ -460,9 +460,9 @@ const BasicEventForm = ({ eventData, nextForm }) => {
   
   return (
     <>
-      <div className="w-full rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 px-4 py-8">
+      <div className="w-full px-2 py-4">
         <ToastContainer />
-        <div className="mx-auto rounded-2xl border border-emerald-900/10 bg-white p-6 shadow-xl md:p-8">
+        <div className="mx-auto p-4 md:p-6">
           <div className="mb-6 rounded-xl bg-emerald-100/70 px-4 py-3 text-sm font-medium text-emerald-800">
             Form 1: Basic Event Information
           </div>
@@ -838,9 +838,9 @@ const BasicEventForm = ({ eventData, nextForm }) => {
             </div>
 
             {/* Submit Button */}
-            <div className="col-span-3 mt-4 flex justify-end">
-              <button type="submit" className="rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white shadow transition hover:bg-emerald-700">
-                {(localStorage.getItem('isEditMode') === 'true' || localStorage.getItem('endformId')) ? "Update Data" : "Save Data"}
+            <div className="col-span-3 mt-8 flex justify-end gap-3">
+              <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+                Save and Go Next
               </button>
             </div>
           </form>

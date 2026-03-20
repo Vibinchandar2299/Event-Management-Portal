@@ -34,8 +34,8 @@ const RoomSelection = ({ selectedRooms = [], onRoomChange }) => {
             className={`relative flex items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition-colors group
               ${
                 safeSelectedRooms.includes(room.id)
-                  ? "border-indigo-500 bg-indigo-50"
-                  : "border-gray-200 hover:border-indigo-300"
+                  ? "border-indigo-500 bg-white ring-2 ring-indigo-100"
+                  : "border-gray-200 bg-white hover:border-indigo-300"
               }`}
           >
             <input
