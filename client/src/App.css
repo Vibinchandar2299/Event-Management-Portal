@@ -1,0 +1,35 @@
+.custom-scrollbar {
+  overflow-y: scroll;
+  max-height: 400px;
+  scrollbar-width: thin;
+  scrollbar-color: #f1e5a7 #f1f1f1;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  transition: all 0.3s ease-in-out;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, #e4c009, #a2c9e6);
+  border-radius: 10px;
+  animation: scroll-thumb-animation 1.5s infinite alternate;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #0c8bec, #342f19);
+}
+
+@keyframes scroll-thumb-animation {
+  0% {
+    background: linear-gradient(45deg, #f1e5a7, #a2c9e6);
+  }
+  100% {
+    background: linear-gradient(45deg, #a2c9e6, #f1e5a7);
+  }
+}

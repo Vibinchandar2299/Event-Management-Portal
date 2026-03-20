@@ -1,0 +1,29 @@
+{
+  "basicDetails": {
+    "departmentName": "CSE",
+    "designation": "Professor",
+    "empId": "ER42343FWE",
+    "iqacNumber": "IQAC/VIJAY",
+    "mobileNumber": "9876543210",
+    "requestorName": "Dr. Vijay",
+    "requisitionDate": "2024-12-06"
+  },
+  "eventDetails": {
+    "eventName": "Annual Technical Symposium",
+    "eventType": "Outreach",
+    "travellerDetails": "Faculty and Students"
+  },
+  "travelDetails": {
+    "pickUpDateTime": "2024-12-06T10:00",
+    "pickUpLocation": "Coimbatore",
+    "dropDateTime": "2024-12-06T18:00",
+    "dropLocation": "Chennai",
+    "numberOfPassengers": 40,
+    "vehicleType": "Bus",
+    "specialRequirements": "AC bus with reclining seats"
+  },
+  "driverDetails": {
+    "name": "Saravana Kumar",
+    "mobileNumber": "8438435678"
+  }
+}

@@ -1,0 +1,122 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-primary: "Sora", sans-serif;
+}
+
+:root {
+  --bg: #f4f7f1;
+  --bg-accent: #e9f4ee;
+  --surface: #ffffff;
+  --surface-soft: #f7fbf8;
+  --text: #10231a;
+  --muted: #5f7468;
+  --brand: #157347;
+  --brand-strong: #0f5d39;
+  --ring: rgba(21, 115, 71, 0.2);
+  --shadow-soft: 0 10px 30px rgba(16, 35, 26, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-primary);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(21, 115, 71, 0.14), transparent 40%),
+    radial-gradient(circle at 100% 0%, rgba(5, 150, 105, 0.14), transparent 42%),
+    linear-gradient(180deg, var(--bg-accent), var(--bg));
+}
+
+.glass-surface {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.72));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(16, 35, 26, 0.08);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-card {
+  border-radius: 20px;
+  border: 1px solid rgba(16, 35, 26, 0.08);
+  box-shadow: var(--shadow-soft);
+}
+
+.custom-scrollbar {
+  overflow-y: auto;
+  max-height: 400px;
+  scrollbar-width: thin;
+  scrollbar-color: #95b9a5 #eef4f0;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #eef4f0;
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #2c8f61, #8eb8a0);
+  border-radius: 999px;
+}
+
+.fade-in-up {
+  animation: fadeInUp 520ms ease forwards;
+}
+
+/* Unified input sizing for all /forms pages */
+.forms-uniform :is(input, select, textarea) {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  line-height: 20px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.forms-uniform :is(input:not([type="checkbox"]):not([type="radio"]), select) {
+  min-height: 42px;
+  padding: 10px 12px;
+}
+
+.forms-uniform textarea {
+  min-height: 110px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.forms-uniform :is(input, select, textarea):focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+}
+
+.forms-uniform :is(input, select, textarea)::placeholder {
+  color: #94a3b8;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
