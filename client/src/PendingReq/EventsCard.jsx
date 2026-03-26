@@ -983,13 +983,11 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
       </div>
 
       {isPopupOpen && selectedEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <EndPopup 
-            event={selectedEvent} 
-            onClose={closePopup}
-            isOpen={isPopupOpen}
-          />
-        </div>
+        <EndPopup 
+          event={selectedEvent} 
+          onClose={closePopup}
+          isOpen={isPopupOpen}
+        />
       )}
     </div>
   );
