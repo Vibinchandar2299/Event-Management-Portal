@@ -265,42 +265,47 @@ const EndPopup = ({ event, onClose, isOpen }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
       <div className="max-h-[92vh] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 via-white to-white shadow-2xl">
-        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 p-6 backdrop-blur">
-          <div className="flex items-start justify-between gap-4">
+        <>
+          {/* Header with close button */}
+          <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 p-6 backdrop-blur flex items-start justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Event Requirement Details</h2>
               <p className="mt-1 text-sm text-slate-600">Structured overview of basic event data and all submitted requirement forms.</p>
             </div>
-            <button
-              onClick={onClose}
-              className="rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-              aria-label="Close details"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-              <p className="text-xs font-medium text-indigo-700">Event Name</p>
-              <p className="mt-1 truncate text-sm font-semibold text-indigo-900">{basic.eventName || "N/A"}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="text-xs font-medium text-emerald-700">Type</p>
-              <p className="mt-1 truncate text-sm font-semibold text-emerald-900">{basic.eventType || "N/A"}</p>
-            </div>
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-xs font-medium text-amber-700">Date Range</p>
-              <p className="mt-1 text-sm font-semibold text-amber-900">{formatDate(basic.startDate)} - {formatDate(basic.endDate)}</p>
-            </div>
-            <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
-              <p className="text-xs font-medium text-sky-700">Sections Included</p>
-              <p className="mt-1 text-sm font-semibold text-sky-900">{sectionCount}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close details"
+              >
+                <X className="h-6 w-6" />
+              </button>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-6 p-6">
+          <div>
+
+            <div className="p-6">
+              <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+                  <p className="text-xs font-medium text-indigo-700">Event Name</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-indigo-900">{basic.eventName || "N/A"}</p>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <p className="text-xs font-medium text-emerald-700">Type</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-emerald-900">{basic.eventType || "N/A"}</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-xs font-medium text-amber-700">Date Range</p>
+                  <p className="mt-1 text-sm font-semibold text-amber-900">{formatDate(basic.startDate)} - {formatDate(basic.endDate)}</p>
+                </div>
+                <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+                  <p className="text-xs font-medium text-sky-700">Sections Included</p>
+                  <p className="mt-1 text-sm font-semibold text-sky-900">{sectionCount}</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
           {formattedEvent.basicEvent && (
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-4 text-lg font-semibold text-slate-800">Basic Event Information</h3>
@@ -342,8 +347,11 @@ const EndPopup = ({ event, onClose, isOpen }) => {
               <Guestroom guestroomData={formattedEvent.guestform} />
             </div>
           )}
-
-          <div className="flex justify-end border-t border-slate-200 pt-4">
+              </div>
+            </div>
+          </div>
+          {/* Footer with close button */}
+          <div className="flex justify-end border-t border-slate-200 bg-white px-6 py-4">
             <button
               onClick={onClose}
               className="rounded-md bg-slate-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-900"
@@ -351,7 +359,7 @@ const EndPopup = ({ event, onClose, isOpen }) => {
               Close Details
             </button>
           </div>
-        </div>
+        </>
       </div>
     </div>
   );

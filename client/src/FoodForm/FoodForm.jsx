@@ -53,6 +53,27 @@ function FoodForm({ eventData, nextForm }) {
   // Define canEdit at the top to avoid temporal dead zone
   const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
   const canEdit = userDept === "food" || userDept === "iqac" || userDept === "system admin" || !userDept;
+  const [isFormEditable, setIsFormEditable] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState(null);
+  const isEditMode = localStorage.getItem('isEditMode') === 'true';
+
+  useEffect(() => {
+    setIsFormEditable(!isEditMode);
+  }, [isEditMode]);
+
+  const handleEditToggle = () => {
+    if (!isFormEditable && formData) {
+      setOriginalFormData(JSON.parse(JSON.stringify(formData)));
+      setIsFormEditable(true);
+    }
+  };
+
+  const handleCancel = () => {
+    if (originalFormData) {
+      setFormData(originalFormData);
+    }
+    setIsFormEditable(false);
+  };
 
   useEffect(() => {
     const endformId = localStorage.getItem('endformId');
@@ -481,14 +502,31 @@ function FoodForm({ eventData, nextForm }) {
         </div>
         <Header />
         <div className="p-6 space-y-6">
-          <BasicInfo formData={formData} setFormData={setFormData} />
-          <EventDetails formData={formData} setFormData={setFormData} />
-          <FoodTable formData={formData} setFormData={setFormData} />
+          <BasicInfo formData={formData} setFormData={setFormData} disabled={!canEdit || !isFormEditable} />
+          <EventDetails formData={formData} setFormData={setFormData} disabled={!canEdit || !isFormEditable} />
+          <FoodTable formData={formData} setFormData={setFormData} disabled={!canEdit || !isFormEditable} />
         </div>
-        <div className="mt-8 flex justify-end px-6 pb-6">
-          <button type="submit" className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2" disabled={!canEdit}>
-            Save and Go Next
-          </button>
+        <div className="mt-8 flex justify-end gap-3 px-6 pb-6">
+          {isEditMode && !isFormEditable && (
+            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" disabled={!canEdit}>
+              Edit Form
+            </button>
+          )}
+          {isFormEditable && (
+            <>
+              <button type="button" onClick={handleCancel} className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
+                Cancel
+              </button>
+              <button type="submit" className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                Save and Go Next
+              </button>
+            </>
+          )}
+          {!isEditMode && (
+            <button type="submit" className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" disabled={!canEdit}>
+              Save and Go Next
+            </button>
+          )}
         </div>
       </form>
     </div>

@@ -68,6 +68,27 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [commId, setCommId] = useState('');
+  const isEditMode = localStorage.getItem('isEditMode') === 'true';
+  const [isFormEditable, setIsFormEditable] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState(null);
+
+  useEffect(() => {
+    setIsFormEditable(!isEditMode);
+  }, [isEditMode]);
+
+  const handleEditToggle = () => {
+    if (!isFormEditable && formData) {
+      setOriginalFormData(JSON.parse(JSON.stringify(formData)));
+      setIsFormEditable(true);
+    }
+  };
+
+  const handleCancel = () => {
+    if (originalFormData) {
+      setFormData(originalFormData);
+    }
+    setIsFormEditable(false);
+  };
   
   // Define canEdit at the top to avoid temporal dead zone
   const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
@@ -767,7 +788,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 value={formData.department}
                 onChange={handleInputChange}
                 placeholder="Enter department name"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
 
               <FormInput
@@ -777,7 +798,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 value={formData.requestorName}
                 onChange={handleInputChange}
                 placeholder="Enter your name"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
 
               <FormInput
@@ -786,7 +807,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 value={formData.empId}
                 onChange={handleInputChange}
                 placeholder="Enter employee ID"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
 
               <FormInput
@@ -797,7 +818,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 value={formData.mobile}
                 onChange={handleInputChange}
                 placeholder="Enter mobile number"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
 
               <FormInput
@@ -808,7 +829,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 onChange={handleInputChange}
                 placeholder="Enter designation"
                 className="md:col-span-2"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
 
               <div className="">
@@ -822,7 +843,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                   className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
                   rows={3}
                   placeholder="Enter purpose of booking"
-                  disabled={!canEdit}
+                  disabled={!canEdit || !isFormEditable}
                 />
               </div>
 
@@ -833,7 +854,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 type="date"
                 value={toDateInputValue(formData.date)}
                 onChange={handleInputChange}
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
 
               <FormInput
@@ -845,7 +866,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 value={formData.guestCount}
                 onChange={handleInputChange}
                 placeholder="Enter number of guests"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
 
               <FormInput
@@ -854,24 +875,53 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 value={formData.eventType}
                 onChange={handleInputChange}
                 placeholder="Enter event type"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
             </div>
 
             <RoomSelection
               selectedRooms={formData.selectedRooms || []}
               onRoomChange={handleRoomChange}
-              disabled={!canEdit}
+              disabled={!canEdit || !isFormEditable}
             />
 
-            <div className="mt-8 flex justify-end p-6">
-              <button
-                type="submit"
-                className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                disabled={!canEdit}
-              >
-                Save and Go Next
-              </button>
+            <div className="mt-8 flex justify-end gap-3 p-6">
+              {isEditMode && !isFormEditable && (
+                <button
+                  type="button"
+                  onClick={handleEditToggle}
+                  className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  disabled={!canEdit}
+                >
+                  Edit Form
+                </button>
+              )}
+              {isFormEditable && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  >
+                    Save and Go Next
+                  </button>
+                </>
+              )}
+              {!isEditMode && (
+                <button
+                  type="submit"
+                  className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  disabled={!canEdit}
+                >
+                  Save and Go Next
+                </button>
+              )}
             </div>
           </form>
 

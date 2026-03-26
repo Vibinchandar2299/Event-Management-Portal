@@ -35,6 +35,27 @@ const TransportForm = ({ eventData, nextForm }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [events, setEvents] = useState([]);
   const [commId, setCommId] = useState('');
+  const isEditMode = localStorage.getItem('isEditMode') === 'true';
+  const [isFormEditable, setIsFormEditable] = useState(false);
+  const [originalCurrentEvent, setOriginalCurrentEvent] = useState(null);
+
+  useEffect(() => {
+    setIsFormEditable(!isEditMode);
+  }, [isEditMode]);
+
+  const handleEditToggle = () => {
+    if (!isFormEditable && currentEvent) {
+      setOriginalCurrentEvent(JSON.parse(JSON.stringify(currentEvent)));
+      setIsFormEditable(true);
+    }
+  };
+
+  const handleCancel = () => {
+    if (originalCurrentEvent) {
+      setCurrentEvent(originalCurrentEvent);
+    }
+    setIsFormEditable(false);
+  };
 
   // Define canEdit at the top to avoid temporal dead zone
   const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
@@ -561,15 +582,32 @@ const TransportForm = ({ eventData, nextForm }) => {
           Form 3: Transport Requisition
         </div>
         <div className="p-6 space-y-6">
-          <BasicDetails data={currentEvent.basicDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, basicDetails: data }))} disabled={!canEdit} />
-          <EventDetails data={currentEvent.eventDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, eventDetails: data }))} disabled={!canEdit} />
-          <TravelDetails data={currentEvent.travelDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, travelDetails: data }))} disabled={!canEdit} />
-          <DriverDetails data={currentEvent.driverDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, driverDetails: data }))} disabled={!canEdit} />
+          <BasicDetails data={currentEvent.basicDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, basicDetails: data }))} disabled={!canEdit || !isFormEditable} />
+          <EventDetails data={currentEvent.eventDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, eventDetails: data }))} disabled={!canEdit || !isFormEditable} />
+          <TravelDetails data={currentEvent.travelDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, travelDetails: data }))} disabled={!canEdit || !isFormEditable} />
+          <DriverDetails data={currentEvent.driverDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, driverDetails: data }))} disabled={!canEdit || !isFormEditable} />
         </div>
-        <div className="mt-8 flex justify-end px-6 pb-6">
-          <button type="submit" className="h-10 rounded-md bg-sky-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2" disabled={!canEdit}>
-            Save and Go Next
-          </button>
+        <div className="mt-8 flex justify-end gap-3 px-6 pb-6">
+          {isEditMode && !isFormEditable && (
+            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" disabled={!canEdit}>
+              Edit Form
+            </button>
+          )}
+          {isFormEditable && (
+            <>
+              <button type="button" onClick={handleCancel} className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
+                Cancel
+              </button>
+              <button type="submit" className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                Save and Go Next
+              </button>
+            </>
+          )}
+          {!isEditMode && (
+            <button type="submit" className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" disabled={!canEdit}>
+              Save and Go Next
+            </button>
+          )}
         </div>
       </form>
 

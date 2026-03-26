@@ -1,7 +1,7 @@
 import React from "react";
 import { Bed } from "lucide-react";
 
-const RoomSelection = ({ selectedRooms = [], onRoomChange }) => {
+const RoomSelection = ({ selectedRooms = [], onRoomChange, disabled = false }) => {
   // Ensure selectedRooms is always an array
   const safeSelectedRooms = Array.isArray(selectedRooms) ? selectedRooms : [];
 
@@ -17,6 +17,7 @@ const RoomSelection = ({ selectedRooms = [], onRoomChange }) => {
   ];
 
   const handleRoomToggle = (roomId) => {
+    if (disabled) return;
     console.log("Room Selection: ", roomId);
     onRoomChange(roomId);
   };
@@ -31,17 +32,19 @@ const RoomSelection = ({ selectedRooms = [], onRoomChange }) => {
         {rooms.map((room) => (
           <label
             key={room.id}
-            className={`relative flex items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition-colors group
+            className={`relative flex items-center justify-center p-4 border-2 rounded-lg transition-colors group
               ${
                 safeSelectedRooms.includes(room.id)
                   ? "border-indigo-500 bg-white ring-2 ring-indigo-100"
                   : "border-gray-200 bg-white hover:border-indigo-300"
-              }`}
+              }
+              ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
           >
             <input
               type="checkbox"
               checked={safeSelectedRooms.includes(room.id)}
               onChange={() => handleRoomToggle(room.id)}
+              disabled={disabled}
               className="absolute h-4 w-4 top-2 right-2 text-indigo-600 focus:ring-indigo-500"
             />
             <span

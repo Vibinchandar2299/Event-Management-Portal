@@ -105,17 +105,12 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
     }
   }, [Events]);
 
-  // Add effect to refresh event data when popup is closed
+  // Refresh list only; do not reopen details when popup closes
   useEffect(() => {
-    if (!isPopupOpen && selectedEvent) {
-      // Refresh event data
-      handleViewDetails(selectedEvent._id);
-      // Notify parent component to refresh event list
-      if (onEventUpdate) {
-        onEventUpdate();
-      }
+    if (!isPopupOpen && !selectedEvent && onEventUpdate) {
+      onEventUpdate();
     }
-  }, [isPopupOpen]);
+  }, [isPopupOpen, selectedEvent, onEventUpdate]);
 
   // Helper to fetch and format event data for both details and edit
   const formatAndFetchEventData = async (eventData) => {
@@ -705,13 +700,9 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                   }}
                 />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
-                <div className="absolute left-4 bottom-4 flex items-center gap-2">
+                <div className="absolute left-4 bottom-4">
                   <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-indigo-700 shadow-sm">
                     {eventType || "Event"}
-                  </span>
-                  <span className="flex items-center gap-1 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white">
-                    <UsersIcon className="h-4 w-4" />
-                    <span>{participants || 0}</span>
                   </span>
                 </div>
                 <span

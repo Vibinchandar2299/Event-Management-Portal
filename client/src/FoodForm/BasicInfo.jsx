@@ -7,7 +7,7 @@ function toDateInputValue(date) {
   return d.toISOString().slice(0, 10);
 }
 
-const BasicInfo = ({ formData, setFormData }) => {
+const BasicInfo = ({ formData, setFormData, disabled = false }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -31,6 +31,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="iqacNumber"
             value={formData.iqacNumber || ""}
             onChange={handleChange}
+            disabled={disabled}
             className="w-full"
           />
         </div>
@@ -43,6 +44,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="requisitionDate"
             value={toDateInputValue(formData.requisitionDate)}
             onChange={handleChange}
+            disabled={disabled}
             className="w-full"
           />
         </div>
@@ -56,6 +58,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="department"
             value={formData.department || ""}
             onChange={handleChange}
+            disabled={disabled}
             className="w-full"
           />
         </div>
@@ -69,6 +72,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="requestorName"
             value={formData.requestorName || ""}
             onChange={handleChange}
+            disabled={disabled}
             className="w-full"
           />
         </div>
@@ -81,6 +85,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="empId"
             value={formData.empId || ""}
             onChange={handleChange}
+            disabled={disabled}
             className="w-full"
           />
         </div>
@@ -93,6 +98,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="designationDepartment"
             value={formData.designationDepartment || ""}
             onChange={handleChange}
+            disabled={disabled}
             className="w-full"
           />
         </div>
@@ -105,6 +111,7 @@ const BasicInfo = ({ formData, setFormData }) => {
             name="mobileNumber"
             value={formData.mobileNumber || ""}
             onChange={handleChange}
+            disabled={disabled}
             className="w-full"
           />
         </div>

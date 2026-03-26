@@ -40,6 +40,30 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
   });
   const [commId, setCommId] = useState('');
 
+  const [isFormEditable, setIsFormEditable] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState(null);
+  const [originalSelectedOptions, setOriginalSelectedOptions] = useState(null);
+
+  useEffect(() => {
+    setIsFormEditable(!isEditMode);
+  }, [isEditMode]);
+
+  const handleEditToggle = () => {
+    if (!isFormEditable) {
+      setOriginalFormData(JSON.parse(JSON.stringify(formData)));
+      setOriginalSelectedOptions(JSON.parse(JSON.stringify(selectedOptions)));
+      setIsFormEditable(true);
+    }
+  };
+
+  const handleCancel = () => {
+    if (originalFormData) {
+      setFormData(originalFormData);
+      setSelectedOptions(originalSelectedOptions || {});
+    }
+    setIsFormEditable(false);
+  };
+
   // Define canEdit at the top to avoid temporal dead zone
   const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
   const canEdit = userDept === "communication" || userDept === "iqac" || userDept === "system admin" || !userDept;
@@ -389,6 +413,8 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
       
       if (nextForm) {
         console.log("Navigating to next form:", nextForm);
+        setIsFormEditable(false);
+        setOriginalFormData(null);
         try {
           navigate(nextForm);
           console.log("Navigate to nextForm completed");
@@ -398,6 +424,8 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
       } else {
         console.log("Navigating to transport form");
         console.log("About to call navigate('/forms/transport')");
+        setIsFormEditable(false);
+        setOriginalFormData(null);
         try {
           navigate("/forms/transport");
           console.log("Navigate call completed");
@@ -440,7 +468,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 checked={formData.photography}
                 onChange={handleChange}
                 className="mt-0.5 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
               <span className="ml-2 text-gray-700 leading-6">
                 Request for Photography on the day of the event
@@ -453,7 +481,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 checked={formData.videography}
                 onChange={handleChange}
                 className="mt-0.5 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
-                disabled={!canEdit}
+                disabled={!canEdit || !isFormEditable}
               />
               <span className="ml-2 text-gray-700 leading-6">
                 Request for Videography on the day of the event
@@ -484,7 +512,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                           ) || false
                         }
                         className="mt-1 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
-                        disabled={!canEdit}
+                        disabled={!canEdit || !isFormEditable}
                       />
                       <span className="block w-full whitespace-normal break-words text-sm text-gray-800 leading-6">{option}</span>
                     </label>
@@ -494,20 +522,40 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
             ))}
           </div>
           <div className="mt-8 flex justify-end gap-3">
-            <button
-              type="submit"
-              className="h-10 rounded-md bg-violet-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
-              disabled={!canEdit}
-            >
-              Save and Go Next
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/forms/end")}
-              className="h-10 rounded-md border border-violet-300 bg-white px-6 py-2 text-sm font-medium text-violet-700 shadow-sm hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2"
-            >
-              Go to End Form
-            </button>
+            {isEditMode && !isFormEditable ? (
+              <button
+                type="button"
+                onClick={handleEditToggle}
+                className="h-10 rounded-md bg-blue-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Edit Form
+              </button>
+            ) : isFormEditable ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="h-10 rounded-md bg-gray-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="h-10 rounded-md bg-violet-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+                  disabled={!canEdit}
+                >
+                  Save and Go Next
+                </button>
+              </>
+            ) : (
+              <button
+                type="submit"
+                className="h-10 rounded-md bg-violet-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+                disabled={!canEdit}
+              >
+                Save and Go Next
+              </button>
+            )}
           </div>
         </form>
       </div>

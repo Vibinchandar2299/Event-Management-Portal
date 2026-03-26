@@ -7,7 +7,7 @@ function toDateInputValue(date) {
   return d.toISOString().slice(0, 10);
 }
 
-const FoodTable = ({ formData, setFormData }) => {
+const FoodTable = ({ formData, setFormData, disabled = false }) => {
   // Get all actual date keys (start dates) from formData.dates
   const dateKeys = Object.keys(formData.dates || {});
 
@@ -114,6 +114,7 @@ const FoodTable = ({ formData, setFormData }) => {
                       type="date"
                       value={toDateInputValue(formData.dates?.[dateKey]?.start)}
                       onChange={(e) => handleDateChange(dateKey, "start", e.target.value)}
+                       disabled={disabled}
                       className="w-40 p-1 border rounded text-sm"
                     />
                   </div>
@@ -123,6 +124,7 @@ const FoodTable = ({ formData, setFormData }) => {
                       type="date"
                       value={toDateInputValue(formData.dates?.[dateKey]?.end)}
                       onChange={(e) => handleDateChange(dateKey, "end", e.target.value)}
+                       disabled={disabled}
                       className="w-40 p-1 border rounded text-sm"
                     />
                   </div>
@@ -163,6 +165,7 @@ const FoodTable = ({ formData, setFormData }) => {
                             type="number"
                             min="0"
                             className="w-20 p-1 border rounded text-sm"
+                            disabled={disabled}
                             value={
                               formData.foodDetails?.[dateKey]?.[meal.name]
                                 ?.participants?.[type] || ""
@@ -176,6 +179,7 @@ const FoodTable = ({ formData, setFormData }) => {
                                 e.target.value
                               )
                             }
+                             disabled={disabled}
                           />
                         </td>
                         <td className="px-2 py-1 text-center">
@@ -183,6 +187,7 @@ const FoodTable = ({ formData, setFormData }) => {
                             type="number"
                             min="0"
                             className="w-20 p-1 border rounded text-sm"
+                            disabled={disabled}
                             value={
                               formData.foodDetails?.[dateKey]?.[meal.name]
                                 ?.guest?.[type] || ""
@@ -212,6 +217,7 @@ const FoodTable = ({ formData, setFormData }) => {
                           type="number"
                           min="0"
                           className="w-20 p-1 border rounded text-sm"
+                          disabled={disabled}
                           value={
                             formData.foodDetails?.[dateKey]?.[meal.name]
                               ?.participants || ""
@@ -232,6 +238,7 @@ const FoodTable = ({ formData, setFormData }) => {
                           type="number"
                           min="0"
                           className="w-20 p-1 border rounded text-sm"
+                          disabled={disabled}
                           value={
                             formData.foodDetails?.[dateKey]?.[meal.name]?.guest ||
                             ""

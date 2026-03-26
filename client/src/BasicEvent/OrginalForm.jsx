@@ -54,6 +54,10 @@ const BasicEventForm = ({ eventData, nextForm }) => {
     { name: "", affiliation: "" },
   ]);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isFormEditable, setIsFormEditable] = useState(false); // Controls if form fields are editable
+  const [originalFormData, setOriginalFormData] = useState(null); // Store original data for cancel
+  const [originalOrganizers, setOriginalOrganizers] = useState(null);
+  const [originalResourcePersons, setOriginalResourcePersons] = useState(null);
   const [formData, setFormData] = useState({
     iqacNumber: "",
     departments: [],
@@ -79,8 +83,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     
     if (isEditMode && event1Basics && event1Basics._id) {
-      setFormData(prev => ({
-        ...prev, // Keep the initial arrays
+      const prefillData = {
         iqacNumber: event1Basics.iqacNumber || "",
         eventName: event1Basics.eventName || "",
         eventType: event1Basics.eventType || "",
@@ -96,12 +99,13 @@ const BasicEventForm = ({ eventData, nextForm }) => {
         year: event1Basics.year || "",
         categories: event1Basics.categories || "",
         description: event1Basics.description || "",
-      }));
+      };
+      setFormData(prev => ({ ...prev, ...prefillData }));
+      setOriginalFormData(prefillData);
       setIsEditMode(true);
+      setIsFormEditable(false); // Start in read-only mode
     } else if (isEditMode && eventData && eventData._id) {
-      // Fallback to eventData prop if Redux is empty
-      setFormData(prev => ({
-        ...prev, // Keep the initial arrays
+      const prefillData = {
         iqacNumber: eventData.iqacNumber || "",
         eventName: eventData.eventName || "",
         eventType: eventData.eventType || "",
@@ -117,11 +121,15 @@ const BasicEventForm = ({ eventData, nextForm }) => {
         year: eventData.year || "",
         categories: eventData.categories || "",
         description: eventData.description || "",
-      }));
+      };
+      setFormData(prev => ({ ...prev, ...prefillData }));
+      setOriginalFormData(prefillData);
       setIsEditMode(true);
+      setIsFormEditable(false); // Start in read-only mode
     } else {
-      // New event creation - start with empty form
+      // New event creation - start editable
       setIsEditMode(false);
+      setIsFormEditable(true);
     }
   }, [event1Basics, eventData]);
 
@@ -164,6 +172,26 @@ const BasicEventForm = ({ eventData, nextForm }) => {
     console.log("FormData professional:", formData.professional);
   }, [formData]);
 
+  const handleEditToggle = () => {
+    if (!isFormEditable) {
+      // Entering edit mode - store original data for cancel
+      setOriginalFormData(JSON.parse(JSON.stringify(formData)));
+      setOriginalOrganizers(JSON.parse(JSON.stringify(organizers)));
+      setOriginalResourcePersons(JSON.parse(JSON.stringify(resourcePersons)));
+      setIsFormEditable(true);
+    }
+  };
+
+  const handleCancel = () => {
+    // Revert to original data
+    if (originalFormData) {
+      setFormData(originalFormData);
+      setOrganizers(originalOrganizers || organizers);
+      setResourcePersons(originalResourcePersons || resourcePersons);
+    }
+    setIsFormEditable(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -199,10 +227,10 @@ const BasicEventForm = ({ eventData, nextForm }) => {
       };
 
       console.log("Data to be posted:", dataToPost);
-      const isUpdating = eventData?._id;
+      const eventIdToUpdate = event1Basics?._id || formData.basicEventId || localStorage.getItem('basicEventId');
       let response;
-      console.log("updating the ID field : ", isUpdating);
-      // Get authentication token
+      console.log("Event ID for update:", eventIdToUpdate);
+      
       const token = localStorage.getItem('token');
       console.log('BasicEventForm - Token from localStorage:', token ? 'Present' : 'Missing');
       
@@ -217,17 +245,21 @@ const BasicEventForm = ({ eventData, nextForm }) => {
         'Authorization': `Bearer ${token}`
       };
 
-      if (isUpdating) {
+      if (isEditMode && eventIdToUpdate) {
         response = await axios.put(
-          `${import.meta.env.VITE_API_URL}/event/${isUpdating}`,
+          `${import.meta.env.VITE_API_URL}/event/${eventIdToUpdate}`,
           dataToPost,
           { headers }
         );
-
+        
         if (response.status === 200) {
           toast.success("Event updated successfully!");
-          // Update Redux state with the full updated event data
+          // Update Redux with updated data
           dispatch(setEventData(response.data));
+          setIsFormEditable(false); // Exit edit mode after save
+          setOriginalFormData(null); // Clear original data
+          // Continue to next form
+          navigate("/forms/communication");
         } else {
           toast.error("Failed to update event. Please try again.");
         }
@@ -514,6 +546,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <select
                 value={formData.eventType || ""}
                 onChange={(e) => handleEventTypeChange(e.target.value)}
+                      disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               >
@@ -529,6 +562,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
             {/* Event Venue */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700">
+                      disabled={!isFormEditable}
                 Event Venue
               </label>
               <input
@@ -541,6 +575,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 required
               />
             </div>
+                      disabled={!isFormEditable}
 
             {/* Start Date */}
             <div className="col-span-1">
@@ -563,6 +598,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <label className="block text-sm font-medium text-gray-700">
                 End Date
               </label>
+                      disabled={!isFormEditable}
               <input
                 type="date"
                 value={toDateInputValue(formData.endDate)}
@@ -578,6 +614,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700">
                 Year
+                      disabled={!isFormEditable}
               </label>
               <input
                 type="number"
@@ -593,6 +630,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
             {/* Year Categories */}
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700">
+                      disabled={!isFormEditable}
                 Year Categories
               </label>
               <input
@@ -608,6 +646,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
 
             {/* Departments */}
             <div className="col-span-1">
+                      disabled={!isFormEditable}
               <label className="block text-sm font-medium text-gray-700">
                 Departments
               </label>
@@ -623,6 +662,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   </option>
                 ))}
               </select>
+                      disabled={!isFormEditable}
             </div>
 
             {/* Logos */}
@@ -636,6 +676,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
                 <option value="">Select Logo</option>
+                      disabled={!isFormEditable}
                 {logos.map((logo) => (
                   <option key={logo} value={logo}>
                     {logo}

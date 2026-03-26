@@ -1,6 +1,6 @@
 import React from "react";
 
-const EventDetails = ({ formData, setFormData }) => {
+const EventDetails = ({ formData, setFormData, disabled = false }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -20,6 +20,7 @@ const EventDetails = ({ formData, setFormData }) => {
           name="eventName"
           value={formData.eventName}
           onChange={handleChange}
+          disabled={disabled}
           className="w-full"
         />
       </div>
@@ -33,6 +34,7 @@ const EventDetails = ({ formData, setFormData }) => {
           name="eventType"
           value={formData.eventType}
           onChange={handleChange}
+          disabled={disabled}
           className="w-full"
         />
       </div>
