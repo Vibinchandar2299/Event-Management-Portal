@@ -6,7 +6,6 @@ import {
   Phone,
   BookOpen,
   MapPin,
-  Import,
 } from "lucide-react";
 import axios from "axios";
 import RoomSelection from "./RoomSelection";
@@ -876,26 +875,6 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             </div>
           </form>
 
-          {["guestroom", "guest deparment", "system admin", "iqac", "IQAC"].includes((userDept || "").toLowerCase()) && (
-            <div className="mt-2 flex justify-end gap-4">
-              <button
-                type="button"
-                className="h-10 rounded-md border border-indigo-300 bg-white px-6 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2"
-                onClick={() => {
-                  if (guestroomData) {
-                    setFormData({
-                      ...formData,
-                      ...guestroomData,
-                      selectedRooms: guestroomData.selectedRooms || [],
-                    });
-                  }
-                }}
-                disabled={!canEdit}
-              >
-                Load Existing Guest Data
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

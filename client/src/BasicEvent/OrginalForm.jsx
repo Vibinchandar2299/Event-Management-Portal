@@ -756,7 +756,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <button
                 type="button"
                 onClick={() => setResourcePersons([...resourcePersons, { name: '', affiliation: '' }])}
-                className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="mt-2 rounded-md bg-emerald-600 px-3 py-1 text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
               >
                 Add Resource Person
               </button>
@@ -831,7 +831,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <button
                 type="button"
                 onClick={() => setOrganizers([...organizers, { employeeId: '', name: '', designation: '', phone: '' }])}
-                className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="mt-2 rounded-md bg-emerald-600 px-3 py-1 text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
               >
                 Add Organizer
               </button>
