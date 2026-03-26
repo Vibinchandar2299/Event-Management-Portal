@@ -18,6 +18,17 @@ const EndPopup = ({ event, onClose, isOpen }) => {
   const dispatch = useDispatch();
   const token = useSelector((state) => state.auth.token);
 
+  const formatDate = (dateValue) => {
+    if (!dateValue || dateValue === "N/A") return "N/A";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return dateValue;
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
   useEffect(() => {
     const processEventData = async () => {
       console.log("=== EndPopup Debug ===");
@@ -192,15 +203,15 @@ const EndPopup = ({ event, onClose, isOpen }) => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
+        <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Loading Event Details...</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <X className="h-6 w-6" />
             </button>
           </div>
-          <div className="animate-pulse">
+          <div className="animate-pulse p-8">
             <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
             <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
             <div className="h-4 bg-gray-200 rounded w-5/6"></div>
@@ -212,15 +223,15 @@ const EndPopup = ({ event, onClose, isOpen }) => {
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
+        <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex justify-between items-center p-6 border-b border-slate-200">
             <h2 className="text-2xl font-bold text-red-600">Error</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <X className="h-6 w-6" />
             </button>
           </div>
-          <p className="text-red-500">{error}</p>
+          <p className="p-6 text-red-500">{error}</p>
         </div>
       </div>
     );
@@ -228,72 +239,118 @@ const EndPopup = ({ event, onClose, isOpen }) => {
 
   if (!formattedEvent) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
+        <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex justify-between items-center p-6 border-b border-slate-200">
             <h2 className="text-2xl font-bold text-red-600">Error</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <X className="h-6 w-6" />
             </button>
           </div>
-          <p className="text-red-500">No event data available</p>
+          <p className="p-6 text-red-500">No event data available</p>
         </div>
       </div>
     );
   }
 
+  const basic = formattedEvent.basicEvent || {};
+  const sectionCount = [
+    !!formattedEvent.basicEvent,
+    !!formattedEvent.communicationdata && Object.keys(formattedEvent.communicationdata).length > 0,
+    !!formattedEvent.transport && formattedEvent.transport.length > 0,
+    !!formattedEvent.foodform,
+    !!formattedEvent.guestform && Object.keys(formattedEvent.guestform).length > 0,
+  ].filter(Boolean).length;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Event Details</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="h-6 w-6" />
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
+      <div className="max-h-[92vh] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 via-white to-white shadow-2xl">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 p-6 backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">Event Requirement Details</h2>
+              <p className="mt-1 text-sm text-slate-600">Structured overview of basic event data and all submitted requirement forms.</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Close details"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+              <p className="text-xs font-medium text-indigo-700">Event Name</p>
+              <p className="mt-1 truncate text-sm font-semibold text-indigo-900">{basic.eventName || "N/A"}</p>
+            </div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <p className="text-xs font-medium text-emerald-700">Type</p>
+              <p className="mt-1 truncate text-sm font-semibold text-emerald-900">{basic.eventType || "N/A"}</p>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs font-medium text-amber-700">Date Range</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">{formatDate(basic.startDate)} - {formatDate(basic.endDate)}</p>
+            </div>
+            <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+              <p className="text-xs font-medium text-sky-700">Sections Included</p>
+              <p className="mt-1 text-sm font-semibold text-sky-900">{sectionCount}</p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
           {formattedEvent.basicEvent && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Basic Event Information</h3>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-slate-800">Basic Event Information</h3>
               <EventBasic eventData={formattedEvent.basicEvent} />
             </div>
           )}
 
           {formattedEvent.basicEvent && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Additional Event Information</h3>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-slate-800">Additional Event Information</h3>
               <EventBasic2 eventData={formattedEvent.basicEvent} />
             </div>
           )}
 
-          {formattedEvent.communicationdata && Object.keys(formattedEvent.communicationdata).length > 0 && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Communication Details</h3>
-              <CommunicationMedia Communicationform={formattedEvent.communicationdata} />
-            </div>
-          )}
-
           {formattedEvent.transport && formattedEvent.transport.length > 0 && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Transport Details</h3>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-slate-800">Transport Details</h3>
               <TransportRequisition transportData={formattedEvent.transport} />
             </div>
           )}
 
+          {formattedEvent.communicationdata && Object.keys(formattedEvent.communicationdata).length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-slate-800">Communication Details</h3>
+              <CommunicationMedia Communicationform={formattedEvent.communicationdata} />
+            </div>
+          )}
+
           {formattedEvent.foodform && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Food and Amenities</h3>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-slate-800">Food and Amenities</h3>
               <AmenitiesForm foodFormData={formattedEvent.foodform} />
             </div>
           )}
 
           {formattedEvent.guestform && Object.keys(formattedEvent.guestform).length > 0 && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Guest Room Details</h3>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-slate-800">Guest Room Details</h3>
               <Guestroom guestroomData={formattedEvent.guestform} />
             </div>
           )}
+
+          <div className="flex justify-end border-t border-slate-200 pt-4">
+            <button
+              onClick={onClose}
+              className="rounded-md bg-slate-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-900"
+            >
+              Close Details
+            </button>
+          </div>
         </div>
       </div>
     </div>

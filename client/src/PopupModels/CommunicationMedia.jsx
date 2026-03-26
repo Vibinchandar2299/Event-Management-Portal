@@ -16,67 +16,60 @@ const CommunicationMedia = ({ Communicationform }) => {
     communication,
   } = Communicationform || {};
 
+  const renderPills = (items) => {
+    if (!Array.isArray(items) || items.length === 0) {
+      return <span className="text-sm text-slate-500">None</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2">
+        {items.map((item, index) => (
+          <span
+            key={index}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="w-full overflow-auto">
-      <h1 className="main-heading">Communication and Media</h1>
-      <table>
-        <thead>
-          <tr>
-            <th>Event Poster</th>
-            <th>Videos</th>
-            <th>Onstage Requirements</th>
-            <th>Flex Banners</th>
-            <th>Reception TV Streaming Requirements</th>
-            <th>Communication</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <ul>
-                {eventPoster &&
-                  eventPoster.map((item, index) => <li key={index}>{item}</li>)}
-              </ul>
-            </td>
-            <td>
-              <ul>
-                {videos &&
-                  videos.map((item, index) => <li key={index}>{item}</li>)}
-              </ul>
-            </td>
-            <td>
-              <ul>
-                {onStageRequirements &&
-                  onStageRequirements.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-              </ul>
-            </td>
-            <td>
-              <ul>
-                {flexBanners &&
-                  flexBanners.map((item, index) => <li key={index}>{item}</li>)}
-              </ul>
-            </td>
-            <td>
-              <ul>
-                {receptionTVStreamingRequirements &&
-                  receptionTVStreamingRequirements.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-              </ul>
-            </td>
-            <td>
-              <ul>
-                {communication &&
-                  communication.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-              </ul>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      <h1 className="text-base font-semibold text-slate-800">Communication and Media</h1>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-sm font-semibold text-slate-700">Event Poster</p>
+          {renderPills(eventPoster)}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-sm font-semibold text-slate-700">Videos</p>
+          {renderPills(videos)}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-sm font-semibold text-slate-700">Onstage Requirements</p>
+          {renderPills(onStageRequirements)}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-sm font-semibold text-slate-700">Flex Banners</p>
+          {renderPills(flexBanners)}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-sm font-semibold text-slate-700">Reception TV Streaming Requirements</p>
+          {renderPills(receptionTVStreamingRequirements)}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-sm font-semibold text-slate-700">Communication</p>
+          {renderPills(communication)}
+        </div>
+      </div>
     </div>
   );
 };

@@ -30,53 +30,53 @@ const Guestroom = ({ guestroomData }) => {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <h4 className="font-semibold text-gray-700">Department/Centre</h4>
-          <p className="text-gray-600">{guestroomData.department || "N/A"}</p>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Department/Centre</h4>
+          <p className="mt-1 text-sm font-medium text-slate-700">{guestroomData.department || "N/A"}</p>
         </div>
-        <div>
-          <h4 className="font-semibold text-gray-700">Requestor Name</h4>
-          <p className="text-gray-600">{guestroomData.requestorName || "N/A"}</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Requestor Name</h4>
+          <p className="mt-1 text-sm font-medium text-slate-700">{guestroomData.requestorName || "N/A"}</p>
         </div>
-        <div>
-          <h4 className="font-semibold text-gray-700">Employee ID</h4>
-          <p className="text-gray-600">{guestroomData.empId || "N/A"}</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Employee ID</h4>
+          <p className="mt-1 text-sm font-medium text-slate-700">{guestroomData.empId || "N/A"}</p>
         </div>
-        <div>
-          <h4 className="font-semibold text-gray-700">Mobile Number</h4>
-          <p className="text-gray-600">{guestroomData.mobile || "N/A"}</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mobile Number</h4>
+          <p className="mt-1 text-sm font-medium text-slate-700">{guestroomData.mobile || "N/A"}</p>
         </div>
-        <div>
-          <h4 className="font-semibold text-gray-700">Designation</h4>
-          <p className="text-gray-600">{guestroomData.designation || "N/A"}</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Designation</h4>
+          <p className="mt-1 text-sm font-medium text-slate-700">{guestroomData.designation || "N/A"}</p>
         </div>
-        <div>
-          <h4 className="font-semibold text-gray-700">Date</h4>
-          <p className="text-gray-600">{formattedDate}</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date</h4>
+          <p className="mt-1 text-sm font-medium text-slate-700">{formattedDate}</p>
         </div>
-        <div>
-          <h4 className="font-semibold text-gray-700">Number of Guests</h4>
-          <p className="text-gray-600">{guestroomData.guestCount || "N/A"}</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Number of Guests</h4>
+          <p className="mt-1 text-sm font-medium text-slate-700">{guestroomData.guestCount || "N/A"}</p>
         </div>
       </div>
 
-      <div>
-        <h4 className="font-semibold text-gray-700 mb-2">Purpose</h4>
-        <p className="text-gray-600">{guestroomData.purpose || "N/A"}</p>
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Purpose</h4>
+        <p className="mt-1 text-sm leading-relaxed text-slate-700">{guestroomData.purpose || "N/A"}</p>
       </div>
 
-      <div>
-        <h4 className="font-semibold text-gray-700 mb-2">Selected Rooms</h4>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Selected Rooms</h4>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {guestroomData.selectedRooms && guestroomData.selectedRooms.length > 0 ? (
             guestroomData.selectedRooms.map((roomId, index) => (
-              <div key={index} className="bg-gray-50 p-2 rounded">
+              <div key={index} className="rounded-md border border-slate-200 bg-white p-2 text-sm font-medium text-slate-700">
                 {roomLabels[roomId] || roomId}
               </div>
             ))
           ) : (
-            <p className="text-gray-500 italic">No rooms selected</p>
+            <p className="text-sm text-slate-500 italic">No rooms selected</p>
           )}
         </div>
       </div>

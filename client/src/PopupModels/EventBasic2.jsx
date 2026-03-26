@@ -32,95 +32,109 @@ const EventBasic2 = ({ eventData }) => {
   };
   
   return (
-    <div>
-      <h1 className="main-heading">Event Basic 2</h1>
-      <table>
-        <thead>
-          <tr>
-            <th>Organizers</th>
-            <th>Year</th>
-            <th>Categories</th>
-            <th>Professional Societies</th>
-            <th>Resource Persons</th>
-            <th>Logo</th>
-            <th>Description</th>
-            <th>IQAC Number</th>
-            <th>Status</th>
-            <th>Departments</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            {/* Organizers */}
-            <td>
-              <table className="nested-table">
-                <thead>
-                  <tr>
-                    <th>Employee ID</th>
-                    <th>Name</th>
-                    <th>Designation</th>
-                    <th>Phone No.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {safeArray(eventData?.organizers).map((organizer, index) => (
+    <div className="space-y-4">
+      <h1 className="text-base font-semibold text-slate-800">Event Basic 2</h1>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium text-slate-500">Year</p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">{eventData?.year || "N/A"}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium text-slate-500">IQAC Number</p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">{eventData?.iqacNumber || "N/A"}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium text-slate-500">Status</p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">{eventData?.status || "N/A"}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 p-3">
+          <h2 className="mb-2 text-sm font-semibold text-slate-700">Organizers</h2>
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100 text-slate-700">
+                <tr>
+                  <th className="px-2 py-2 text-left">Employee ID</th>
+                  <th className="px-2 py-2 text-left">Name</th>
+                  <th className="px-2 py-2 text-left">Designation</th>
+                  <th className="px-2 py-2 text-left">Phone No.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                {safeArray(eventData?.organizers).length > 0 ? (
+                  safeArray(eventData?.organizers).map((organizer, index) => (
                     <tr key={index}>
-                      <td>{organizer.employeeId || organizer.employeeid || "N/A"}</td>
-                      <td>{organizer.name || "N/A"}</td>
-                      <td>{organizer.designation || "N/A"}</td>
-                      <td>{organizer.phone || "N/A"}</td>
+                      <td className="px-2 py-2">{organizer.employeeId || organizer.employeeid || "N/A"}</td>
+                      <td className="px-2 py-2">{organizer.name || "N/A"}</td>
+                      <td className="px-2 py-2">{organizer.designation || "N/A"}</td>
+                      <td className="px-2 py-2">{organizer.phone || "N/A"}</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </td>
-
-            {/* Year */}
-            <td>{eventData?.year || "N/A"}</td>
-
-            {/* Categories */}
-            <td>{safeJoin(eventData?.categories)}</td>
-
-            {/* Professional Societies */}
-            <td>{safeJoin(eventData?.professional)}</td>
-
-            {/* Resource Persons */}
-            <td>
-              <table className="nested-table">
-                <thead>
+                  ))
+                ) : (
                   <tr>
-                    <th>Name</th>
-                    <th>Affiliation</th>
+                    <td colSpan="4" className="px-2 py-4 text-center text-slate-500">No organizers added</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {safeArray(eventData?.resourcePersons).map((person, index) => (
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-3">
+          <h2 className="mb-2 text-sm font-semibold text-slate-700">Resource Persons</h2>
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100 text-slate-700">
+                <tr>
+                  <th className="px-2 py-2 text-left">Name</th>
+                  <th className="px-2 py-2 text-left">Affiliation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                {safeArray(eventData?.resourcePersons).length > 0 ? (
+                  safeArray(eventData?.resourcePersons).map((person, index) => (
                     <tr key={index}>
-                      <td>{person.name || "N/A"}</td>
-                      <td>{person.affiliation || "N/A"}</td>
+                      <td className="px-2 py-2">{person.name || "N/A"}</td>
+                      <td className="px-2 py-2">{person.affiliation || "N/A"}</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </td>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="2" className="px-2 py-4 text-center text-slate-500">No resource persons added</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
-            {/* Logos */}
-            <td>{safeJoin(eventData?.logos)}</td>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium text-slate-500">Categories</p>
+          <p className="mt-1 text-sm text-slate-700">{safeJoin(eventData?.categories)}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium text-slate-500">Professional Societies</p>
+          <p className="mt-1 text-sm text-slate-700">{safeJoin(eventData?.professional)}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium text-slate-500">Departments</p>
+          <p className="mt-1 text-sm text-slate-700">{safeJoin(eventData?.departments)}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium text-slate-500">Logo</p>
+          <p className="mt-1 text-sm text-slate-700">{safeJoin(eventData?.logos)}</p>
+        </div>
+      </div>
 
-            {/* Description */}
-            <td>{eventData?.description || "N/A"}</td>
-
-            {/* IQAC Number */}
-            <td>{eventData?.iqacNumber || "N/A"}</td>
-
-            {/* Status */}
-            <td>{eventData?.status || "N/A"}</td>
-
-            {/* Departments */}
-            <td>{safeJoin(eventData?.departments)}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <p className="text-xs font-medium text-slate-500">Description</p>
+        <p className="mt-1 text-sm leading-relaxed text-slate-700">{eventData?.description || "N/A"}</p>
+      </div>
     </div>
   );
 };

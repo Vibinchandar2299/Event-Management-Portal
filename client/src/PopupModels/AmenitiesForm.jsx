@@ -40,73 +40,86 @@ const AmenitiesForm = ({ foodFormData }) => {
   const endDate = foodFormData.endDate || '';
 
   return (
-    <div>
-      <h1 className="main-heading">Amenities Form</h1>
-      {/* Only Requestor Name and Department/Centre at the top */}
-      <div className="mb-4">
+    <div className="space-y-4">
+      <h1 className="text-base font-semibold text-slate-800">Amenities Form</h1>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {requestorName && (
-          <div><span className="font-semibold">Requestor Name:</span> {requestorName}</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            <span className="font-semibold">Requestor Name:</span> {requestorName}
+          </div>
         )}
         {department && (
-          <div><span className="font-semibold">Department/Centre:</span> {department}</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            <span className="font-semibold">Department/Centre:</span> {department}
+          </div>
         )}
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Type</th>
-            {dates.map((date, idx) => (
-              <React.Fragment key={idx}>
-                <th>Start Date</th>
-                <th>End Date</th>
-                <th>Participants Veg</th>
-                <th>Participants NonVeg</th>
-                <th>Guest/VIP Veg</th>
-                <th>Guest/VIP NonVeg</th>
-              </React.Fragment>
-            ))}
-          </tr>
-          <tr>
-            <th></th>
-            {dates.map((date, idx) => (
-              <React.Fragment key={idx}>
-                <th>{date.date && typeof date.date === 'object' && date.date.start
-                  ? new Date(date.date.start).toLocaleDateString()
-                  : (typeof date.date === 'string' && date.date ? new Date(date.date).toLocaleDateString() : '-')}</th>
-                <th>{date.date && typeof date.date === 'object' && date.date.end
-                  ? new Date(date.date.end).toLocaleDateString()
-                  : (typeof date.date === 'string' && date.date ? new Date(date.date).toLocaleDateString() : '-')}</th>
-                <th colSpan={4}></th>
-              </React.Fragment>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {mealTypes.length > 0 ? (
-            mealTypes.map((mealType) => (
-              <tr key={mealType}>
-                <td>{mealType}</td>
-                {dates.map((date, idx) => {
-                  const dateFoodDetails = foodDetails[idx]?.[mealType] || {};
-                  return (
-                    <React.Fragment key={idx}>
-                      <td colSpan={2}></td>
-                      <td>{dateFoodDetails.participants?.Veg || "0"}</td>
-                      <td>{dateFoodDetails.participants?.NonVeg || "0"}</td>
-                      <td>{dateFoodDetails.guest?.Veg || "0"}</td>
-                      <td>{dateFoodDetails.guest?.NonVeg || "0"}</td>
-                    </React.Fragment>
-                  );
-                })}
-              </tr>
-            ))
-          ) : (
+
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-100 text-slate-700">
             <tr>
-              <td colSpan={dates.length > 0 ? dates.length * 6 + 1 : 7}>No Food Details Available</td>
+              <th className="px-3 py-2 text-left font-semibold">Type</th>
+              {dates.map((date, idx) => (
+                <React.Fragment key={idx}>
+                  <th className="px-3 py-2 text-left font-semibold">Start Date</th>
+                  <th className="px-3 py-2 text-left font-semibold">End Date</th>
+                  <th className="px-3 py-2 text-left font-semibold">Participants Veg</th>
+                  <th className="px-3 py-2 text-left font-semibold">Participants NonVeg</th>
+                  <th className="px-3 py-2 text-left font-semibold">Guest/VIP Veg</th>
+                  <th className="px-3 py-2 text-left font-semibold">Guest/VIP NonVeg</th>
+                </React.Fragment>
+              ))}
             </tr>
-          )}
-        </tbody>
-      </table>
+            <tr className="bg-slate-50 text-slate-600">
+              <th className="px-3 py-2 text-left"></th>
+              {dates.map((date, idx) => (
+                <React.Fragment key={idx}>
+                  <th className="px-3 py-2 text-left">
+                    {date.date && typeof date.date === 'object' && date.date.start
+                      ? new Date(date.date.start).toLocaleDateString()
+                      : (typeof date.date === 'string' && date.date ? new Date(date.date).toLocaleDateString() : '-')}
+                  </th>
+                  <th className="px-3 py-2 text-left">
+                    {date.date && typeof date.date === 'object' && date.date.end
+                      ? new Date(date.date.end).toLocaleDateString()
+                      : (typeof date.date === 'string' && date.date ? new Date(date.date).toLocaleDateString() : '-')}
+                  </th>
+                  <th colSpan={4}></th>
+                </React.Fragment>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+            {mealTypes.length > 0 ? (
+              mealTypes.map((mealType) => (
+                <tr key={mealType}>
+                  <td className="px-3 py-2 font-medium">{mealType}</td>
+                  {dates.map((date, idx) => {
+                    const dateFoodDetails = foodDetails[idx]?.[mealType] || {};
+                    return (
+                      <React.Fragment key={idx}>
+                        <td colSpan={2}></td>
+                        <td className="px-3 py-2">{dateFoodDetails.participants?.Veg || "0"}</td>
+                        <td className="px-3 py-2">{dateFoodDetails.participants?.NonVeg || "0"}</td>
+                        <td className="px-3 py-2">{dateFoodDetails.guest?.Veg || "0"}</td>
+                        <td className="px-3 py-2">{dateFoodDetails.guest?.NonVeg || "0"}</td>
+                      </React.Fragment>
+                    );
+                  })}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={dates.length > 0 ? dates.length * 6 + 1 : 7} className="px-3 py-6 text-center text-slate-500">
+                  No Food Details Available
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

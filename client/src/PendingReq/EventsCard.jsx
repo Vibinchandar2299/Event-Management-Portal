@@ -33,6 +33,21 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const apiBaseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "");
+
+  const resolveBasicEventId = (event) => {
+    return event?.basicEvent?._id || event?.eventdata || event?.eventId || null;
+  };
+
+  const getPosterSrc = (event) => {
+    const posterPath = event?.poster || event?.basicEvent?.poster;
+    if (!posterPath) {
+      return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=";
+    }
+    if (posterPath.startsWith("http")) return posterPath;
+    return apiBaseUrl ? `${apiBaseUrl}${posterPath}` : posterPath;
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     console.log("=== Checking Token ===");
@@ -454,11 +469,19 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
            !status.iqac?.approved;
   };
 
-  const handlePosterUpload = async (eventId, file) => {
+  const handlePosterUpload = async (event, file) => {
+    if (!file) return;
+
+    const basicEventId = resolveBasicEventId(event);
+    if (!basicEventId) {
+      toast.error("Unable to upload poster: event ID is missing.");
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("poster", file);
-      formData.append("eventId", eventId);
+      formData.append("eventId", basicEventId);
 
       const response = await axios.post(
         `/api/event/upload-poster`,
@@ -472,8 +495,12 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
 
       toast.success("Poster uploaded successfully!");
       console.log(response.data);
+      if (onEventUpdate) {
+        onEventUpdate();
+      }
     } catch (error) {
       console.error("Poster upload failed", error);
+      toast.error(error?.response?.data?.message || "Poster upload failed. Please try again.");
     }
   };
 
@@ -639,6 +666,14 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
           const eventVenue = event.eventVenue || event.basicEvent?.eventVenue || event.venue || event.basicEvent?.venue || "";
           const startDate = event.startDate || event.basicEvent?.startDate || "";
           const organizers = event.organizers || event.basicEvent?.organizers || [];
+          const organizerDepartment =
+            organizers[0]?.department ||
+            organizers[0]?.dept ||
+            organizers[0]?.designation ||
+            (Array.isArray(event.basicEvent?.departments)
+              ? event.basicEvent.departments.join(", ")
+              : event.basicEvent?.departments) ||
+            "Department N/A";
           const eventId = event._id;
           const status = approvalStatuses[eventId];
           const isPending = hasPendingApprovals(eventId);
@@ -655,26 +690,32 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
           return (
             <div
               key={event._id || event.id || Math.random().toString(36).substr(2, 9)}
-              className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all border-2 ${
+              className={`group overflow-hidden rounded-2xl border bg-white/95 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
                 isPending ? 'border-red-300' : isApproved ? 'border-green-300' : 'border-gray-200'
-              } group`}
+              }`}
             >
               <div className="relative">
                 <img
-                  src={event.poster ? 
-                    (event.poster.startsWith('http') ? 
-                      event.poster : 
-                      `http://localhost:8000${event.poster}`) 
-                    : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4='}
+                  src={getPosterSrc(event)}
                   alt={event.eventName || 'Event Image'}
-                  className="w-full h-72 object-contain object-center rounded-t-xl bg-gray-100"
+                  className="h-56 w-full object-cover object-center bg-gray-100"
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
                   }}
                 />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
+                <div className="absolute left-4 bottom-4 flex items-center gap-2">
+                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-indigo-700 shadow-sm">
+                    {eventType || "Event"}
+                  </span>
+                  <span className="flex items-center gap-1 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white">
+                    <UsersIcon className="h-4 w-4" />
+                    <span>{participants || 0}</span>
+                  </span>
+                </div>
                 <span
-                  className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-medium ${
+                  className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
                     event.status === "Upcoming"
                       ? "bg-blue-100 text-blue-600"
                       : event.status === "Ongoing"
@@ -687,39 +728,28 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
               </div>
 
               <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-medium text-purple-600">
-                    {eventType}
-                  </span>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <UsersIcon className="h-5 w-5" />
-                    <span>{participants}</span>
-                  </div>
-                </div>
-
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="mb-2 text-xl font-semibold text-gray-900">
                   {eventName}
                 </h3>
+                <p className="mb-4 text-sm leading-relaxed text-gray-600">
+                  {description || "No description provided."}
+                </p>
 
-                <div className="space-y-3 text-sm">
+                <div className="grid gap-2 text-sm text-gray-700">
                   <div className="flex items-center gap-2">
                     <CalendarIcon className="h-5 w-5 text-gray-500" />
                     <span>{startDate}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <ClockIcon className="h-5 w-5 text-gray-500" />
-                    <span>{description}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <MapPinIcon className="h-5 w-5 text-gray-500" />
-                    <span>{eventVenue}</span>
+                    <span>{eventVenue || "Venue not specified"}</span>
                   </div>
                 </div>
 
                 {/* Approval Status Display */}
                 {status && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Approval Status:</h4>
+                  <div className="mt-4 rounded-xl border border-gray-200 bg-slate-50 p-3">
+                    <h4 className="mb-2 text-sm font-semibold text-gray-700">Approval Status</h4>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="flex items-center gap-1">
                         {status.communication?.approved ? (
@@ -775,29 +805,25 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                   </div>
                 )}
 
-                <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="https://source.unsplash.com/random/100x100/?logo"
-                      alt="Organizer"
-                      className="w-10 h-10 rounded-full"
-                    />
+                <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+                  <div>
                     <div>
                       <p className="text-sm text-gray-600">Organized by</p>
                       <p className="font-medium">{organizers[0]?.name || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">Dept: {organizerDepartment}</p>
                     </div>
                   </div>
                   {/* Guest Department approval button - hover visible */}
                   {userDepartment === 'Guest Deparment' && !status?.guestroom?.approved && (
                     <button
                       onClick={() => handleApproval(eventId, 'guestroom')}
-                      className="px-3 py-1 text-xs bg-purple-500 hover:bg-purple-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="rounded-lg bg-purple-500 px-3 py-1 text-xs text-white hover:bg-purple-600"
                     >
                       Approve Guest Deparment
                     </button>
                   )}
                   
-                  <div className="flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-end">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
 
                     
                     {/* Approval Button */}
@@ -899,14 +925,18 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                     </button>
                     {/* Debug log for transport */}
                     {console.log('Transport data:', event.transport)}
-                    <label className="px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg cursor-pointer">
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm text-white hover:bg-cyan-700">
+                      <ArrowUpTrayIcon className="h-4 w-4" />
                       Upload Poster
                       <input
                         type="file"
                         className="hidden"
-                        onChange={(e) =>
-                          handlePosterUpload(event._id, e.target.files[0])
-                        }
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          handlePosterUpload(event, file);
+                          e.target.value = "";
+                        }}
                       />
                     </label>
                     <button
