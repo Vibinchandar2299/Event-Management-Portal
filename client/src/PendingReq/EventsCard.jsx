@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {jwtDecode} from "jwt-decode";
 import axios from "axios";
 import {
@@ -105,12 +105,15 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
     }
   }, [Events]);
 
-  // Refresh list only; do not reopen details when popup closes
+  const wasPopupOpenRef = useRef(false);
+
+  // Refresh list only when popup actually transitions from open to closed
   useEffect(() => {
-    if (!isPopupOpen && !selectedEvent && onEventUpdate) {
+    if (wasPopupOpenRef.current && !isPopupOpen && onEventUpdate) {
       onEventUpdate();
     }
-  }, [isPopupOpen, selectedEvent, onEventUpdate]);
+    wasPopupOpenRef.current = isPopupOpen;
+  }, [isPopupOpen, onEventUpdate]);
 
   // Helper to fetch and format event data for both details and edit
   const formatAndFetchEventData = async (eventData) => {

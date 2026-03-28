@@ -558,7 +558,7 @@ function FoodForm({ eventData, nextForm }) {
         </div>
         <div className="mt-8 flex justify-end gap-3 px-6 pb-6">
           {isEditMode && !isFormEditable && (
-            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" disabled={!canEdit}>
+            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2" disabled={!canEdit}>
               Edit Form
             </button>
           )}

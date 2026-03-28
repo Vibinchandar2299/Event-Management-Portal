@@ -526,7 +526,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
               <button
                 type="button"
                 onClick={handleEditToggle}
-                className="h-10 rounded-md bg-blue-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-10 rounded-md bg-violet-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
               >
                 Edit Form
               </button>

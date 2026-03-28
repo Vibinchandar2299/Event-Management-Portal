@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Dashboard from "./Dashboard";
 import EventsCard from "./EventsCard";
 import axios from "axios";
@@ -17,6 +17,7 @@ function PendingDashboard() {
   const [loading, setLoading] = useState(true);
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
   const location = useLocation();
+  const skipFirstPathRefetch = useRef(true);
 
   const fetchPendingEndforms = async (retryCount = 0) => {
     console.log("Fetching events from:", `/api/endform/allpending`);
@@ -86,17 +87,23 @@ function PendingDashboard() {
     }
   };
 
+  const handleEventUpdate = useCallback(async () => {
+    await fetchPendingEndforms();
+    setStatsRefreshKey((k) => k + 1);
+  }, []);
+
+  // Always fetch once when the page mounts
   useEffect(() => {
     fetchPendingEndforms();
   }, []);
 
-  const handleEventUpdate = async () => {
-    await fetchPendingEndforms();
-    setStatsRefreshKey((k) => k + 1);
-  };
-
   // Add useEffect to refetch data when navigating back to the dashboard route
   useEffect(() => {
+    if (skipFirstPathRefetch.current) {
+      skipFirstPathRefetch.current = false;
+      return;
+    }
+
     console.log("Location changed:", location.pathname);
     // Assuming the dashboard route is '/', adjust if it's different
     if (location.pathname === '/pending-requests') { // Replace '/pending-requests' with the actual dashboard path if different
