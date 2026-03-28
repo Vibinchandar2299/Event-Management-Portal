@@ -179,7 +179,6 @@ const FoodTable = ({ formData, setFormData, disabled = false }) => {
                                 e.target.value
                               )
                             }
-                             disabled={disabled}
                           />
                         </td>
                         <td className="px-2 py-1 text-center">

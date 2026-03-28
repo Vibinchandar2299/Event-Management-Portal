@@ -78,11 +78,49 @@ const BasicEventForm = ({ eventData, nextForm }) => {
     societies: "",
   });
 
+  const normalizeOrganizers = (value) => {
+    if (Array.isArray(value) && value.length > 0) {
+      return value.map((item) => ({
+        employeeId: item?.employeeId || "",
+        name: item?.name || "",
+        designation: item?.designation || "",
+        phone: item?.phone || "",
+      }));
+    }
+    if (value && typeof value === "object") {
+      return [{
+        employeeId: value.employeeId || "",
+        name: value.name || "",
+        designation: value.designation || "",
+        phone: value.phone || "",
+      }];
+    }
+    return [{ employeeId: "", name: "", designation: "", phone: "" }];
+  };
+
+  const normalizeResourcePersons = (value) => {
+    if (Array.isArray(value) && value.length > 0) {
+      return value.map((item) => ({
+        name: item?.name || "",
+        affiliation: item?.affiliation || "",
+      }));
+    }
+    if (value && typeof value === "object") {
+      return [{
+        name: value.name || "",
+        affiliation: value.affiliation || "",
+      }];
+    }
+    return [{ name: "", affiliation: "" }];
+  };
+
   useEffect(() => {
     // Prefer Redux state for prefill
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     
     if (isEditMode && event1Basics && event1Basics._id) {
+      const prefillOrganizers = normalizeOrganizers(event1Basics.organizers);
+      const prefillResourcePersons = normalizeResourcePersons(event1Basics.resourcePersons);
       const prefillData = {
         iqacNumber: event1Basics.iqacNumber || "",
         eventName: event1Basics.eventName || "",
@@ -101,10 +139,16 @@ const BasicEventForm = ({ eventData, nextForm }) => {
         description: event1Basics.description || "",
       };
       setFormData(prev => ({ ...prev, ...prefillData }));
+      setOrganizers(prefillOrganizers);
+      setResourcePersons(prefillResourcePersons);
       setOriginalFormData(prefillData);
+      setOriginalOrganizers(prefillOrganizers);
+      setOriginalResourcePersons(prefillResourcePersons);
       setIsEditMode(true);
       setIsFormEditable(false); // Start in read-only mode
     } else if (isEditMode && eventData && eventData._id) {
+      const prefillOrganizers = normalizeOrganizers(eventData.organizers);
+      const prefillResourcePersons = normalizeResourcePersons(eventData.resourcePersons);
       const prefillData = {
         iqacNumber: eventData.iqacNumber || "",
         eventName: eventData.eventName || "",
@@ -123,7 +167,11 @@ const BasicEventForm = ({ eventData, nextForm }) => {
         description: eventData.description || "",
       };
       setFormData(prev => ({ ...prev, ...prefillData }));
+      setOrganizers(prefillOrganizers);
+      setResourcePersons(prefillResourcePersons);
       setOriginalFormData(prefillData);
+      setOriginalOrganizers(prefillOrganizers);
+      setOriginalResourcePersons(prefillResourcePersons);
       setIsEditMode(true);
       setIsFormEditable(false); // Start in read-only mode
     } else {
@@ -134,6 +182,9 @@ const BasicEventForm = ({ eventData, nextForm }) => {
   }, [event1Basics, eventData]);
 
   useEffect(() => {
+    const inEditMode = localStorage.getItem('isEditMode') === 'true';
+    if (inEditMode) return;
+
     if (!eventData) {
       const empiddecode = localStorage.getItem("event_token");
       if (empiddecode) {
@@ -517,6 +568,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, iqacNumber: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
@@ -533,6 +585,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, eventName: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
@@ -562,7 +615,6 @@ const BasicEventForm = ({ eventData, nextForm }) => {
             {/* Event Venue */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700">
-                      disabled={!isFormEditable}
                 Event Venue
               </label>
               <input
@@ -571,11 +623,11 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, eventVenue: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
             </div>
-                      disabled={!isFormEditable}
 
             {/* Start Date */}
             <div className="col-span-1">
@@ -588,6 +640,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, startDate: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
@@ -598,13 +651,13 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <label className="block text-sm font-medium text-gray-700">
                 End Date
               </label>
-                      disabled={!isFormEditable}
               <input
                 type="date"
                 value={toDateInputValue(formData.endDate)}
                 onChange={(e) =>
                   setFormData({ ...formData, endDate: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
@@ -614,7 +667,6 @@ const BasicEventForm = ({ eventData, nextForm }) => {
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700">
                 Year
-                      disabled={!isFormEditable}
               </label>
               <input
                 type="number"
@@ -622,6 +674,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, year: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
@@ -630,7 +683,6 @@ const BasicEventForm = ({ eventData, nextForm }) => {
             {/* Year Categories */}
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700">
-                      disabled={!isFormEditable}
                 Year Categories
               </label>
               <input
@@ -639,6 +691,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, categories: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 placeholder="Enter year categories"
               />
@@ -646,13 +699,13 @@ const BasicEventForm = ({ eventData, nextForm }) => {
 
             {/* Departments */}
             <div className="col-span-1">
-                      disabled={!isFormEditable}
               <label className="block text-sm font-medium text-gray-700">
                 Departments
               </label>
               <select
                 value={(formData.departments && formData.departments[0]) || ""}
                 onChange={(e) => handleDepartmentChange(e.target.value)}
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
                 <option value="">Select Department</option>
@@ -662,7 +715,6 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   </option>
                 ))}
               </select>
-                      disabled={!isFormEditable}
             </div>
 
             {/* Logos */}
@@ -673,10 +725,10 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <select
                 value={(formData.logos && formData.logos[0]) || ""}
                 onChange={(e) => handleLogoChange(e.target.value)}
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
                 <option value="">Select Logo</option>
-                      disabled={!isFormEditable}
                 {logos.map((logo) => (
                   <option key={logo} value={logo}>
                     {logo}
@@ -693,6 +745,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <select
                 value={(formData.professional && formData.professional[0]) || ""}
                 onChange={(e) => handelProfessionalBodeis(e.target.value)}
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
                 <option value="">Select Professional Society</option>
@@ -715,6 +768,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, startTime: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
@@ -731,6 +785,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, endTime: e.target.value })
                 }
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
@@ -747,6 +802,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, description: e.target.value })
                 }
                 rows="4"
+                disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               />
@@ -763,6 +819,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                     type="text"
                     placeholder="Name"
                     value={person.name || ""}
+                    disabled={!isFormEditable}
                     onChange={e => {
                       const updated = [...resourcePersons];
                       updated[idx].name = e.target.value;
@@ -775,6 +832,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                     type="text"
                     placeholder="Affiliation"
                     value={person.affiliation || ""}
+                    disabled={!isFormEditable}
                     onChange={e => {
                       const updated = [...resourcePersons];
                       updated[idx].affiliation = e.target.value;
@@ -788,6 +846,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                     onClick={() => {
                       setResourcePersons(resourcePersons.filter((_, i) => i !== idx));
                     }}
+                    disabled={!isFormEditable}
                     className="text-red-500 hover:text-red-700"
                   >
                     Remove
@@ -797,6 +856,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <button
                 type="button"
                 onClick={() => setResourcePersons([...resourcePersons, { name: '', affiliation: '' }])}
+                disabled={!isFormEditable}
                 className="mt-2 rounded-md bg-emerald-600 px-3 py-1 text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
               >
                 Add Resource Person
@@ -814,6 +874,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                     type="text"
                     placeholder="Employee ID"
                     value={org.employeeId || ""}
+                    disabled={!isFormEditable}
                     onChange={e => {
                       const updated = [...organizers];
                       updated[idx].employeeId = e.target.value;
@@ -826,6 +887,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                     type="text"
                     placeholder="Name"
                     value={org.name || ""}
+                    disabled={!isFormEditable}
                     onChange={e => {
                       const updated = [...organizers];
                       updated[idx].name = e.target.value;
@@ -838,6 +900,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                     type="text"
                     placeholder="Designation"
                     value={org.designation || ""}
+                    disabled={!isFormEditable}
                     onChange={e => {
                       const updated = [...organizers];
                       updated[idx].designation = e.target.value;
@@ -850,6 +913,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                     type="text"
                     placeholder="Phone"
                     value={org.phone || ""}
+                    disabled={!isFormEditable}
                     onChange={e => {
                       const updated = [...organizers];
                       updated[idx].phone = e.target.value;
@@ -863,6 +927,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                     onClick={() => {
                       setOrganizers(organizers.filter((_, i) => i !== idx));
                     }}
+                    disabled={!isFormEditable}
                     className="text-red-500 hover:text-red-700"
                   >
                     Remove
@@ -872,6 +937,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               <button
                 type="button"
                 onClick={() => setOrganizers([...organizers, { employeeId: '', name: '', designation: '', phone: '' }])}
+                disabled={!isFormEditable}
                 className="mt-2 rounded-md bg-emerald-600 px-3 py-1 text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
               >
                 Add Organizer
