@@ -264,19 +264,33 @@ const EndForm = () => {
   }, [location.pathname, currentEventId]);
 
   function clearLocalStorage() {
-    localStorage.removeItem("basicEvent");
-    localStorage.removeItem("communicationForm");
-    localStorage.removeItem("transportForm");
-    localStorage.removeItem("iqacno");
-    localStorage.removeItem("foodForm");
-    localStorage.removeItem("guestRoomForm");
-    localStorage.removeItem("foodFormId");
-    localStorage.removeItem("guestRoomFormId");
-    localStorage.removeItem("transportFormId");
-    localStorage.removeItem("communicationFormId");
-    localStorage.removeItem("basicEventId");
-    localStorage.removeItem("currentEventId");
-    localStorage.removeItem("isEditMode");
+    const keysToClear = [
+      "basicEvent",
+      "communicationForm",
+      "transportForm",
+      "iqacno",
+      "foodForm",
+      "guestRoomForm",
+      "foodFormId",
+      "guestRoomFormId",
+      "transportFormId",
+      "communicationFormId",
+      "basicEventId",
+      "currentEventId",
+      "currentEventData",
+      "common_data",
+      "endformId",
+      "isEditMode",
+      "foodFormData",
+      "guestRoomFormData",
+      "transportFormData",
+      "communicationFormData",
+      "foodHasUnsavedChanges",
+      "guestRoomHasUnsavedChanges",
+      "transportHasUnsavedChanges",
+      "communicationHasUnsavedChanges",
+    ];
+    keysToClear.forEach((key) => localStorage.removeItem(key));
   }
 
   const handleSubmit = async (e) => {

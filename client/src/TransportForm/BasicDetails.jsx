@@ -71,7 +71,6 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
             onChange={handleChange}
             disabled={disabled}
             className="mt-1"
-            placeholder="1/2024-25/"
             required
           />
         </div>

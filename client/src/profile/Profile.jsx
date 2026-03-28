@@ -88,7 +88,8 @@ function Profile() {
   }, [isAdminUser]);
 
   const handleCreateEvent = () => {
-    navigate('/forms');
+    localStorage.setItem('startNewFlow', 'true');
+    navigate('/forms/basic');
   };
 
   const handleManageEvents = () => {

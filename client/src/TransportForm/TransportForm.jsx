@@ -200,10 +200,10 @@ const TransportForm = ({ eventData, nextForm }) => {
     const currentEventId = localStorage.getItem("currentEventId");
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     
-    // Check if we're in edit mode or have an active event
+    // No active flow yet: keep empty form.
     if (!currentEventId && !endformId && !isEditMode) {
       console.log("TransportForm - No active event found, starting with empty form for new event creation");
-      setCurrentEvent(getAutofilledTransportBase());
+      setCurrentEvent(defaultCurrentEvent);
       return;
     }
 
@@ -214,8 +214,8 @@ const TransportForm = ({ eventData, nextForm }) => {
       return;
     }
     
-    // If we have an endformId OR isEditMode is true OR currentEventId, this is an existing event being edited
-    if (endformId || isEditMode || currentEventId) {
+    // Existing flow: only use edit mode or endform-linked prefill.
+    if (endformId || isEditMode) {
       // Check if we have unsaved changes (user was actively editing)
       const existingFormData = localStorage.getItem('transportFormData');
       const hasUnsavedChanges = localStorage.getItem('transportHasUnsavedChanges') === 'true';

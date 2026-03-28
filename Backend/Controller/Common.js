@@ -11,17 +11,53 @@ const toDayDate = (value) => {
   return d;
 };
 
+const toValidDate = (value) => {
+  const d = value ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  return d;
+};
+
+const getBookingDate = (endform, event) => {
+  return (
+    toValidDate(endform?.createdAt) ||
+    toValidDate(endform?.createdat) ||
+    toValidDate(event?.createdAt) ||
+    toValidDate(event?.createdat) ||
+    toValidDate(event?.startDate)
+  );
+};
+
 const getTrackedEndformsAndEvents = async () => {
-  const endforms = await Endform.find({ eventdata: { $exists: true, $ne: null } })
-    .select("eventdata status createdAt")
+  const rawEndforms = await Endform.find({ eventdata: { $exists: true, $ne: null } })
+    .select("eventdata status createdAt createdat")
     .lean();
 
   const eventIds = [
-    ...new Set(endforms.map((f) => String(f.eventdata)).filter(Boolean)),
+    ...new Set(rawEndforms.map((f) => String(f.eventdata)).filter(Boolean)),
   ];
 
   const events = await Event.find({ _id: { $in: eventIds } }).lean();
   const eventsMap = new Map(events.map((e) => [String(e._id), e]));
+
+  const sortedEndforms = rawEndforms
+    .slice()
+    .sort((a, b) => {
+      const aDate = getBookingDate(a, eventsMap.get(String(a.eventdata))) || new Date(0);
+      const bDate = getBookingDate(b, eventsMap.get(String(b.eventdata))) || new Date(0);
+      return bDate - aDate;
+    });
+
+  // Keep only the latest endform per event to avoid duplicate counting.
+  const uniqueEndformsMap = new Map();
+  sortedEndforms.forEach((ef) => {
+    const key = String(ef.eventdata || "");
+    if (!key) return;
+    if (!uniqueEndformsMap.has(key)) {
+      uniqueEndformsMap.set(key, ef);
+    }
+  });
+
+  const endforms = Array.from(uniqueEndformsMap.values());
 
   return { endforms, events, eventsMap };
 };
@@ -61,12 +97,13 @@ const getDashboardData = async (req, res) => {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   try {
-    const { endforms, events } = await getTrackedEndformsAndEvents();
+    const { endforms, events, eventsMap } = await getTrackedEndformsAndEvents();
 
     const pendingCollaborations = endforms.filter((ef) => ef.status === "Pending").length;
     const totalBookingsThisMonth = endforms.filter((ef) => {
-      const created = new Date(ef.createdAt);
-      return !Number.isNaN(created.getTime()) && created >= startOfMonth;
+      const event = eventsMap.get(String(ef.eventdata));
+      const created = getBookingDate(ef, event);
+      return created && !Number.isNaN(created.getTime()) && created >= startOfMonth;
     }).length;
     const eventsToday = events.filter((ev) => {
       const start = toDayDate(ev.startDate);
@@ -98,6 +135,7 @@ const getDashboardData = async (req, res) => {
 
 const getEventStats = async (req, res) => {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const startOfQuarter = new Date(
     today.getFullYear(),
     Math.floor(today.getMonth() / 3) * 3,
@@ -107,14 +145,18 @@ const getEventStats = async (req, res) => {
   endOfQuarter.setMonth(startOfQuarter.getMonth() + 3);
 
   try {
-    const totalEvents = await Event.countDocuments();
-    const upcomingEvents = await Event.countDocuments({
-      startDate: { $gte: today.toISOString().split("T")[0] },
-    });
-    const ongoingEvents = await Event.countDocuments({
-      startDate: { $lte: today.toISOString().split("T")[0] },
-      endDate: { $gte: today.toISOString().split("T")[0] },
-    });
+    const { events } = await getTrackedEndformsAndEvents();
+
+    const totalEvents = events.length;
+    const upcomingEvents = events.filter((ev) => {
+      const start = toDayDate(ev.startDate);
+      return start && start >= today;
+    }).length;
+    const ongoingEvents = events.filter((ev) => {
+      const start = toDayDate(ev.startDate);
+      const end = toDayDate(ev.endDate);
+      return start && end && start <= today && end >= today;
+    }).length;
 
     const stats = {
       totalEvents,
@@ -139,8 +181,9 @@ const getComprehensiveDashboardData = async (req, res) => {
 
     const pendingCollaborations = endforms.filter((ef) => ef.status === "Pending").length;
     const totalBookingsThisMonth = endforms.filter((ef) => {
-      const created = new Date(ef.createdAt);
-      return !Number.isNaN(created.getTime()) && created >= startOfMonth;
+      const event = eventsMap.get(String(ef.eventdata));
+      const created = getBookingDate(ef, event);
+      return created && !Number.isNaN(created.getTime()) && created >= startOfMonth;
     }).length;
 
     const eventsToday = endforms
@@ -185,8 +228,9 @@ const getComprehensiveDashboardData = async (req, res) => {
       const endOfMonth = new Date(currentYear, month + 1, 0);
       
       const monthCount = endforms.filter((ef) => {
-        const created = new Date(ef.createdAt);
-        return !Number.isNaN(created.getTime()) && created >= startOfMonth && created <= endOfMonth;
+        const event = eventsMap.get(String(ef.eventdata));
+        const created = getBookingDate(ef, event);
+        return created && !Number.isNaN(created.getTime()) && created >= startOfMonth && created <= endOfMonth;
       }).length;
       
       monthlyData.push({
@@ -211,7 +255,11 @@ const getComprehensiveDashboardData = async (req, res) => {
     // Recent bookings (last 10 events)
     const recentBookings = endforms
       .slice()
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .sort((a, b) => {
+        const aDate = getBookingDate(a, eventsMap.get(String(a.eventdata))) || new Date(0);
+        const bDate = getBookingDate(b, eventsMap.get(String(b.eventdata))) || new Date(0);
+        return bDate - aDate;
+      })
       .map((ef) => {
         const ev = eventsMap.get(String(ef.eventdata)) || {};
         return {

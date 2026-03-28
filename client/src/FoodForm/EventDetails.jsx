@@ -20,6 +20,7 @@ const EventDetails = ({ formData, setFormData, disabled = false }) => {
           name="eventName"
           value={formData.eventName}
           onChange={handleChange}
+          autoComplete="off"
           disabled={disabled}
           className="w-full"
         />
@@ -34,6 +35,7 @@ const EventDetails = ({ formData, setFormData, disabled = false }) => {
           name="eventType"
           value={formData.eventType}
           onChange={handleChange}
+          autoComplete="off"
           disabled={disabled}
           className="w-full"
         />

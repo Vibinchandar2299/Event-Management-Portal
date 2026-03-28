@@ -22,7 +22,7 @@ export function FormHeader() {
         </div>
         <div className="text-right">
           <h2 className="text-lg font-semibold">Transport Requisition Form</h2>
-          <p className="text-sm text-gray-600">IQAC/2024/001/e</p>
+          <p className="text-sm text-gray-600">IQAC Number</p>
         </div>
       </div>
     </div>

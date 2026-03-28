@@ -16,6 +16,7 @@ function FoodForm({ eventData, nextForm }) {
 
   const getBasicSourceData = () => {
     try {
+      const currentEventId = localStorage.getItem("currentEventId");
       const currentEventData = JSON.parse(localStorage.getItem("currentEventData") || "null");
       const basicFromCurrent = currentEventData?.basicEvent || null;
       const basicFromStorage = JSON.parse(localStorage.getItem("basicEvent") || "null");
@@ -32,9 +33,18 @@ function FoodForm({ eventData, nextForm }) {
         );
       };
 
-      if (hasUsableBasicData(basicFromCurrent)) return basicFromCurrent;
-      if (hasUsableBasicData(basicFromStorage)) return basicFromStorage;
-      if (hasUsableBasicData(basicFromCommon)) return basicFromCommon;
+      const isForCurrentFlow = (obj) => {
+        if (!obj || typeof obj !== "object") return false;
+        if (!currentEventId) return true;
+        const objId = obj._id || obj.id;
+        return objId ? String(objId) === String(currentEventId) : false;
+      };
+
+      // Prefer the just-saved Basic Event for the active flow.
+      if (hasUsableBasicData(basicFromStorage) && isForCurrentFlow(basicFromStorage)) return basicFromStorage;
+      if (hasUsableBasicData(basicFromCurrent) && isForCurrentFlow(basicFromCurrent)) return basicFromCurrent;
+      // Use common_data only as a last fallback to avoid stale cross-event leakage.
+      if (!currentEventId && hasUsableBasicData(basicFromCommon)) return basicFromCommon;
       return {};
     } catch {
       return {};
@@ -124,7 +134,29 @@ function FoodForm({ eventData, nextForm }) {
   const canEdit = userDept === "food" || userDept === "iqac" || userDept === "system admin" || !userDept;
   const [isFormEditable, setIsFormEditable] = useState(false);
   const [originalFormData, setOriginalFormData] = useState(null);
-  const isEditMode = localStorage.getItem('isEditMode') === 'true';
+  const rawIsEditMode = localStorage.getItem('isEditMode') === 'true';
+  const isEditMode = rawIsEditMode && !!endformId;
+
+  useEffect(() => {
+    // New create flow marker: basicEventId matches currentEventId.
+    // In this case, any leftover edit/endform keys are stale and must be cleared.
+    const currentId = localStorage.getItem('currentEventId');
+    const basicId = localStorage.getItem('basicEventId');
+    if (currentId && basicId && String(currentId) === String(basicId)) {
+      localStorage.removeItem('endformId');
+      localStorage.removeItem('isEditMode');
+      localStorage.removeItem('foodForm');
+      localStorage.removeItem('foodFormData');
+      localStorage.removeItem('foodHasUnsavedChanges');
+    }
+  }, []);
+
+  useEffect(() => {
+    // Guard against stale edit flag from previous flows.
+    if (rawIsEditMode && !endformId) {
+      localStorage.removeItem('isEditMode');
+    }
+  }, [rawIsEditMode, endformId]);
 
   useEffect(() => {
     setIsFormEditable(!isEditMode);
@@ -192,7 +224,8 @@ function FoodForm({ eventData, nextForm }) {
     // Check if there's an active event first
     const endformId = localStorage.getItem("endformId");
     const currentEventId = localStorage.getItem("currentEventId");
-    const isEditMode = localStorage.getItem('isEditMode') === 'true';
+    const rawIsEditMode = localStorage.getItem('isEditMode') === 'true';
+    const isEditMode = rawIsEditMode && !!endformId;
     
     console.log("FoodForm - endformId:", endformId);
     console.log("FoodForm - currentEventId:", currentEventId);
@@ -201,8 +234,34 @@ function FoodForm({ eventData, nextForm }) {
     console.log("FoodForm - foodForm in localStorage:", localStorage.getItem('foodForm'));
     console.log("FoodForm - foodFormId in localStorage:", localStorage.getItem('foodFormId'));
     
-    // Check if we're in edit mode or have an active event
-    if (!endformId && !isEditMode) {
+    // No active flow yet: keep empty form.
+    if (!currentEventId && !endformId && !isEditMode) {
+      console.log("FoodForm - No active event, starting with empty form");
+      setFormData({
+        iqacNumber: "",
+        requisitionDate: "",
+        department: "",
+        requestorName: "",
+        empId: "",
+        designationDepartment: "",
+        mobileNumber: "",
+        eventName: "",
+        eventType: "",
+        otherEventType: "",
+        dates: {},
+        foodDetails: {},
+        amenitiesIncharge: "",
+        signOfOS: "",
+        facultySignature: "",
+        recommendedBy: "",
+        deanClearance: "",
+      });
+      setHasInitialized(true);
+      return;
+    }
+
+    // New flow after Basic Event save: prefill only from current Basic details.
+    if (currentEventId && !endformId && !isEditMode) {
       console.log("FoodForm - New flow detected, applying Basic Event autofill");
       setFormData(getAutofilledFoodBase());
       setHasInitialized(true);
@@ -443,7 +502,10 @@ function FoodForm({ eventData, nextForm }) {
         'Authorization': `Bearer ${token}`
       };
       let response;
-      if (localStorage.getItem('isEditMode') === 'true' || localStorage.getItem('endformId')) {
+      const activeEndformId = localStorage.getItem('endformId');
+      const activeIsEditMode = localStorage.getItem('isEditMode') === 'true' && !!activeEndformId;
+
+      if (activeIsEditMode || activeEndformId) {
         // Get the food form ID from the current form data
         const foodFormId = formData._id;
         console.log("[DEBUG] Food form ID for update:", foodFormId);
@@ -545,6 +607,7 @@ function FoodForm({ eventData, nextForm }) {
       )}
       <form
         onSubmit={handleSubmit}
+        autoComplete="off"
         className="mx-auto max-w-full overflow-hidden"
       >
         <div className="mb-6 rounded-xl bg-amber-100/70 px-4 py-3 text-sm font-medium text-amber-800">

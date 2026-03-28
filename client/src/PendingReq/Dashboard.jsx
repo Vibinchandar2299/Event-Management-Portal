@@ -125,7 +125,10 @@ const Dashboard = ({ refreshKey = 0 }) => {
               <ChevronRightIcon className="h-4 w-4 text-gray-600 cursor-pointer" />
             </div>
             <button 
-              onClick={() => navigate('/forms')}
+              onClick={() => {
+                localStorage.setItem('startNewFlow', 'true');
+                navigate('/forms/basic');
+              }}
               className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
             >
               <PlusIcon className="h-5 w-5" />

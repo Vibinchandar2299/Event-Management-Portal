@@ -43,11 +43,42 @@ const Form = () => {
     const endformId = localStorage.getItem('endformId');
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     const currentEventId = localStorage.getItem('currentEventId');
+    const startNewFlow = localStorage.getItem('startNewFlow') === 'true';
     
     console.log("Form - Initial values:");
     console.log("Form - endformId:", endformId);
     console.log("Form - currentEventId:", currentEventId);
     console.log("Form - isEditMode:", isEditMode);
+    console.log("Form - startNewFlow:", startNewFlow);
+
+    // Explicit new-event action from dashboard/profile/pending: always reset flow state.
+    if (startNewFlow) {
+      dispatch(clearEventData());
+      dispatch(resetEventState());
+      [
+        'foodForm', 'guestRoomForm', 'transportForm', 'communicationForm',
+        'basicEvent', 'iqacno', 'common_data', 'foodFormData', 'guestRoomFormData',
+        'transportFormData', 'communicationFormData', 'foodFormState', 'guestRoomFormState',
+        'transportFormState', 'communicationFormState', 'formData', 'selectedOptions',
+        'currentFormData', 'eventFormData', 'basicEventId', 'currentEventData',
+        'eventData', 'formState', 'communicationState', 'transportState', 'foodState', 'guestRoomState',
+        'currentEventId', 'endformId', 'isEditMode',
+        'foodHasUnsavedChanges', 'guestRoomHasUnsavedChanges', 'transportHasUnsavedChanges', 'communicationHasUnsavedChanges',
+        'startNewFlow'
+      ].forEach((key) => localStorage.removeItem(key));
+      // Ensure user starts from Basic form in a clean state.
+      if (location.pathname !== '/forms/basic') {
+        navigate('/forms/basic');
+      }
+      return;
+    }
+
+    // Direct /forms entry without edit mode should behave like starting a new event.
+    if (location.pathname === '/forms' && !isEditMode) {
+      localStorage.setItem('startNewFlow', 'true');
+      navigate('/forms/basic');
+      return;
+    }
     
     // If we have isEditMode but no currentEventId, this is a stale edit mode - clear it
     if (isEditMode && !currentEventId) {
@@ -59,6 +90,27 @@ const Form = () => {
     if (isEditMode && !endformId) {
       console.log("Form - Clearing stale isEditMode flag (no endformId)");
       localStorage.removeItem('isEditMode');
+    }
+
+    // If we're in create flow (currentEventId present) and not truly editing,
+    // clear stale edit context that can leak old form values.
+    if (currentEventId && !isEditMode && endformId) {
+      console.log("Form - Clearing stale endform/edit context for create flow");
+      [
+        'endformId',
+        'foodForm',
+        'guestRoomForm',
+        'transportForm',
+        'communicationForm',
+        'foodFormData',
+        'guestRoomFormData',
+        'transportFormData',
+        'communicationFormData',
+        'foodHasUnsavedChanges',
+        'guestRoomHasUnsavedChanges',
+        'transportHasUnsavedChanges',
+        'communicationHasUnsavedChanges',
+      ].forEach((key) => localStorage.removeItem(key));
     }
     
     // Clear stale data only when there is no active flow at all.
@@ -96,7 +148,7 @@ const Form = () => {
       console.log("Form - Active flow detected, preserving data:", { endformId, currentEventId, isEditMode });
     }
 
-  }, [token, dispatch, navigate]);
+  }, [token, dispatch, navigate, location.pathname]);
 
     // The nested routes will handle form rendering
   // We just need to render the Outlet

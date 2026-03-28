@@ -218,6 +218,11 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       console.log("GuestRoom - Skipping common_data effect due to edit mode or existing event");
       return;
     }
+
+    // Do not prefill from common_data unless a new basic event is active.
+    if (!currentEventId) {
+      return;
+    }
     
     const local = JSON.parse(localStorage.getItem("common_data"));
 
@@ -266,10 +271,21 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     console.log("guestRoomForm in localStorage:", localStorage.getItem('guestRoomForm'));
     console.log("guestRoomFormId in localStorage:", localStorage.getItem('guestRoomFormId'));
     
-    // Check if we're in edit mode or have an active event
+    // No active flow yet: keep empty form.
     if (!currentEventId && !endformId && !isEditMode) {
       console.log("GuestRoom - No active event found, starting with empty form for new event creation");
-      setFormData(getAutofilledGuestBase());
+      setFormData({
+        department: "",
+        requestorName: "",
+        empId: "",
+        mobile: "",
+        designation: "",
+        purpose: "",
+        date: "",
+        guestCount: "",
+        eventType: "",
+        selectedRooms: [],
+      });
       return;
     }
 
@@ -280,8 +296,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       return;
     }
     
-    // If we have an endformId OR isEditMode is true OR currentEventId, this is an existing event being edited
-    if (endformId || isEditMode || currentEventId) {
+    // Existing flow: only use edit mode or endform-linked prefill.
+    if (endformId || isEditMode) {
       // Check if we have unsaved changes (user was actively editing)
       const existingFormData = localStorage.getItem('guestRoomForm');
       const hasUnsavedChanges = localStorage.getItem('guestRoomHasUnsavedChanges') === 'true';

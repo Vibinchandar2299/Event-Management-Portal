@@ -371,6 +371,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
           };
           console.log("Dispatching new event data to Redux:", newEventData);
           dispatch(setEventData(newEventData));
+          localStorage.setItem('currentEventData', JSON.stringify(newEventData));
 
           const eventformId = response.data.event._id;
           const iqacNumber = formData.iqacNumber;
@@ -397,6 +398,14 @@ const BasicEventForm = ({ eventData, nextForm }) => {
           localStorage.removeItem('guestRoomForm');
           localStorage.removeItem('transportForm');
           localStorage.removeItem('communicationForm');
+          localStorage.removeItem('foodFormData');
+          localStorage.removeItem('guestRoomFormData');
+          localStorage.removeItem('transportFormData');
+          localStorage.removeItem('communicationFormData');
+          localStorage.removeItem('foodHasUnsavedChanges');
+          localStorage.removeItem('guestRoomHasUnsavedChanges');
+          localStorage.removeItem('transportHasUnsavedChanges');
+          localStorage.removeItem('communicationHasUnsavedChanges');
           // Don't clear basicEvent, iqacno, or common_data as they were just set
 
           // Store the event ID for later endform creation

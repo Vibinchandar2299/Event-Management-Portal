@@ -31,6 +31,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="iqacNumber"
             value={formData.iqacNumber || ""}
             onChange={handleChange}
+            autoComplete="off"
             disabled={disabled}
             className="w-full"
           />
@@ -44,6 +45,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="requisitionDate"
             value={toDateInputValue(formData.requisitionDate)}
             onChange={handleChange}
+            autoComplete="off"
             disabled={disabled}
             className="w-full"
           />
@@ -58,6 +60,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="department"
             value={formData.department || ""}
             onChange={handleChange}
+            autoComplete="off"
             disabled={disabled}
             className="w-full"
           />
@@ -72,6 +75,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="requestorName"
             value={formData.requestorName || ""}
             onChange={handleChange}
+            autoComplete="off"
             disabled={disabled}
             className="w-full"
           />
@@ -85,6 +89,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="empId"
             value={formData.empId || ""}
             onChange={handleChange}
+            autoComplete="off"
             disabled={disabled}
             className="w-full"
           />
@@ -98,6 +103,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="designationDepartment"
             value={formData.designationDepartment || ""}
             onChange={handleChange}
+            autoComplete="off"
             disabled={disabled}
             className="w-full"
           />
@@ -111,6 +117,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="mobileNumber"
             value={formData.mobileNumber || ""}
             onChange={handleChange}
+            autoComplete="off"
             disabled={disabled}
             className="w-full"
           />
