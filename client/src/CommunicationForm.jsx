@@ -535,7 +535,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="h-10 rounded-md bg-gray-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
                 >
                   Cancel
                 </button>

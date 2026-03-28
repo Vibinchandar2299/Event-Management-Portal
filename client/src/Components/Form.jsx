@@ -61,14 +61,9 @@ const Form = () => {
       localStorage.removeItem('isEditMode');
     }
     
-    // Only preserve data if we have BOTH endformId AND currentEventId AND isEditMode (indicating a real edit session)
-    if (!endformId || !currentEventId || !isEditMode) {
-      // No endformId or no currentEventId or no isEditMode means new event creation or stale data - clear everything
-      console.log("Form - No endformId or no currentEventId or no isEditMode, clearing all data for fresh start");
-      console.log("Form - Condition check:");
-      console.log("Form - !endformId:", !endformId);
-      console.log("Form - !currentEventId:", !currentEventId);
-      console.log("Form - !isEditMode:", !isEditMode);
+    // Clear stale data only when there is no active flow at all.
+    if (!currentEventId && !isEditMode) {
+      console.log("Form - No active flow, clearing stale local data for fresh start");
       
       dispatch(clearEventData());
       dispatch(resetEventState());
@@ -96,12 +91,9 @@ const Form = () => {
       console.log('Form - After clearing - currentEventId:', localStorage.getItem('currentEventId'));
       console.log('Form - After clearing - endformId:', localStorage.getItem('endformId'));
       console.log('Form - After clearing - isEditMode:', localStorage.getItem('isEditMode'));
-      
-      // Don't generate custom event ID - let the backend create the MongoDB ObjectId
-      console.log('Form - Starting fresh event - will use backend-generated ID');
     } else {
-      // We have BOTH endformId AND currentEventId AND isEditMode - this is a real edit session, preserve the data
-      console.log("Form - Real edit session detected, preserving data for editing:", { endformId, currentEventId, isEditMode });
+      // Active creation/edit flow - preserve data across form navigation
+      console.log("Form - Active flow detected, preserving data:", { endformId, currentEventId, isEditMode });
     }
 
   }, [token, dispatch, navigate]);

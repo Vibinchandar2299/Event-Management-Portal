@@ -175,7 +175,38 @@ const BasicEventForm = ({ eventData, nextForm }) => {
       setIsEditMode(true);
       setIsFormEditable(false); // Start in read-only mode
     } else {
-      // New event creation - start editable
+      // New event creation - start editable and prefill from saved flow data if available
+      const basicFromStorage = JSON.parse(localStorage.getItem('basicEvent') || 'null');
+      const basicFromCommon = JSON.parse(localStorage.getItem('common_data') || 'null');
+      const prefillSource = basicFromStorage && (basicFromStorage.eventName || basicFromStorage.iqacNumber)
+        ? basicFromStorage
+        : basicFromCommon;
+
+      if (prefillSource) {
+        const prefillOrganizers = normalizeOrganizers(prefillSource.organizers);
+        const prefillResourcePersons = normalizeResourcePersons(prefillSource.resourcePersons);
+        const prefillData = {
+          iqacNumber: prefillSource.iqacNumber || "",
+          eventName: prefillSource.eventName || "",
+          eventType: prefillSource.eventType || "",
+          startDate: prefillSource.startDate ? prefillSource.startDate.split('T')[0] : "",
+          endDate: prefillSource.endDate ? prefillSource.endDate.split('T')[0] : "",
+          startTime: prefillSource.startTime || "",
+          endTime: prefillSource.endTime || "",
+          eventVenue: prefillSource.eventVenue || "",
+          departments: prefillSource.departments || [],
+          academicdepartment: prefillSource.academicdepartment || [],
+          professional: prefillSource.professional || [],
+          logos: prefillSource.logos || [],
+          year: prefillSource.year || "",
+          categories: prefillSource.categories || "",
+          description: prefillSource.description || "",
+        };
+        setFormData(prev => ({ ...prev, ...prefillData }));
+        setOrganizers(prefillOrganizers);
+        setResourcePersons(prefillResourcePersons);
+      }
+
       setIsEditMode(false);
       setIsFormEditable(true);
     }
@@ -346,7 +377,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
 
           localStorage.setItem(
             "basicEvent",
-            JSON.stringify({ _id: eventformId })
+            JSON.stringify(response.data.event)
           );
           localStorage.setItem(
             "iqacno",
@@ -476,9 +507,9 @@ const BasicEventForm = ({ eventData, nextForm }) => {
     const currentEventId = localStorage.getItem('currentEventId');
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     
-    // If we have currentEventId but no endformId, this is a new event
-    if (currentEventId && !endformId) {
-      console.log("BasicEventForm - New event creation detected, clearing old data");
+    // Only clear when there is no active flow at all.
+    if (!currentEventId && !endformId && !isEditMode) {
+      console.log("BasicEventForm - No active flow, clearing stale data");
       dispatch(clearEventData());
       // Force a complete Redux reset
       dispatch(resetEventState());

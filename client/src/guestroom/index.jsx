@@ -27,6 +27,64 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
+
+  const getBasicSourceData = () => {
+    try {
+      const currentEventData = JSON.parse(localStorage.getItem("currentEventData") || "null");
+      const basicFromCurrent = currentEventData?.basicEvent || null;
+      const basicFromStorage = JSON.parse(localStorage.getItem("basicEvent") || "null");
+      const basicFromCommon = JSON.parse(localStorage.getItem("common_data") || "null");
+
+      const hasUsableBasicData = (obj) => {
+        if (!obj || typeof obj !== "object") return false;
+        return Boolean(
+          obj.iqacNumber ||
+          obj.eventName ||
+          obj.eventType ||
+          obj.departments ||
+          obj.organizers
+        );
+      };
+
+      if (hasUsableBasicData(basicFromCurrent)) return basicFromCurrent;
+      if (hasUsableBasicData(basicFromStorage)) return basicFromStorage;
+      if (hasUsableBasicData(basicFromCommon)) return basicFromCommon;
+      return {};
+    } catch {
+      return {};
+    }
+  };
+
+  const getPrimaryOrganizer = (source) => {
+    if (Array.isArray(source?.organizers) && source.organizers.length > 0) {
+      return source.organizers[0] || {};
+    }
+    if (source?.organizers && typeof source.organizers === "object") {
+      return source.organizers;
+    }
+    return {};
+  };
+
+  const getAutofilledGuestBase = () => {
+    const basic = getBasicSourceData();
+    const organizer = getPrimaryOrganizer(basic);
+    const departmentValue = Array.isArray(basic.departments)
+      ? basic.departments.join(", ")
+      : (basic.departments || basic.department || "");
+
+    return {
+      department: departmentValue,
+      requestorName: organizer.name || basic.requestorName || "",
+      empId: organizer.employeeId || basic.empId || "",
+      mobile: organizer.phone || basic.mobileNumber || basic.mobile || "",
+      designation: organizer.designation || basic.designation || "",
+      purpose: basic.description || "",
+      date: basic.startDate ? new Date(basic.startDate).toISOString().split("T")[0] : "",
+      guestCount: "",
+      eventType: basic.eventType || "",
+      selectedRooms: [],
+    };
+  };
   
   // Check if there's an active event at the very beginning
   const endformId = localStorage.getItem('endformId');
@@ -144,19 +202,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     
     // If we have a currentEventId but no guestRoomFormId, we're creating a new event
     if (currentEventId && !guestRoomFormId) {
-      console.log("New event creation detected, resetting form data");
-      setFormData({
-        department: "",
-        requestorName: "",
-        empId: "",
-        mobile: "",
-        designation: "",
-        purpose: "",
-        date: "",
-        guestCount: "",
-        eventType: "",
-        selectedRooms: [],
-      });
+      console.log("New event creation detected, applying Basic Event autofill");
+      setFormData(getAutofilledGuestBase());
     }
   }, [location.pathname]);
 
@@ -176,6 +223,9 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
     if (local) {
       const eventData = local;
+      const primaryOrganizer = Array.isArray(eventData.organizers)
+        ? (eventData.organizers[0] || {})
+        : (eventData.organizers || {});
       // Format the date to yyyy-MM-dd
       const formattedDate = eventData.startDate 
         ? new Date(eventData.startDate).toISOString().split('T')[0]
@@ -192,10 +242,10 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         department: eventData.departments
           ? eventData.departments.join(", ")
           : "",
-        requestorName: eventData.organizers.name || "",
-        empId: eventData.organizers.employeeId || "",
-        designation: eventData.organizers.designation || "",
-        mobile: eventData.organizers.phone || "",
+        requestorName: primaryOrganizer.name || "",
+        empId: primaryOrganizer.employeeId || "",
+        designation: primaryOrganizer.designation || "",
+        mobile: primaryOrganizer.phone || "",
         purpose: eventData.description,
       }));
     }
@@ -219,19 +269,14 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     // Check if we're in edit mode or have an active event
     if (!currentEventId && !endformId && !isEditMode) {
       console.log("GuestRoom - No active event found, starting with empty form for new event creation");
-      // For new event creation, start with empty form
-      setFormData({
-        department: "",
-        requestorName: "",
-        empId: "",
-        mobile: "",
-        designation: "",
-        purpose: "",
-        date: "",
-        guestCount: "",
-        eventType: "",
-        selectedRooms: [],
-      });
+      setFormData(getAutofilledGuestBase());
+      return;
+    }
+
+    // New event flow after Basic Event save: currentEventId exists, but no endform yet
+    if (currentEventId && !endformId && !isEditMode) {
+      console.log("GuestRoom - Applying Basic Event autofill for new flow");
+      setFormData(getAutofilledGuestBase());
       return;
     }
     
@@ -723,7 +768,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   useEffect(() => {
     const endformId = localStorage.getItem('endformId');
     const currentEventId = localStorage.getItem('currentEventId');
-    if (!endformId || !currentEventId) {
+    // Only clear when there is no active event flow.
+    if (!currentEventId) {
       dispatch(clearEventData());
       localStorage.removeItem('guestRoomFormId');
       localStorage.removeItem('guestRoomForm');
@@ -748,7 +794,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     return () => {
       const endformId = localStorage.getItem('endformId');
       const currentEventId = localStorage.getItem('currentEventId');
-      if (!endformId || !currentEventId) {
+      if (!currentEventId) {
         dispatch(clearEventData());
       }
     };
@@ -907,16 +953,16 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                   </button>
                   <button
                     type="submit"
-                    className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                   >
                     Save and Go Next
                   </button>
                 </>
               )}
-              {!isEditMode && (
+              {!isEditMode && !isFormEditable && (
                 <button
                   type="submit"
-                  className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                   disabled={!canEdit}
                 >
                   Save and Go Next

@@ -17,6 +17,84 @@ const TransportForm = ({ eventData, nextForm }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const getBasicSourceData = () => {
+    try {
+      const currentEventData = JSON.parse(localStorage.getItem("currentEventData") || "null");
+      const basicFromCurrent = currentEventData?.basicEvent || null;
+      const basicFromStorage = JSON.parse(localStorage.getItem("basicEvent") || "null");
+      const basicFromCommon = JSON.parse(localStorage.getItem("common_data") || "null");
+
+      const hasUsableBasicData = (obj) => {
+        if (!obj || typeof obj !== "object") return false;
+        return Boolean(
+          obj.iqacNumber ||
+          obj.eventName ||
+          obj.eventType ||
+          obj.departments ||
+          obj.organizers
+        );
+      };
+
+      if (hasUsableBasicData(basicFromCurrent)) return basicFromCurrent;
+      if (hasUsableBasicData(basicFromStorage)) return basicFromStorage;
+      if (hasUsableBasicData(basicFromCommon)) return basicFromCommon;
+      return {};
+    } catch {
+      return {};
+    }
+  };
+
+  const getPrimaryOrganizer = (source) => {
+    if (Array.isArray(source?.organizers) && source.organizers.length > 0) {
+      return source.organizers[0] || {};
+    }
+    if (source?.organizers && typeof source.organizers === "object") {
+      return source.organizers;
+    }
+    return {};
+  };
+
+  const getAutofilledTransportBase = () => {
+    const basic = getBasicSourceData();
+    const organizer = getPrimaryOrganizer(basic);
+    const departmentValue = Array.isArray(basic.departments)
+      ? basic.departments[0] || ""
+      : (basic.departments || basic.department || "");
+    const requisitionDate = basic.startDate
+      ? new Date(basic.startDate).toISOString().split("T")[0]
+      : "";
+
+    return {
+      basicDetails: {
+        departmentName: departmentValue,
+        designation: organizer.designation || basic.designation || "",
+        empId: organizer.employeeId || basic.empId || "",
+        iqacNumber: basic.iqacNumber || "",
+        mobileNumber: organizer.phone || basic.mobileNumber || basic.mobile || "",
+        requestorName: organizer.name || basic.requestorName || "",
+        requisitionDate,
+      },
+      eventDetails: {
+        eventName: basic.eventName || "",
+        eventType: basic.eventType || "",
+        travellerDetails: "",
+      },
+      travelDetails: {
+        pickUpDateTime: "",
+        dropDateTime: "",
+        numberOfPassengers: "",
+        vehicleType: "",
+        pickUpLocation: "",
+        dropLocation: "",
+        specialRequirements: "",
+      },
+      driverDetails: {
+        mobileNumber: "",
+        name: "",
+      },
+    };
+  };
   
   // Check if there's an active event at the very beginning
   const endformId = localStorage.getItem('endformId');
@@ -69,7 +147,7 @@ const TransportForm = ({ eventData, nextForm }) => {
       iqacNumber: "",
       mobileNumber: "Not Provided",
       requestorName: "",
-      requisitionDate: new Date().toISOString().split('T')[0]
+      requisitionDate: ""
     },
     eventDetails: {
       eventName: "",
@@ -79,7 +157,7 @@ const TransportForm = ({ eventData, nextForm }) => {
     travelDetails: {
       pickUpDateTime: "",
       dropDateTime: "",
-      numberOfPassengers: 1,
+      numberOfPassengers: "",
       vehicleType: "",
       pickUpLocation: "",
       dropLocation: "",
@@ -125,36 +203,14 @@ const TransportForm = ({ eventData, nextForm }) => {
     // Check if we're in edit mode or have an active event
     if (!currentEventId && !endformId && !isEditMode) {
       console.log("TransportForm - No active event found, starting with empty form for new event creation");
-      // For new event creation, start with empty form
-      setCurrentEvent({
-        basicDetails: {
-          departmentName: "",
-          designation: "",
-          empId: "",
-          iqacNumber: "",
-          mobileNumber: "",
-          requestorName: "",
-          requisitionDate: new Date().toISOString().split('T')[0],
-        },
-        driverDetails: {
-          mobileNumber: "",
-          name: "",
-        },
-        travelDetails: {
-          pickUpDateTime: "",
-          dropDateTime: "",
-          numberOfPassengers: 1,
-          vehicleType: "",
-          pickUpLocation: "",
-          dropLocation: "",
-          specialRequirements: "",
-        },
-        eventDetails: {
-          eventName: "",
-          eventType: "",
-          travellerDetails: "",
-        },
-      });
+      setCurrentEvent(getAutofilledTransportBase());
+      return;
+    }
+
+    // New event flow after Basic Event save: currentEventId exists, but no endform yet
+    if (currentEventId && !endformId && !isEditMode) {
+      console.log("TransportForm - Applying Basic Event autofill for new flow");
+      setCurrentEvent(getAutofilledTransportBase());
       return;
     }
     
@@ -197,7 +253,7 @@ const TransportForm = ({ eventData, nextForm }) => {
               iqacNumber: transportData.iqacNumber || "",
               mobileNumber: transportData.mobileNumber || "",
               requestorName: transportData.requestorName || "",
-              requisitionDate: transportData.requisitionDate || new Date().toISOString().split('T')[0],
+              requisitionDate: transportData.requisitionDate || "",
             },
             driverDetails: {
               mobileNumber: transportData.driverDetails?.mobileNumber || "",
@@ -206,7 +262,7 @@ const TransportForm = ({ eventData, nextForm }) => {
             travelDetails: {
               pickUpDateTime: transportData.travelDetails?.pickUpDateTime || "",
               dropDateTime: transportData.travelDetails?.dropDateTime || "",
-              numberOfPassengers: transportData.travelDetails?.numberOfPassengers || 1,
+              numberOfPassengers: transportData.travelDetails?.numberOfPassengers ?? "",
               vehicleType: transportData.travelDetails?.vehicleType || "",
               pickUpLocation: transportData.travelDetails?.pickUpLocation || "",
               dropLocation: transportData.travelDetails?.dropLocation || "",
@@ -247,7 +303,7 @@ const TransportForm = ({ eventData, nextForm }) => {
                 iqacNumber: transportData.iqacNumber || "",
                 mobileNumber: transportData.mobileNumber || "",
                 requestorName: transportData.requestorName || "",
-                requisitionDate: transportData.requisitionDate || new Date().toISOString().split('T')[0],
+                requisitionDate: transportData.requisitionDate || "",
               },
               driverDetails: {
                 mobileNumber: transportData.driverDetails?.mobileNumber || "",
@@ -256,7 +312,7 @@ const TransportForm = ({ eventData, nextForm }) => {
               travelDetails: {
                 pickUpDateTime: transportData.travelDetails?.pickUpDateTime || "",
                 dropDateTime: transportData.travelDetails?.dropDateTime || "",
-                numberOfPassengers: transportData.travelDetails?.numberOfPassengers || 1,
+                numberOfPassengers: transportData.travelDetails?.numberOfPassengers ?? "",
                 vehicleType: transportData.travelDetails?.vehicleType || "",
                 pickUpLocation: transportData.travelDetails?.pickUpLocation || "",
                 dropLocation: transportData.travelDetails?.dropLocation || "",
@@ -316,7 +372,7 @@ const TransportForm = ({ eventData, nextForm }) => {
             iqacNumber: transportDataArray[0].basicDetails?.iqacNumber || "",
             mobileNumber: transportDataArray[0].basicDetails?.mobileNumber || "Not Provided",
             requestorName: transportDataArray[0].basicDetails?.requestorName || "",
-            requisitionDate: transportDataArray[0].basicDetails?.requisitionDate || new Date().toISOString().split('T')[0]
+            requisitionDate: transportDataArray[0].basicDetails?.requisitionDate || ""
           },
           eventDetails: {
             eventName: transportDataArray[0].eventDetails?.eventName || "",
@@ -326,7 +382,7 @@ const TransportForm = ({ eventData, nextForm }) => {
           travelDetails: {
             pickUpDateTime: transportDataArray[0].travelDetails?.pickUpDateTime || "",
             dropDateTime: transportDataArray[0].travelDetails?.dropDateTime || "",
-            numberOfPassengers: transportDataArray[0].travelDetails?.numberOfPassengers || 1,
+            numberOfPassengers: transportDataArray[0].travelDetails?.numberOfPassengers ?? "",
             vehicleType: transportDataArray[0].travelDetails?.vehicleType || "",
             pickUpLocation: transportDataArray[0].travelDetails?.pickUpLocation || "",
             dropLocation: transportDataArray[0].travelDetails?.dropLocation || "",
@@ -379,6 +435,13 @@ const TransportForm = ({ eventData, nextForm }) => {
       return;
     }
 
+    const passengersValue = Number(currentEvent.travelDetails.numberOfPassengers);
+    if (!Number.isFinite(passengersValue) || passengersValue < 1) {
+      toast.error("Please enter a valid Number of Passengers.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const eventId = localStorage.getItem("currentEventId");
       if (!eventId) {
@@ -413,7 +476,7 @@ const TransportForm = ({ eventData, nextForm }) => {
         travelDetails: {
           pickUpDateTime: new Date(currentEvent.travelDetails.pickUpDateTime),
           dropDateTime: new Date(currentEvent.travelDetails.dropDateTime),
-          numberOfPassengers: Number(currentEvent.travelDetails.numberOfPassengers) || 1,
+          numberOfPassengers: passengersValue,
           vehicleType: currentEvent.travelDetails.vehicleType,
           pickUpLocation: currentEvent.travelDetails.pickUpLocation,
           dropLocation: currentEvent.travelDetails.dropLocation,
@@ -598,13 +661,13 @@ const TransportForm = ({ eventData, nextForm }) => {
               <button type="button" onClick={handleCancel} className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
                 Cancel
               </button>
-              <button type="submit" className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+              <button type="submit" className="h-10 rounded-md bg-sky-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2">
                 Save and Go Next
               </button>
             </>
           )}
-          {!isEditMode && (
-            <button type="submit" className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" disabled={!canEdit}>
+          {!isEditMode && !isFormEditable && (
+            <button type="submit" className="h-10 rounded-md bg-sky-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2" disabled={!canEdit}>
               Save and Go Next
             </button>
           )}

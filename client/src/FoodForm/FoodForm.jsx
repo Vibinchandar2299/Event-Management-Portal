@@ -13,6 +13,75 @@ import { setEventData, clearEventData } from "../redux/EventSlice";
 function FoodForm({ eventData, nextForm }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const getBasicSourceData = () => {
+    try {
+      const currentEventData = JSON.parse(localStorage.getItem("currentEventData") || "null");
+      const basicFromCurrent = currentEventData?.basicEvent || null;
+      const basicFromStorage = JSON.parse(localStorage.getItem("basicEvent") || "null");
+      const basicFromCommon = JSON.parse(localStorage.getItem("common_data") || "null");
+
+      const hasUsableBasicData = (obj) => {
+        if (!obj || typeof obj !== "object") return false;
+        return Boolean(
+          obj.iqacNumber ||
+          obj.eventName ||
+          obj.eventType ||
+          obj.departments ||
+          obj.organizers
+        );
+      };
+
+      if (hasUsableBasicData(basicFromCurrent)) return basicFromCurrent;
+      if (hasUsableBasicData(basicFromStorage)) return basicFromStorage;
+      if (hasUsableBasicData(basicFromCommon)) return basicFromCommon;
+      return {};
+    } catch {
+      return {};
+    }
+  };
+
+  const getPrimaryOrganizer = (source) => {
+    if (Array.isArray(source?.organizers) && source.organizers.length > 0) {
+      return source.organizers[0] || {};
+    }
+    if (source?.organizers && typeof source.organizers === "object") {
+      return source.organizers;
+    }
+    return {};
+  };
+
+  const getAutofilledFoodBase = () => {
+    const basic = getBasicSourceData();
+    const organizer = getPrimaryOrganizer(basic);
+    const departmentValue = Array.isArray(basic.departments)
+      ? basic.departments[0] || ""
+      : (basic.departments || basic.department || "");
+    const fallbackDate = basic.startDate
+      ? new Date(basic.startDate).toISOString().slice(0, 10)
+      : "";
+
+    return {
+      iqacNumber: basic.iqacNumber || "",
+      requisitionDate: fallbackDate,
+      department: departmentValue,
+      requestorName: organizer.name || basic.requestorName || "",
+      empId: organizer.employeeId || basic.empId || "",
+      designationDepartment:
+        organizer.designation || basic.designationDepartment || basic.designation || "",
+      mobileNumber: organizer.phone || basic.mobileNumber || basic.mobile || "",
+      eventName: basic.eventName || "",
+      eventType: basic.eventType || "",
+      otherEventType: "",
+      dates: {},
+      foodDetails: {},
+      amenitiesIncharge: "",
+      signOfOS: "",
+      facultySignature: "",
+      recommendedBy: "",
+      deanClearance: "",
+    };
+  };
   
   // Check if there's an active event at the very beginning
   const endformId = localStorage.getItem('endformId');
@@ -134,27 +203,8 @@ function FoodForm({ eventData, nextForm }) {
     
     // Check if we're in edit mode or have an active event
     if (!endformId && !isEditMode) {
-      console.log("FoodForm - No active event found, starting with empty form for new event creation");
-      // For new event creation, start with empty form
-      setFormData({
-        iqacNumber: "",
-        requisitionDate: "",
-        department: "",
-        requestorName: "",
-        empId: "",
-        designationDepartment: "",
-        mobileNumber: "",
-        eventName: "",
-        eventType: "",
-        otherEventType: "",
-        dates: {},
-        foodDetails: {},
-        amenitiesIncharge: "",
-        signOfOS: "",
-        facultySignature: "",
-        recommendedBy: "",
-        deanClearance: "",
-      });
+      console.log("FoodForm - New flow detected, applying Basic Event autofill");
+      setFormData(getAutofilledFoodBase());
       setHasInitialized(true);
       return;
     }
@@ -517,13 +567,13 @@ function FoodForm({ eventData, nextForm }) {
               <button type="button" onClick={handleCancel} className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
                 Cancel
               </button>
-              <button type="submit" className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+              <button type="submit" className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
                 Save and Go Next
               </button>
             </>
           )}
-          {!isEditMode && (
-            <button type="submit" className="h-10 rounded-md bg-green-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" disabled={!canEdit}>
+          {!isEditMode && !isFormEditable && (
+            <button type="submit" className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2" disabled={!canEdit}>
               Save and Go Next
             </button>
           )}
