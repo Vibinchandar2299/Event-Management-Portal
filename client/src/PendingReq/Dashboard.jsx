@@ -14,7 +14,7 @@ import {
   MapPinIcon,
 } from "@heroicons/react/24/outline";
 
-const Dashboard = () => {
+const Dashboard = ({ refreshKey = 0 }) => {
   const navigate = useNavigate();
   
   const [pendingPageData, setPendingPageData] = useState({
@@ -63,7 +63,7 @@ const Dashboard = () => {
     };
 
     fetchPendingPageData();
-  }, []);
+  }, [refreshKey]);
 
   const stats = [
     {

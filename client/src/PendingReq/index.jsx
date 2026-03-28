@@ -15,6 +15,7 @@ function PendingDashboard() {
   const [activeTab, setActiveTab] = useState("pending");
   const [pendingEvents, setPendingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statsRefreshKey, setStatsRefreshKey] = useState(0);
   const location = useLocation();
 
   const fetchPendingEndforms = async (retryCount = 0) => {
@@ -89,6 +90,11 @@ function PendingDashboard() {
     fetchPendingEndforms();
   }, []);
 
+  const handleEventUpdate = async () => {
+    await fetchPendingEndforms();
+    setStatsRefreshKey((k) => k + 1);
+  };
+
   // Add useEffect to refetch data when navigating back to the dashboard route
   useEffect(() => {
     console.log("Location changed:", location.pathname);
@@ -117,7 +123,7 @@ function PendingDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <Dashboard />
+        <Dashboard refreshKey={statsRefreshKey} />
         
         <div className="flex gap-6 mb-6 border-b border-gray-200">
           {["All", "Upcoming", "Ongoing", "Completed"].map((tab) => (
@@ -150,7 +156,7 @@ function PendingDashboard() {
               <EventsCard 
                 Events={filteredEvents} 
                 EventPopup={uniquePendingEvents} 
-                onEventUpdate={fetchPendingEndforms}
+                onEventUpdate={handleEventUpdate}
               />
             );
           })()

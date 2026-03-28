@@ -4,15 +4,50 @@ import { generateSingleEventPdf } from "../other/PDF.js";
 import Endform from "../Schema/EndForm.js";
 import mongoose from "mongoose";
 
+const toDayDate = (value) => {
+  const d = value ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const getTrackedEndformsAndEvents = async () => {
+  const endforms = await Endform.find({ eventdata: { $exists: true, $ne: null } })
+    .select("eventdata status createdAt")
+    .lean();
+
+  const eventIds = [
+    ...new Set(endforms.map((f) => String(f.eventdata)).filter(Boolean)),
+  ];
+
+  const events = await Event.find({ _id: { $in: eventIds } }).lean();
+  const eventsMap = new Map(events.map((e) => [String(e._id), e]));
+
+  return { endforms, events, eventsMap };
+};
+
 const getCurrentDateEvents = async (req, res) => {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   try {
-    const events = await Event.find({
-      status: "Pending",
-      startDate: { $lte: today },
-      endDate: { $gte: today },
-    });
+    const { endforms, eventsMap } = await getTrackedEndformsAndEvents();
+
+    const trackedCurrentEvents = endforms
+      .filter((ef) => ["Pending", "Approved"].includes(ef.status))
+      .map((ef) => eventsMap.get(String(ef.eventdata)))
+      .filter(Boolean)
+      .filter((ev) => {
+        const start = toDayDate(ev.startDate);
+        const end = toDayDate(ev.endDate);
+        return start && end && start <= today && end >= today;
+      });
+
+    const uniqueById = Array.from(
+      new Map(trackedCurrentEvents.map((ev) => [String(ev._id), ev])).values()
+    );
+
+    const events = uniqueById;
     return res.status(200).json(events);
   } catch (error) {
     console.error("Error fetching current date events:", error);
@@ -21,41 +56,37 @@ const getCurrentDateEvents = async (req, res) => {
 };
 
 const getDashboardData = async (req, res) => {
-  const today = new Date().toISOString().split("T")[0];
-  const startOfMonth = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth(),
-    1
-  )
-    .toISOString()
-    .split("T")[0];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   try {
-    const pendingCollaborations = await Event.countDocuments({
-      status: "Pending",
+    const { endforms, events } = await getTrackedEndformsAndEvents();
+
+    const pendingCollaborations = endforms.filter((ef) => ef.status === "Pending").length;
+    const totalBookingsThisMonth = endforms.filter((ef) => {
+      const created = new Date(ef.createdAt);
+      return !Number.isNaN(created.getTime()) && created >= startOfMonth;
+    }).length;
+    const eventsToday = events.filter((ev) => {
+      const start = toDayDate(ev.startDate);
+      const end = toDayDate(ev.endDate);
+      return start && end && start <= today && end >= today;
+    }).length;
+
+    const departmentCountMap = new Map();
+    events.forEach((ev) => {
+      (ev.departments || []).forEach((dept) => {
+        departmentCountMap.set(dept, (departmentCountMap.get(dept) || 0) + 1);
+      });
     });
-    const totalBookingsThisMonth = await Event.countDocuments({
-      startDate: { $gte: startOfMonth },
-    });
-    const eventsToday = await Event.countDocuments({
-      startDate: { $lte: today },
-      endDate: { $gte: today },
-    });
-    const mostEventBookingDepartment = await Event.aggregate([
-      { $unwind: "$departments" },
-      { $group: { _id: "$departments", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 1 },
-    ]);
+    const mostDept = Array.from(departmentCountMap.entries()).sort((a, b) => b[1] - a[1])[0];
 
     const dashboardData = {
       pendingCollaborations,
       totalBookingsThisMonth,
       eventsToday,
-      mostEventBookingDepartment:
-        mostEventBookingDepartment.length > 0
-          ? mostEventBookingDepartment[0]._id
-          : "N/A",
+      mostEventBookingDepartment: mostDept ? mostDept[0] : "N/A",
     };
 
     return res.status(200).json(dashboardData);
@@ -100,31 +131,48 @@ const getEventStats = async (req, res) => {
 
 const getComprehensiveDashboardData = async (req, res) => {
   try {
-    // Basic statistics - using simpler queries first
-    const pendingCollaborations = await Event.countDocuments({
-      status: "Pending",
-    });
-    
-    const totalBookingsThisMonth = await Event.countDocuments({});
-    
-    const eventsToday = await Event.countDocuments({});
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const { endforms, events, eventsMap } = await getTrackedEndformsAndEvents();
+
+    const pendingCollaborations = endforms.filter((ef) => ef.status === "Pending").length;
+    const totalBookingsThisMonth = endforms.filter((ef) => {
+      const created = new Date(ef.createdAt);
+      return !Number.isNaN(created.getTime()) && created >= startOfMonth;
+    }).length;
+
+    const eventsToday = endforms
+      .map((ef) => eventsMap.get(String(ef.eventdata)))
+      .filter(Boolean)
+      .filter((ev) => {
+        const start = toDayDate(ev.startDate);
+        const end = toDayDate(ev.endDate);
+        return start && end && start <= today && end >= today;
+      }).length;
     
     // Department bookings for donut chart - FIXED to show all departments
-    const departmentBookings = await Event.aggregate([
-      { $unwind: "$departments" },
-      { $group: { _id: "$departments", value: { $sum: 1 } } },
-      { $project: { name: "$_id", value: 1, _id: 0 } },
-      { $sort: { value: -1 } }
-      // Removed $limit to show all departments
-    ]);
+    const departmentCountMap = new Map();
+    events.forEach((ev) => {
+      (ev.departments || []).forEach((dept) => {
+        if (!dept) return;
+        departmentCountMap.set(dept, (departmentCountMap.get(dept) || 0) + 1);
+      });
+    });
+    const departmentBookings = Array.from(departmentCountMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
 
     // Event types for donut chart - FIXED to show all event types
-    const eventTypes = await Event.aggregate([
-      { $group: { _id: "$eventType", value: { $sum: 1 } } },
-      { $project: { name: "$_id", value: 1, _id: 0 } },
-      { $sort: { value: -1 } }
-      // Removed $limit to show all event types
-    ]);
+    const eventTypeMap = new Map();
+    events.forEach((ev) => {
+      const type = ev.eventType || "Other";
+      eventTypeMap.set(type, (eventTypeMap.get(type) || 0) + 1);
+    });
+    const eventTypes = Array.from(eventTypeMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
 
     // Monthly data for area chart - FIXED to be truly dynamic
     const currentYear = new Date().getFullYear();
@@ -136,13 +184,10 @@ const getComprehensiveDashboardData = async (req, res) => {
       const startOfMonth = new Date(currentYear, month, 1);
       const endOfMonth = new Date(currentYear, month + 1, 0);
       
-      // Count events for this month (using createdAt field)
-      const monthCount = await Event.countDocuments({
-        createdAt: {
-          $gte: startOfMonth,
-          $lte: endOfMonth
-        }
-      });
+      const monthCount = endforms.filter((ef) => {
+        const created = new Date(ef.createdAt);
+        return !Number.isNaN(created.getTime()) && created >= startOfMonth && created <= endOfMonth;
+      }).length;
       
       monthlyData.push({
         name: monthNames[month],
@@ -151,10 +196,10 @@ const getComprehensiveDashboardData = async (req, res) => {
     }
 
     // Event satisfaction data - FIXED to be dynamic
-    const totalEventsForSatisfaction = await Event.countDocuments();
-    const completedEventsForSatisfaction = await Event.countDocuments({ status: "Completed" });
-    const pendingEventsForSatisfaction = await Event.countDocuments({ status: "Pending" });
-    const rejectedEventsForSatisfaction = await Event.countDocuments({ status: "Rejected" });
+    const totalEventsForSatisfaction = endforms.length;
+    const completedEventsForSatisfaction = endforms.filter((ef) => ef.status === "Approved").length;
+    const pendingEventsForSatisfaction = endforms.filter((ef) => ef.status === "Pending").length;
+    const rejectedEventsForSatisfaction = endforms.filter((ef) => ef.status === "Rejected").length;
     
     const eventSatisfaction = [
       { name: "Very Satisfied", value: completedEventsForSatisfaction },
@@ -164,22 +209,29 @@ const getComprehensiveDashboardData = async (req, res) => {
     ];
 
     // Recent bookings (last 10 events)
-    const recentBookings = await Event.find({})
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .select('_id departments startDate eventName status eventType')
-      .lean();
+    const recentBookings = endforms
+      .slice()
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map((ef) => {
+        const ev = eventsMap.get(String(ef.eventdata)) || {};
+        return {
+          _id: ef._id,
+          departments: ev.departments || [],
+          startDate: ev.startDate || "N/A",
+          eventName: ev.eventName || "Untitled Event",
+          status: ef.status || "Pending",
+          eventType: ev.eventType || "Other",
+        };
+      })
+      .slice(0, 10);
 
     // Calculate user satisfaction rating (simulated based on event status)
     const satisfactionRating = totalEventsForSatisfaction > 0 ? (completedEventsForSatisfaction / totalEventsForSatisfaction * 5).toFixed(1) : "3.5";
 
     // Get most active department
-    const mostEventBookingDepartment = await Event.aggregate([
-      { $unwind: "$departments" },
-      { $group: { _id: "$departments", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 1 },
-    ]);
+    const mostEventBookingDepartment = departmentBookings.length > 0
+      ? [{ _id: departmentBookings[0].name, count: departmentBookings[0].value }]
+      : [];
 
     // Participants (total from all events) - SIMPLIFIED TO AVOID ERRORS
     let totalParticipants = 0;
@@ -271,19 +323,26 @@ const getPendingPageData = async (req, res) => {
     console.log(`Quarter Start: ${quarterStart.toISOString().split('T')[0]}`);
     console.log(`Quarter End: ${quarterEnd.toISOString().split('T')[0]}`);
     
-    // Total Events (all events in the system)
-    const totalEventsCount = await Event.countDocuments({});
-    
-    // Upcoming Events (events with start date in the future)
-    const upcomingEventsCount = await Event.countDocuments({
-      startDate: { $gte: currentDate.toISOString().split("T")[0] }
-    });
-    
-    // Ongoing Events (events happening today)
-    const ongoingEventsCount = await Event.countDocuments({
-      startDate: { $lte: currentDate.toISOString().split("T")[0] },
-      endDate: { $gte: currentDate.toISOString().split("T")[0] }
-    });
+    const today = new Date(currentDate);
+    today.setHours(0, 0, 0, 0);
+    const { endforms, eventsMap } = await getTrackedEndformsAndEvents();
+
+    const trackedEvents = endforms
+      .map((ef) => ({ endform: ef, event: eventsMap.get(String(ef.eventdata)) }))
+      .filter((row) => !!row.event);
+
+    const totalEventsCount = trackedEvents.length;
+
+    const upcomingEventsCount = trackedEvents.filter(({ event }) => {
+      const start = toDayDate(event.startDate);
+      return start && start >= today;
+    }).length;
+
+    const ongoingEventsCount = trackedEvents.filter(({ event }) => {
+      const start = toDayDate(event.startDate);
+      const end = toDayDate(event.endDate);
+      return start && end && start <= today && end >= today;
+    }).length;
     
     // Participants (total from all events) - SIMPLIFIED TO AVOID ERRORS
     let totalParticipants = 0;
@@ -294,39 +353,30 @@ const getPendingPageData = async (req, res) => {
     totalParticipants = 0; // Default value
     
     // Quarter-specific data
-    const quarterEvents = await Event.countDocuments({
-      startDate: {
-        $gte: quarterStart.toISOString().split("T")[0],
-        $lte: quarterEnd.toISOString().split("T")[0]
-      }
-    });
-    
-    const quarterUpcoming = await Event.countDocuments({
-      startDate: { 
-        $gte: currentDate.toISOString().split("T")[0],
-        $lte: quarterEnd.toISOString().split("T")[0]
-      }
-    });
-    
-    const quarterOngoing = await Event.countDocuments({
-      startDate: { $lte: currentDate.toISOString().split("T")[0] },
-      endDate: { $gte: currentDate.toISOString().split("T")[0] },
-      startDate: {
-        $gte: quarterStart.toISOString().split("T")[0],
-        $lte: quarterEnd.toISOString().split("T")[0]
-      }
-    });
+    const quarterEvents = trackedEvents.filter(({ event }) => {
+      const start = toDayDate(event.startDate);
+      return start && start >= quarterStart && start <= quarterEnd;
+    }).length;
+
+    const quarterUpcoming = trackedEvents.filter(({ event }) => {
+      const start = toDayDate(event.startDate);
+      return start && start >= today && start <= quarterEnd;
+    }).length;
+
+    const quarterOngoing = trackedEvents.filter(({ event }) => {
+      const start = toDayDate(event.startDate);
+      const end = toDayDate(event.endDate);
+      return start && end && start <= today && end >= today && start >= quarterStart && start <= quarterEnd;
+    }).length;
     
     // Calculate growth percentage (simulated based on current vs previous quarter)
     const previousQuarterStart = new Date(currentYear, (currentQuarter - 2) * 3, 1);
     const previousQuarterEnd = new Date(currentYear, (currentQuarter - 1) * 3, 0);
     
-    const previousQuarterEvents = await Event.countDocuments({
-      startDate: {
-        $gte: previousQuarterStart.toISOString().split("T")[0],
-        $lte: previousQuarterEnd.toISOString().split("T")[0]
-      }
-    });
+    const previousQuarterEvents = trackedEvents.filter(({ event }) => {
+      const start = toDayDate(event.startDate);
+      return start && start >= previousQuarterStart && start <= previousQuarterEnd;
+    }).length;
     
     const growthPercentage = previousQuarterEvents > 0 
       ? ((quarterEvents - previousQuarterEvents) / previousQuarterEvents * 100).toFixed(1)
@@ -347,9 +397,9 @@ const getPendingPageData = async (req, res) => {
       growthPercentage,
       
       // Additional metrics
-      pendingEvents: await Event.countDocuments({ status: "Pending" }),
-      completedEventsCount: await Event.countDocuments({ status: "Completed" }),
-      rejectedEvents: await Event.countDocuments({ status: "Rejected" })
+      pendingEvents: endforms.filter((ef) => ef.status === "Pending").length,
+      completedEventsCount: endforms.filter((ef) => ef.status === "Approved" || ef.status === "Completed").length,
+      rejectedEvents: endforms.filter((ef) => ef.status === "Rejected").length
     };
 
     console.log("Pending page data generated successfully:", pendingPageData);
