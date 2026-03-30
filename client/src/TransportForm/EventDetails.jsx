@@ -22,7 +22,7 @@ export function EventDetails({ data, setDetails, disabled = false }) {
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <div>
         <label className="block text-sm font-medium text-gray-700">
-          Name of the Event/Purpose
+          Name of the Event
         </label>
         <input
           type="text"

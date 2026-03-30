@@ -96,7 +96,7 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Name of the Department/Centre
+            Event Requestor Department
           </label>
           <input
             type="text"
