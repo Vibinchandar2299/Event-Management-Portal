@@ -78,6 +78,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       : (basic.departments || basic.department || "");
 
     return {
+      iqacNumber: basic.iqacNumber || "",
+      eventName: basic.eventName || "",
       department: departmentValue,
       requestorName: organizer.name || basic.requestorName || "",
       empId: organizer.employeeId || basic.empId || "",
@@ -116,6 +118,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   console.log('GuestRoom received eventData:', eventData);
 
   const [formData, setFormData] = useState({
+    iqacNumber: "",
+    eventName: "",
     department: "",
     requestorName: "",
     empId: "",
@@ -140,6 +144,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     if (Array.isArray(data)) return data.length > 0;
     const selectedRooms = Array.isArray(data.selectedRooms) ? data.selectedRooms : [];
     return Boolean(
+      data.iqacNumber ||
+      data.eventName ||
       data.department ||
       data.requestorName ||
       data.empId ||
@@ -329,6 +335,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       console.log('GuestRoom - Direct visit detected without active forms flow; clearing guest cache and starting empty');
       ['guestRoomForm', 'guestRoomFormId', 'guestRoomFormData', 'guestRoomHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
       setFormData({
+        iqacNumber: "",
+        eventName: "",
         department: "",
         requestorName: "",
         empId: "",
@@ -350,6 +358,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         console.log('GuestRoom - Create context not bound to this tab; clearing guest cache and starting empty');
         ['guestRoomForm', 'guestRoomFormId', 'guestRoomFormData', 'guestRoomHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
         setFormData({
+          iqacNumber: "",
+          eventName: "",
           department: "",
           requestorName: "",
           empId: "",
@@ -369,6 +379,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     if (!currentEventId && !endformId && !isEditMode) {
       console.log("GuestRoom - No active event found, starting with empty form for new event creation");
       setFormData({
+        iqacNumber: "",
+        eventName: "",
         department: "",
         requestorName: "",
         empId: "",
@@ -391,6 +403,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
           const parsedGuestData = JSON.parse(storedGuestRoomForm);
           if (parsedGuestData && Object.keys(parsedGuestData).length > 0) {
             setFormData({
+              iqacNumber: parsedGuestData.iqacNumber || "",
+              eventName: parsedGuestData.eventName || "",
               department: parsedGuestData.department || "",
               requestorName: parsedGuestData.requestorName || "",
               empId: parsedGuestData.empId || "",
@@ -466,6 +480,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
           } else {
             // Format the data to match our form structure
             const formattedData = {
+              iqacNumber: parsedGuestData.iqacNumber || "",
+              eventName: parsedGuestData.eventName || "",
               department: parsedGuestData.department || "",
               requestorName: parsedGuestData.requestorName || "",
               empId: parsedGuestData.empId || "",
@@ -525,6 +541,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             
             // Format the data to match our form structure
             const formattedData = {
+              iqacNumber: guestData.iqacNumber || "",
+              eventName: guestData.eventName || "",
               department: guestData.department || "",
               requestorName: guestData.requestorName || "",
               empId: guestData.empId || "",
@@ -558,6 +576,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       // This is a new event creation - ensure form is empty
       console.log("GuestRoom - New event creation, starting with empty form");
       setFormData({
+        iqacNumber: "",
+        eventName: "",
         department: "",
         requestorName: "",
         empId: "",
@@ -992,6 +1012,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       localStorage.removeItem('guestRoomForm');
       // Also clear the form state
       setFormData({
+        iqacNumber: "",
+        eventName: "",
         department: "",
         requestorName: "",
         empId: "",
@@ -1070,6 +1092,26 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 value={formData.empId}
                 onChange={handleInputChange}
                 placeholder="Enter employee ID"
+                disabled={!canEdit || !isFormEditable}
+              />
+
+              <FormInput
+                icon={<BookOpen />}
+                label="IQAC Number"
+                name="iqacNumber"
+                value={formData.iqacNumber}
+                onChange={handleInputChange}
+                placeholder="Enter IQAC number"
+                disabled={!canEdit || !isFormEditable}
+              />
+
+              <FormInput
+                icon={<Building2 />}
+                label="Event Name"
+                name="eventName"
+                value={formData.eventName}
+                onChange={handleInputChange}
+                placeholder="Enter event name"
                 disabled={!canEdit || !isFormEditable}
               />
 

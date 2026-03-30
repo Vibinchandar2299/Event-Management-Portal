@@ -5,6 +5,12 @@ const BookingSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  iqacNumber: {
+    type: String,
+  },
+  eventName: {
+    type: String,
+  },
   department: {
     type: String,
     required: true,
