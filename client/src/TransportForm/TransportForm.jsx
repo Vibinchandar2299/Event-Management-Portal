@@ -192,10 +192,10 @@ const TransportForm = ({ eventData, nextForm }) => {
   const defaultCurrentEvent = {
     basicDetails: {
       departmentName: "",
-      designation: "Not Provided",
+      designation: "",
       empId: "",
       iqacNumber: "",
-      mobileNumber: "Not Provided",
+      mobileNumber: "",
       requestorName: "",
       requisitionDate: ""
     },
@@ -443,10 +443,10 @@ const TransportForm = ({ eventData, nextForm }) => {
         setCurrentEvent({
           basicDetails: {
             departmentName: transportDataArray[0].basicDetails?.departmentName || "",
-            designation: transportDataArray[0].basicDetails?.designation || "Not Provided",
+            designation: transportDataArray[0].basicDetails?.designation || "",
             empId: transportDataArray[0].basicDetails?.empId || "",
             iqacNumber: transportDataArray[0].basicDetails?.iqacNumber || "",
-            mobileNumber: transportDataArray[0].basicDetails?.mobileNumber || "Not Provided",
+            mobileNumber: transportDataArray[0].basicDetails?.mobileNumber || "",
             requestorName: transportDataArray[0].basicDetails?.requestorName || "",
             requisitionDate: transportDataArray[0].basicDetails?.requisitionDate || ""
           },
@@ -525,10 +525,10 @@ const TransportForm = ({ eventData, nextForm }) => {
       const formattedData = {
         basicDetails: {
           departmentName: currentEvent.basicDetails.departmentName,
-          designation: currentEvent.basicDetails.designation || "Not Provided",
+          designation: currentEvent.basicDetails.designation || "",
           empId: currentEvent.basicDetails.empId,
           iqacNumber: currentEvent.basicDetails.iqacNumber,
-          mobileNumber: currentEvent.basicDetails.mobileNumber || "Not Provided",
+          mobileNumber: currentEvent.basicDetails.mobileNumber || "",
           requestorName: currentEvent.basicDetails.requestorName,
           requisitionDate: new Date(currentEvent.basicDetails.requisitionDate)
         },

@@ -82,6 +82,32 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
+            Event Requestor Mobile Number
+          </label>
+          <input
+            type="tel"
+            name="mobileNumber"
+            value={formState.mobileNumber}
+            onChange={handleChange}
+            disabled={disabled}
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Event Requestor Designation
+          </label>
+          <input
+            type="text"
+            name="designation"
+            value={formState.designation}
+            onChange={handleChange}
+            disabled={disabled}
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
             Requisition Date
           </label>
           <input
