@@ -32,6 +32,9 @@ const FoodDetailsSchema = new mongoose.Schema({
     },
   },
   MorningRefreshment: {
+    guest: {
+      total: { type: String, default: "" },
+    },
     participants: {
       total: { type: String, default: "" },
     },

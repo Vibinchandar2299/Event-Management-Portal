@@ -90,18 +90,38 @@ const AmenitiesForm = ({ foodFormData }) => {
   const getCount = (dateFoodDetails, mealType, section, key) => {
     const mealData = getMealData(dateFoodDetails, mealType);
     const sectionData = mealData?.[section];
+
+    const toDisplay = (value) => {
+      if (value == null) return "0";
+      if (typeof value === "string") return value.trim() === "" ? "0" : value;
+      return String(value);
+    };
+
+    // Default for missing sections.
     if (sectionData == null) return "0";
 
-    if (typeof sectionData === "number" || typeof sectionData === "string") {
-      return sectionData || "0";
+    // Refreshments are totals (not Veg/NonVeg). In the Details table we only have
+    // Veg/NonVeg columns, so show the same total in both Veg and NonVeg columns
+    // for the relevant section (participants vs guest).
+    const isRefreshment = mealType === "MorningRefreshment" || mealType === "EveningRefreshment";
+    const isNonVegKey = key === "Non Veg" || key === "NonVeg";
+    const isVegKey = key === "Veg";
+    if (isRefreshment) {
+      if (typeof sectionData === "object") return toDisplay(sectionData?.total);
+      return toDisplay(sectionData);
     }
 
-    const direct = sectionData?.[key];
-    const spaced = key === "NonVeg" ? sectionData?.["Non Veg"] : sectionData?.[key];
-    const compact = key === "Non Veg" ? sectionData?.NonVeg : sectionData?.[key];
-    const total = sectionData?.total;
+    if (typeof sectionData === "number" || typeof sectionData === "string") {
+      return toDisplay(sectionData);
+    }
 
-    return direct ?? spaced ?? compact ?? total ?? "0";
+    // Robust Veg/NonVeg mapping (supports older saved data that may use either key).
+    const nonVegValue = sectionData?.NonVeg ?? sectionData?.["Non Veg"];
+    if (isVegKey) return toDisplay(sectionData?.Veg);
+    if (isNonVegKey) return toDisplay(nonVegValue);
+
+    // Fallback for any other keys.
+    return toDisplay(sectionData?.[key]);
   };
 
   return (

@@ -109,7 +109,7 @@ const Form = () => {
       dispatch(resetEventState());
       [
         'foodForm', 'guestRoomForm', 'transportForm', 'communicationForm',
-        'basicEvent', 'iqacno', 'common_data', 'foodFormData', 'guestRoomFormData',
+        'basicEvent', 'iqacno', 'common_data', 'foodFormData', 'foodFormDataEndformId', 'guestRoomFormData',
         'transportFormData', 'communicationFormData', 'foodFormState', 'guestRoomFormState',
         'transportFormState', 'communicationFormState', 'formData', 'selectedOptions',
         'currentFormData', 'eventFormData', 'basicEventId', 'currentEventData',
@@ -149,7 +149,7 @@ const Form = () => {
       [
         'endformId', 'isEditMode', 'currentEventId', 'basicEventId', 'currentEventData',
         'basicEvent', 'common_data', 'iqacno',
-        'foodForm', 'foodFormId', 'foodFormData', 'foodFormEventId', 'foodFormEndformId',
+        'foodForm', 'foodFormId', 'foodFormData', 'foodFormDataEndformId', 'foodFormEventId', 'foodFormEndformId',
         'guestRoomForm', 'guestRoomFormId', 'guestRoomFormData', 'guestRoomFormEndformId',
         'transportForm', 'transportFormId', 'transportFormData',
         'communicationForm', 'communicationFormId', 'communicationFormData',
@@ -200,7 +200,7 @@ const Form = () => {
           'basicEvent',
           'common_data',
           'iqacno',
-          'foodForm', 'foodFormId', 'foodFormEventId', 'foodFormEndformId', 'foodFormData',
+          'foodForm', 'foodFormId', 'foodFormEventId', 'foodFormEndformId', 'foodFormData', 'foodFormDataEndformId',
           'guestRoomForm', 'guestRoomFormId', 'guestRoomFormEndformId', 'guestRoomFormData',
           'transportForm', 'transportFormId', 'transportFormData',
           'communicationForm', 'communicationFormId', 'communicationFormData',

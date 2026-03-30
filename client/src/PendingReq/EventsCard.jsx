@@ -337,6 +337,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
       localStorage.removeItem("iqacno");
       localStorage.removeItem("foodForm");
       localStorage.removeItem("foodFormData");
+      localStorage.removeItem("foodFormDataEndformId");
       localStorage.removeItem("foodHasUnsavedChanges");
       localStorage.removeItem("foodFormEventId");
       localStorage.removeItem("foodFormEndformId");

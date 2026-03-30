@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import BasicInfo from "./BasicInfo";
 import EventDetails from "./EventDetails";
@@ -13,6 +13,8 @@ import { setEventData, clearEventData } from "../redux/EventSlice";
 function FoodForm({ eventData, nextForm }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const didUserEditRef = useRef(false);
 
   const getBasicSourceData = () => {
     try {
@@ -188,6 +190,27 @@ function FoodForm({ eventData, nextForm }) {
   const isEditMode = rawIsEditMode && !!endformId;
   const isTrueEditContext = isEditMode && !!endformId;
 
+  const setFormDataFromUser = useCallback((updater) => {
+    didUserEditRef.current = true;
+    setFormData((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      const liveEndformId = localStorage.getItem('endformId');
+      const liveIsEditMode = localStorage.getItem('isEditMode') === 'true' && !!liveEndformId;
+
+      if (liveIsEditMode) {
+        try {
+          localStorage.setItem('foodFormData', JSON.stringify(next));
+          localStorage.setItem('foodHasUnsavedChanges', 'true');
+          localStorage.setItem('foodFormDataEndformId', String(liveEndformId));
+        } catch {
+          // ignore storage failures
+        }
+      }
+
+      return next;
+    });
+  }, []);
+
   const canEdit =
     !isTrueEditContext ||
     isCreationFlow ||
@@ -218,6 +241,7 @@ function FoodForm({ eventData, nextForm }) {
       localStorage.removeItem('foodFormId');
       localStorage.removeItem('foodFormEventId');
       localStorage.removeItem('foodFormData');
+      localStorage.removeItem('foodFormDataEndformId');
       localStorage.removeItem('foodHasUnsavedChanges');
       localStorage.removeItem('currentEventData');
       localStorage.removeItem('basicEvent');
@@ -261,6 +285,12 @@ function FoodForm({ eventData, nextForm }) {
     if (originalFormData) {
       setFormData(originalFormData);
     }
+
+    localStorage.removeItem('foodFormData');
+    localStorage.removeItem('foodHasUnsavedChanges');
+    localStorage.removeItem('foodFormDataEndformId');
+    didUserEditRef.current = false;
+
     setIsFormEditable(false);
   };
 
@@ -333,6 +363,7 @@ function FoodForm({ eventData, nextForm }) {
         'foodFormId',
         'foodFormEventId',
         'foodFormData',
+        'foodFormDataEndformId',
         'foodHasUnsavedChanges',
       ].forEach((key) => localStorage.removeItem(key));
 
@@ -365,7 +396,7 @@ function FoodForm({ eventData, nextForm }) {
       const isBoundToThisTab = !!createFlowEventId && String(createFlowEventId) === String(currentEventId);
       if (!isBoundToThisTab) {
         console.log('FoodForm - Create context not bound to this tab; starting empty and clearing Food cache');
-        ['foodForm', 'foodFormId', 'foodFormEventId', 'foodFormData', 'foodHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
+        ['foodForm', 'foodFormId', 'foodFormEventId', 'foodFormData', 'foodFormDataEndformId', 'foodHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
         setFormData({
           iqacNumber: "",
           requisitionDate: "",
@@ -452,6 +483,7 @@ function FoodForm({ eventData, nextForm }) {
         'foodFormId',
         'foodFormEventId',
         'foodFormData',
+        'foodFormDataEndformId',
         'foodHasUnsavedChanges',
         'basicEventId',
         'activeCreateFlow',
@@ -492,7 +524,7 @@ function FoodForm({ eventData, nextForm }) {
       // If we can't prove it belongs to the current event, treat it as stale.
       if (storedFoodForm && (!storedFoodFormEventId || String(storedFoodFormEventId) !== String(currentEventId))) {
         console.log('FoodForm - Clearing stale foodForm cache (event mismatch)');
-        ['foodForm', 'foodFormId', 'foodFormEventId', 'foodFormData', 'foodHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
+        ['foodForm', 'foodFormId', 'foodFormEventId', 'foodFormData', 'foodFormDataEndformId', 'foodHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
       }
 
       const safeStoredFoodForm = localStorage.getItem('foodForm');
@@ -541,8 +573,14 @@ function FoodForm({ eventData, nextForm }) {
       // Check if we have unsaved changes (user was actively editing)
       const existingFormData = localStorage.getItem('foodFormData');
       const hasUnsavedChanges = localStorage.getItem('foodHasUnsavedChanges') === 'true';
+      const draftEndformId = localStorage.getItem('foodFormDataEndformId');
       
-      if (existingFormData && hasUnsavedChanges) {
+      if (
+        existingFormData &&
+        hasUnsavedChanges &&
+        draftEndformId &&
+        String(draftEndformId) === String(endformId)
+      ) {
         console.log("Using existing form data from localStorage (unsaved changes)");
         const parsedData = JSON.parse(existingFormData);
         setFormData(parsedData);
@@ -647,11 +685,41 @@ function FoodForm({ eventData, nextForm }) {
               deanClearance: foodData.deanClearance || "",
               _id: foodData._id || "",
             };
-            
+
+            if (didUserEditRef.current) {
+              console.log('FoodForm - Skipping prefill because user has started editing');
+              return;
+            }
+
             setFormData(formattedData);
             console.log("FoodForm - Set form data with formatted data:", formattedData);
           } else {
             console.log("FoodForm - No existing food data found, starting with empty form");
+            if (!didUserEditRef.current) {
+              setFormData({
+                iqacNumber: "",
+                requisitionDate: "",
+                department: "",
+                requestorName: "",
+                empId: "",
+                designationDepartment: "",
+                mobileNumber: "",
+                eventName: "",
+                eventType: "",
+                otherEventType: "",
+                dates: {},
+                foodDetails: {},
+                amenitiesIncharge: "",
+                signOfOS: "",
+                facultySignature: "",
+                recommendedBy: "",
+                deanClearance: "",
+              });
+            }
+          }
+        } catch (error) {
+          console.error("FoodForm - Error fetching food data:", error);
+          if (!didUserEditRef.current) {
             setFormData({
               iqacNumber: "",
               requisitionDate: "",
@@ -672,29 +740,9 @@ function FoodForm({ eventData, nextForm }) {
               deanClearance: "",
             });
           }
-        } catch (error) {
-          console.error("FoodForm - Error fetching food data:", error);
-          setFormData({
-            iqacNumber: "",
-            requisitionDate: "",
-            department: "",
-            requestorName: "",
-            empId: "",
-            designationDepartment: "",
-            mobileNumber: "",
-            eventName: "",
-            eventType: "",
-            otherEventType: "",
-            dates: {},
-            foodDetails: {},
-            amenitiesIncharge: "",
-            signOfOS: "",
-            facultySignature: "",
-            recommendedBy: "",
-            deanClearance: "",
-          });
+        } finally {
+          setHasInitialized(true);
         }
-        setHasInitialized(true);
       };
       fetchAndPrefill();
     } else {
@@ -781,6 +829,7 @@ function FoodForm({ eventData, nextForm }) {
           },
           MorningRefreshment: {
             participants: getTotalSection(details.MorningRefreshment?.participants),
+            guest: getTotalSection(details.MorningRefreshment?.guest),
           },
           EveningRefreshment: {
             participants: getTotalSection(details.EveningRefreshment?.participants),
@@ -919,6 +968,12 @@ function FoodForm({ eventData, nextForm }) {
           localStorage.setItem('foodFormId', savedFood._id);
         }
 
+        // Clear edit-mode unsaved draft once saved.
+        localStorage.removeItem('foodFormData');
+        localStorage.removeItem('foodHasUnsavedChanges');
+        localStorage.removeItem('foodFormDataEndformId');
+        didUserEditRef.current = false;
+
         toast.success("Food form saved successfully!");
         // Always fetch latest event data and update Redux after update/create
         if (eventId && /^[0-9a-fA-F]{24}$/.test(eventId)) {
@@ -971,9 +1026,9 @@ function FoodForm({ eventData, nextForm }) {
         </div>
         <Header />
         <div className="p-6 space-y-6">
-          <BasicInfo formData={formData} setFormData={setFormData} disabled={!canEdit || !isFormEditable} />
-          <EventDetails formData={formData} setFormData={setFormData} disabled={!canEdit || !isFormEditable} />
-          <FoodTable formData={formData} setFormData={setFormData} disabled={isTrueEditContext && !isFormEditable} />
+          <BasicInfo formData={formData} setFormData={setFormDataFromUser} disabled={!canEdit || !isFormEditable} />
+          <EventDetails formData={formData} setFormData={setFormDataFromUser} disabled={!canEdit || !isFormEditable} />
+          <FoodTable formData={formData} setFormData={setFormDataFromUser} disabled={isTrueEditContext && !isFormEditable} />
           {formData.dates && Object.keys(formData.dates).length === 0 && isCreationFlow && (
             <div className="px-6 py-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
               ℹ️ Please add event dates in the Event Details section above to show the food table.

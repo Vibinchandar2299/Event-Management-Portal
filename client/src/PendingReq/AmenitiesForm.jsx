@@ -74,7 +74,8 @@ const AmenitiesForm = ({ foodFormData }) => {
                   <div className="ml-4">
                     {Object.entries(categoryData).map(([type, value]) => (
                       <div key={type} className="text-sm">
-                        <span className="font-medium">{type}:</span> {value || 'N/A'}
+                        <span className="font-medium">{type}:</span>{" "}
+                        {value === "" || value == null ? "0" : value}
                       </div>
                     ))}
                   </div>

@@ -460,6 +460,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
           localStorage.removeItem('transportForm');
           localStorage.removeItem('communicationForm');
           localStorage.removeItem('foodFormData');
+          localStorage.removeItem('foodFormDataEndformId');
           localStorage.removeItem('guestRoomFormData');
           localStorage.removeItem('transportFormData');
           localStorage.removeItem('communicationFormData');
