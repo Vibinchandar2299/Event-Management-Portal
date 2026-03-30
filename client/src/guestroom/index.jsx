@@ -30,6 +30,11 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
   const getBasicSourceData = () => {
     try {
+      const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
+      if (!hasFormsFlowSession) {
+        return {};
+      }
+
       const currentEventData = JSON.parse(localStorage.getItem("currentEventData") || "null");
       const basicFromCurrent = currentEventData?.basicEvent || null;
       const basicFromStorage = JSON.parse(localStorage.getItem("basicEvent") || "null");
@@ -227,10 +232,22 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     const guestRoomFormId = localStorage.getItem("guestRoomFormId");
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     const endformId = localStorage.getItem('endformId');
+    const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
+    const createFlowEventId = sessionStorage.getItem('createFlowEventId');
     
     // Skip this effect if we're editing an existing event
     if (isEditMode || endformId) {
       console.log("GuestRoom - Skipping reset effect due to edit mode or existing event");
+      return;
+    }
+
+    // Outside an active in-tab forms session, never hydrate from cached Basic data.
+    if (!hasFormsFlowSession) {
+      return;
+    }
+
+    // Only allow create-flow autofill when this tab created the current event.
+    if (!currentEventId || !createFlowEventId || String(createFlowEventId) !== String(currentEventId)) {
       return;
     }
     
@@ -246,10 +263,22 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     const endformId = localStorage.getItem('endformId');
     const currentEventId = localStorage.getItem('currentEventId');
+    const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
+    const createFlowEventId = sessionStorage.getItem('createFlowEventId');
     
     // Skip this effect if we're editing an existing event
     if (isEditMode || endformId) {
       console.log("GuestRoom - Skipping common_data effect due to edit mode or existing event");
+      return;
+    }
+
+    // Never hydrate from common_data unless the user is actively inside this tab's forms flow.
+    if (!hasFormsFlowSession) {
+      return;
+    }
+
+    // Only allow create-flow prefill when this tab created the current event.
+    if (!currentEventId || !createFlowEventId || String(createFlowEventId) !== String(currentEventId)) {
       return;
     }
 
@@ -296,6 +325,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     const guestRoomFormId = localStorage.getItem("guestRoomFormId");
     const currentEventId = localStorage.getItem("currentEventId");
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
+    const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
+    const createFlowEventId = sessionStorage.getItem('createFlowEventId');
     
     console.log("=== GUEST ROOM FORM DEBUG ===");
     console.log("endformId:", endformId);
@@ -304,6 +335,47 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     console.log("All localStorage keys:", Object.keys(localStorage));
     console.log("guestRoomForm in localStorage:", localStorage.getItem('guestRoomForm'));
     console.log("guestRoomFormId in localStorage:", localStorage.getItem('guestRoomFormId'));
+
+    // Direct deep visit (without an active flow session) should always start empty.
+    if (!isEditMode && !endformId && !hasFormsFlowSession) {
+      console.log('GuestRoom - Direct visit detected without active forms flow; clearing guest cache and starting empty');
+      ['guestRoomForm', 'guestRoomFormId', 'guestRoomFormData', 'guestRoomHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
+      setFormData({
+        department: "",
+        requestorName: "",
+        empId: "",
+        mobile: "",
+        designation: "",
+        purpose: "",
+        date: "",
+        guestCount: "",
+        eventType: "",
+        selectedRooms: [],
+      });
+      return;
+    }
+
+    // If this tab did not create the currentEventId, do not hydrate create-flow data.
+    if (currentEventId && !endformId && !isEditMode) {
+      const isBoundToThisTab = !!createFlowEventId && String(createFlowEventId) === String(currentEventId);
+      if (!isBoundToThisTab) {
+        console.log('GuestRoom - Create context not bound to this tab; clearing guest cache and starting empty');
+        ['guestRoomForm', 'guestRoomFormId', 'guestRoomFormData', 'guestRoomHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
+        setFormData({
+          department: "",
+          requestorName: "",
+          empId: "",
+          mobile: "",
+          designation: "",
+          purpose: "",
+          date: "",
+          guestCount: "",
+          eventType: "",
+          selectedRooms: [],
+        });
+        return;
+      }
+    }
     
     // No active flow yet: keep empty form.
     if (!currentEventId && !endformId && !isEditMode) {
@@ -659,29 +731,43 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     setIsLoading(true);
 
     try {
-      // Check if we have guest room data from Redux or localStorage
-      const guestRoomFromStorage = JSON.parse(localStorage.getItem("guestRoomForm")) || {};
-      const guestRoomId = localStorage.getItem("guestRoomFormId");
-      
-      const isUpdating = (localStorage.getItem('isEditMode') === 'true' || localStorage.getItem('endformId')) && (guestroomData?._id || guestRoomId);
-      console.log("isEditMode:", isUpdating);
+      const isEditFlow = localStorage.getItem('isEditMode') === 'true' || Boolean(localStorage.getItem('endformId'));
+      const guestRoomFromStorage = safeParseJSON(localStorage.getItem("guestRoomForm")) || {};
+      const guestRoomIdFromKey = localStorage.getItem("guestRoomFormId");
+      const reduxGuestId = typeof guestroomData === 'string' ? guestroomData : guestroomData?._id;
+
+      let updateId = reduxGuestId || guestRoomIdFromKey || guestRoomFromStorage?._id || null;
+
+      // If we're in edit flow but still can't resolve an id, try reading it from EndForm.
+      if (isEditFlow && !updateId) {
+        const liveEndformId = localStorage.getItem('endformId');
+        if (liveEndformId) {
+          try {
+            const endRes = await axios.get(`${import.meta.env.VITE_API_URL}/endform/${liveEndformId}`);
+            const guestRef = endRes?.data?.guestform;
+            if (typeof guestRef === 'string') {
+              updateId = guestRef;
+            } else if (guestRef && typeof guestRef === 'object') {
+              updateId = guestRef._id || null;
+            }
+          } catch (err) {
+            console.error('GuestRoom - Failed to resolve booking id from endform:', err);
+          }
+        }
+      }
+
+      const isUpdating = isEditFlow && Boolean(updateId);
+      console.log("isEditFlow:", isEditFlow);
       console.log("guestroomData:", guestroomData);
       console.log("guestRoomFromStorage:", guestRoomFromStorage);
-      console.log("guestRoomId:", guestRoomId);
+      console.log("guestRoomIdFromKey:", guestRoomIdFromKey);
+      console.log("resolved updateId:", updateId);
       console.log("isUpdating:", isUpdating);
-      
-      let url;
-      let method;
-      let updateId = null;
 
-      if (isUpdating) {
-        updateId = guestroomData?._id || guestRoomId;
-        url = `${import.meta.env.VITE_API_URL}/guestroom/bookings/${updateId}`;
-        method = 'PUT';
-      } else {
-        url = `${import.meta.env.VITE_API_URL}/guestroom/bookings`;
-        method = 'POST';
-      }
+      const method = isUpdating ? 'PUT' : 'POST';
+      const url = isUpdating
+        ? `${import.meta.env.VITE_API_URL}/guestroom/bookings/${updateId}`
+        : `${import.meta.env.VITE_API_URL}/guestroom/bookings`;
 
       // Format the date before sending
       const submitData = {
@@ -722,7 +808,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
       if (response && response.status >= 200 && response.status < 300) {
         const bookingPayload = response.data?.data || response.data?.booking || response.data || {};
-        const resolvedBookingId = bookingPayload?._id || bookingPayload?.id || updateId || guestRoomId || "";
+        const resolvedBookingId = bookingPayload?._id || bookingPayload?.id || updateId || guestRoomIdFromKey || "";
         const updatedBooking = {
           ...bookingPayload,
           _id: resolvedBookingId,
@@ -763,10 +849,9 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             };
             dispatch(setEventData(updatedEvent));
             
-            // Update the main event to link the updated guest room form
+            // Keep event/endform links correct (especially important if we had to POST as fallback)
             const eventId = localStorage.getItem("currentEventId");
             if (eventId) {
-              // Check if eventId is a valid MongoDB ObjectId (24 hex characters)
               const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
               if (!isValidObjectId) {
                 console.error('Invalid event ID format:', eventId);
@@ -779,13 +864,9 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                   );
                 } catch (err) {
                   console.error('Failed to link updated guest room form to main event:', err);
-                  toast.error('Failed to link guest room form to main event. Please contact support if this persists.');
                 }
               }
-            } else {
-               console.error('No event ID found in basicEvent');
-               toast.warning('Guest room saved, but no active event ID found to link.');
-             }
+            }
             
             // Update the Endform with the updated guest room form ID
             const endformId = localStorage.getItem('endformId');
@@ -805,12 +886,9 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               console.error("GuestRoom - background refresh failed:", err);
             });
 
-            if (nextForm) {
-              navigate(nextForm);
-            } else {
-              console.log("Navigating to end form");
-              navigate("/forms/end");
-            }
+            const postSaveRoute = nextForm || "/forms/end";
+            console.log("Navigating after guest save:", postSaveRoute);
+            navigate(postSaveRoute);
           } else {
             toast.success("Guest room form saved successfully");
             
@@ -875,22 +953,16 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                toast.warning('Guest room saved, but no active event ID found to link.');
              }
             
-            if (nextForm) {
-              navigate(nextForm);
-            } else {
-              console.log("Navigating to end form");
-              navigate("/forms/end");
-            }
+            const postSaveRoute = nextForm || "/forms/end";
+            console.log("Navigating after guest save:", postSaveRoute);
+            navigate(postSaveRoute);
           }
         } else {
           console.warn("Guest room saved but no booking ID returned; continuing workflow.");
           toast.success("Guest room form saved successfully");
-          if (nextForm) {
-            navigate(nextForm);
-          } else {
-            console.log("Navigating to end form");
-            navigate("/forms/end");
-          }
+          const postSaveRoute = nextForm || "/forms/end";
+          console.log("Navigating after guest save:", postSaveRoute);
+          navigate(postSaveRoute);
         }
       } else {
         console.error("Invalid response:", response);
@@ -903,6 +975,14 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         response: error.response?.data,
         status: error.response?.status
       });
+
+      if (error.response?.status === 401) {
+        toast.error("Unauthorized (401). Saved not completed, continuing to End Form.");
+        const postSaveRoute = nextForm || "/forms/end";
+        navigate(postSaveRoute);
+        return;
+      }
+
       const backendMsg =
         error.response?.data?.details ||
         error.response?.data?.error ||

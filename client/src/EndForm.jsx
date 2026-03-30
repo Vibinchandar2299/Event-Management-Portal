@@ -301,6 +301,7 @@ const EndForm = () => {
     sessionStorage.removeItem('formsFlowActive');
     sessionStorage.removeItem('editFlowActive');
     sessionStorage.removeItem('editFlowEndformId');
+    sessionStorage.removeItem('createFlowEventId');
   }
 
   const handleSubmit = async (e) => {

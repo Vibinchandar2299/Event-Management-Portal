@@ -10,6 +10,24 @@ const Form = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // If the user leaves the /forms route, treat that as the end of the in-tab flow.
+  // This prevents stale session markers from making deep-links reuse old localStorage.
+  useEffect(() => {
+    return () => {
+      // React 18 StrictMode runs an extra mount/unmount cycle in dev.
+      // Only clear markers when we truly navigated away from /forms.
+      const pathNow = window.location?.pathname || '';
+      if (pathNow.startsWith('/forms')) {
+        return;
+      }
+
+      sessionStorage.removeItem('formsFlowActive');
+      sessionStorage.removeItem('editFlowActive');
+      sessionStorage.removeItem('editFlowEndformId');
+      sessionStorage.removeItem('createFlowEventId');
+    };
+  }, []);
+
   // Check if there's an active event
   const endformId = localStorage.getItem('endformId');
   const currentEventId = localStorage.getItem('currentEventId');
@@ -86,6 +104,7 @@ const Form = () => {
       sessionStorage.removeItem('formsFlowActive');
       sessionStorage.removeItem('editFlowActive');
       sessionStorage.removeItem('editFlowEndformId');
+      sessionStorage.removeItem('createFlowEventId');
       dispatch(clearEventData());
       dispatch(resetEventState());
       [
@@ -124,6 +143,7 @@ const Form = () => {
       sessionStorage.removeItem('formsFlowActive');
       sessionStorage.removeItem('editFlowActive');
       sessionStorage.removeItem('editFlowEndformId');
+      sessionStorage.removeItem('createFlowEventId');
       dispatch(clearEventData());
       dispatch(resetEventState());
       [

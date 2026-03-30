@@ -444,6 +444,10 @@ const BasicEventForm = ({ eventData, nextForm }) => {
           localStorage.setItem('activeCreateFlow', 'true');
           localStorage.setItem('activeCreateFlowAt', String(Date.now()));
 
+          // Bind this create flow to the current tab/session so direct URL visits
+          // in a fresh tab can't hydrate stale localStorage and leak old data.
+          sessionStorage.setItem('createFlowEventId', String(eventformId));
+
           // Clear old form IDs to prevent loading old data
           localStorage.removeItem('foodFormId');
           localStorage.removeItem('guestRoomFormId');

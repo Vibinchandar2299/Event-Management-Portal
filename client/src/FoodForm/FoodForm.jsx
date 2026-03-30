@@ -315,6 +315,7 @@ function FoodForm({ eventData, nextForm }) {
     const rawIsEditMode = localStorage.getItem('isEditMode') === 'true';
     const isEditMode = rawIsEditMode && !!endformId;
     const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
+    const createFlowEventId = sessionStorage.getItem('createFlowEventId');
     
     console.log("FoodForm - endformId:", endformId);
     console.log("FoodForm - currentEventId:", currentEventId);
@@ -356,6 +357,37 @@ function FoodForm({ eventData, nextForm }) {
       });
       setHasInitialized(true);
       return;
+    }
+
+    // If this tab did not create the currentEventId, do not hydrate create-flow data.
+    // This prevents stale localStorage from leaking into Food on direct URL visits.
+    if (currentEventId && !endformId && !isEditMode) {
+      const isBoundToThisTab = !!createFlowEventId && String(createFlowEventId) === String(currentEventId);
+      if (!isBoundToThisTab) {
+        console.log('FoodForm - Create context not bound to this tab; starting empty and clearing Food cache');
+        ['foodForm', 'foodFormId', 'foodFormEventId', 'foodFormData', 'foodHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
+        setFormData({
+          iqacNumber: "",
+          requisitionDate: "",
+          department: "",
+          requestorName: "",
+          empId: "",
+          designationDepartment: "",
+          mobileNumber: "",
+          eventName: "",
+          eventType: "",
+          otherEventType: "",
+          dates: {},
+          foodDetails: {},
+          amenitiesIncharge: "",
+          signOfOS: "",
+          facultySignature: "",
+          recommendedBy: "",
+          deanClearance: "",
+        });
+        setHasInitialized(true);
+        return;
+      }
     }
 
     const basicEventId = localStorage.getItem('basicEventId');

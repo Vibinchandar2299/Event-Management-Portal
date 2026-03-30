@@ -18,6 +18,48 @@ const TransportForm = ({ eventData, nextForm }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  const looksLikeObjectId = (value) => typeof value === "string" && /^[0-9a-fA-F]{24}$/.test(value);
+
+  const normalizeTransportDoc = (doc) => {
+    if (!doc || typeof doc !== "object") return null;
+
+    const basic = doc.basicDetails || {};
+    const eventDetails = doc.eventDetails || {};
+    const travel = doc.travelDetails || {};
+    const driver = doc.driverDetails || {};
+
+    return {
+      basicDetails: {
+        departmentName: basic.departmentName ?? doc.departmentName ?? "",
+        designation: basic.designation ?? doc.designation ?? "",
+        empId: basic.empId ?? doc.empId ?? "",
+        iqacNumber: basic.iqacNumber ?? doc.iqacNumber ?? "",
+        mobileNumber: basic.mobileNumber ?? doc.mobileNumber ?? "",
+        requestorName: basic.requestorName ?? doc.requestorName ?? "",
+        requisitionDate: basic.requisitionDate ?? doc.requisitionDate ?? "",
+      },
+      eventDetails: {
+        eventName: eventDetails.eventName ?? "",
+        eventType: eventDetails.eventType ?? "",
+        travellerDetails: eventDetails.travellerDetails ?? "",
+      },
+      travelDetails: {
+        pickUpDateTime: travel.pickUpDateTime ?? "",
+        dropDateTime: travel.dropDateTime ?? "",
+        numberOfPassengers: travel.numberOfPassengers ?? "",
+        vehicleType: travel.vehicleType ?? "",
+        pickUpLocation: travel.pickUpLocation ?? "",
+        dropLocation: travel.dropLocation ?? "",
+        specialRequirements: travel.specialRequirements ?? "",
+      },
+      driverDetails: {
+        mobileNumber: driver.mobileNumber ?? "",
+        name: driver.name ?? "",
+      },
+      _id: doc._id || doc.id || "",
+    };
+  };
+
   const getBasicSourceData = () => {
     try {
       const currentEventId = localStorage.getItem("currentEventId");
@@ -290,46 +332,42 @@ const TransportForm = ({ eventData, nextForm }) => {
           
           // If it's an array, take the first element
           const transportData = Array.isArray(parsedTransportData) ? parsedTransportData[0] : parsedTransportData;
+
+          // If we only have an ID string, fetch the full transport document.
+          if (looksLikeObjectId(transportData)) {
+            console.log("TransportForm - Stored transport data is an id; fetching transport by id:", transportData);
+            (async () => {
+              try {
+                const transportRes = await axios.get(
+                  `${import.meta.env.VITE_API_URL}/transportform/transports/${transportData}`
+                );
+                const normalized = normalizeTransportDoc(transportRes.data);
+                if (normalized) {
+                  setCurrentEvent(normalized);
+                  if (normalized._id) {
+                    localStorage.setItem('transportFormId', normalized._id);
+                  }
+                  localStorage.setItem('transportForm', JSON.stringify(transportRes.data));
+                }
+              } catch (error) {
+                console.error("TransportForm - Failed to fetch transport by id from localStorage:", error);
+              }
+            })();
+            return;
+          }
           
           // Check if we have valid transport data
           if (!transportData || Object.keys(transportData).length === 0) {
             console.log("TransportForm - No valid transport data found in localStorage, skipping");
             return;
           }
-          
-          // Format the data to match our form structure
-          const formattedData = {
-            basicDetails: {
-              departmentName: transportData.departmentName || "",
-              designation: transportData.designation || "",
-              empId: transportData.empId || "",
-              iqacNumber: transportData.iqacNumber || "",
-              mobileNumber: transportData.mobileNumber || "",
-              requestorName: transportData.requestorName || "",
-              requisitionDate: transportData.requisitionDate || "",
-            },
-            driverDetails: {
-              mobileNumber: transportData.driverDetails?.mobileNumber || "",
-              name: transportData.driverDetails?.name || "",
-            },
-            travelDetails: {
-              pickUpDateTime: transportData.travelDetails?.pickUpDateTime || "",
-              dropDateTime: transportData.travelDetails?.dropDateTime || "",
-              numberOfPassengers: transportData.travelDetails?.numberOfPassengers ?? "",
-              vehicleType: transportData.travelDetails?.vehicleType || "",
-              pickUpLocation: transportData.travelDetails?.pickUpLocation || "",
-              dropLocation: transportData.travelDetails?.dropLocation || "",
-              specialRequirements: transportData.travelDetails?.specialRequirements || "",
-            },
-            eventDetails: {
-              eventName: transportData.eventDetails?.eventName || "",
-              eventType: transportData.eventDetails?.eventType || "",
-              travellerDetails: transportData.eventDetails?.travellerDetails || "",
-            },
-          };
-          
-          setCurrentEvent(formattedData);
-          console.log("TransportForm - Set current event with localStorage data:", formattedData);
+
+          const normalized = normalizeTransportDoc(transportData);
+          if (normalized) {
+            setCurrentEvent(normalized);
+            console.log("TransportForm - Set current event with localStorage data:", normalized);
+            return;
+          }
           return;
         } catch (error) {
           console.error("TransportForm - Error parsing stored transport form data:", error);
@@ -344,42 +382,27 @@ const TransportForm = ({ eventData, nextForm }) => {
           console.log("TransportForm - Response from endform:", response.data);
           
           if (response.data && response.data.transportform && response.data.transportform.length > 0) {
-            const transportData = response.data.transportform[0];
+            let transportData = response.data.transportform[0];
             console.log("TransportForm - Found transport data:", transportData);
-            
-            // Format the data to match our form structure
-            const formattedData = {
-              basicDetails: {
-                departmentName: transportData.departmentName || "",
-                designation: transportData.designation || "",
-                empId: transportData.empId || "",
-                iqacNumber: transportData.iqacNumber || "",
-                mobileNumber: transportData.mobileNumber || "",
-                requestorName: transportData.requestorName || "",
-                requisitionDate: transportData.requisitionDate || "",
-              },
-              driverDetails: {
-                mobileNumber: transportData.driverDetails?.mobileNumber || "",
-                name: transportData.driverDetails?.name || "",
-              },
-              travelDetails: {
-                pickUpDateTime: transportData.travelDetails?.pickUpDateTime || "",
-                dropDateTime: transportData.travelDetails?.dropDateTime || "",
-                numberOfPassengers: transportData.travelDetails?.numberOfPassengers ?? "",
-                vehicleType: transportData.travelDetails?.vehicleType || "",
-                pickUpLocation: transportData.travelDetails?.pickUpLocation || "",
-                dropLocation: transportData.travelDetails?.dropLocation || "",
-                specialRequirements: transportData.travelDetails?.specialRequirements || "",
-              },
-              eventDetails: {
-                eventName: transportData.eventDetails?.eventName || "",
-                eventType: transportData.eventDetails?.eventType || "",
-                travellerDetails: transportData.eventDetails?.travellerDetails || "",
-              },
-            };
-            
-            setCurrentEvent(formattedData);
-            console.log("TransportForm - Set current event with formatted data:", formattedData);
+
+            // Some responses might contain only ObjectId strings; resolve them.
+            if (looksLikeObjectId(transportData)) {
+              console.log("TransportForm - endform.transportform contains an id; fetching transport by id:", transportData);
+              const transportRes = await axios.get(
+                `${import.meta.env.VITE_API_URL}/transportform/transports/${transportData}`
+              );
+              transportData = transportRes.data;
+              localStorage.setItem('transportForm', JSON.stringify(transportData));
+            }
+
+            const normalized = normalizeTransportDoc(transportData);
+            if (normalized) {
+              setCurrentEvent(normalized);
+              console.log("TransportForm - Set current event with formatted data:", normalized);
+              if (normalized._id) {
+                localStorage.setItem('transportFormId', normalized._id);
+              }
+            }
           } else {
             console.log("TransportForm - No existing transport data found, starting with empty form");
             setCurrentEvent(defaultCurrentEvent);

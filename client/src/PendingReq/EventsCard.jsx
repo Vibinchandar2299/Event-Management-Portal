@@ -170,15 +170,24 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
         guestroom = guestResp.data;
       } catch (e) { guestroom = {}; }
     }
-    // If transport is an array of IDs, fetch all
+    // If transport is an array of IDs, fetch all (correct route is /api/transportform/transports/:id)
     if (Array.isArray(transport) && transport.length > 0 && typeof transport[0] === 'string') {
       try {
-        const transResp = await axios.get(
-          `/api/transport/transports`,
-          { params: { ids: transport.join(',') } }
+        const transportDocs = await Promise.all(
+          transport.map(async (id) => {
+            try {
+              const res = await axios.get(`/api/transportform/transports/${id}`);
+              return res.data;
+            } catch (err) {
+              console.error('Error fetching transport by id:', id, err);
+              return null;
+            }
+          })
         );
-        transport = transResp.data;
-      } catch (e) { /* fallback to IDs */ }
+        transport = transportDocs.filter(Boolean);
+      } catch (e) {
+        /* fallback to IDs */
+      }
     }
     // If any are still null, try fallback to alternative keys
     if (!basicEvent && eventData.eventName) basicEvent = eventData;
@@ -238,10 +247,18 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
     }
     if (Array.isArray(transport) && transport.length > 0 && typeof transport[0] === 'string') {
       try {
-        const transResp = await axios.get(`/api/transport/transports`, {
-          params: { ids: transport.join(',') },
-        });
-        transport = transResp.data;
+        const transportDocs = await Promise.all(
+          transport.map(async (id) => {
+            try {
+              const res = await axios.get(`/api/transportform/transports/${id}`);
+              return res.data;
+            } catch (err) {
+              console.error('Error fetching transport by id:', id, err);
+              return null;
+            }
+          })
+        );
+        transport = transportDocs.filter(Boolean);
       } catch (e) {
         /* fallback to IDs */
       }
