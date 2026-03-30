@@ -233,7 +233,6 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     const endformId = localStorage.getItem('endformId');
     const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
-    const createFlowEventId = sessionStorage.getItem('createFlowEventId');
     
     // Skip this effect if we're editing an existing event
     if (isEditMode || endformId) {
@@ -243,11 +242,6 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
     // Outside an active in-tab forms session, never hydrate from cached Basic data.
     if (!hasFormsFlowSession) {
-      return;
-    }
-
-    // Only allow create-flow autofill when this tab created the current event.
-    if (!currentEventId || !createFlowEventId || String(createFlowEventId) !== String(currentEventId)) {
       return;
     }
     
@@ -264,7 +258,6 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     const endformId = localStorage.getItem('endformId');
     const currentEventId = localStorage.getItem('currentEventId');
     const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
-    const createFlowEventId = sessionStorage.getItem('createFlowEventId');
     
     // Skip this effect if we're editing an existing event
     if (isEditMode || endformId) {
@@ -274,11 +267,6 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
     // Never hydrate from common_data unless the user is actively inside this tab's forms flow.
     if (!hasFormsFlowSession) {
-      return;
-    }
-
-    // Only allow create-flow prefill when this tab created the current event.
-    if (!currentEventId || !createFlowEventId || String(createFlowEventId) !== String(currentEventId)) {
       return;
     }
 
@@ -708,11 +696,11 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     };
 
     const missing = [];
-    if (!requiredFields.department) missing.push('Department/Centre');
-    if (!requiredFields.requestorName) missing.push('Requestor Name');
+    if (!requiredFields.department) missing.push('Event Requestor Department');
+    if (!requiredFields.requestorName) missing.push('Event Requestor Name');
     if (!requiredFields.empId) missing.push('Employee ID');
-    if (!requiredFields.mobile) missing.push('Mobile Number');
-    if (!requiredFields.designation) missing.push('Designation & Department');
+    if (!requiredFields.mobile) missing.push('Event Requestor Mobile Number');
+    if (!requiredFields.designation) missing.push('Event Requestor Designation');
     if (!requiredFields.purpose) missing.push('Purpose');
     if (!requiredFields.eventType) missing.push('Event Type');
 
@@ -721,7 +709,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
     const dateObj = requiredFields.date ? new Date(requiredFields.date) : null;
     const isValidDate = dateObj && !Number.isNaN(dateObj.getTime());
-    if (!isValidDate) missing.push('Date');
+    if (!isValidDate) missing.push('Requisition Date');
 
     if (missing.length > 0) {
       toast.error(`Please fill required fields: ${missing.join(', ')}`);
@@ -1058,7 +1046,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             <div className="xl:grid xl:grid-cols-3 gap-6">
               <FormInput
                 icon={<BookOpen />}
-                label="Department/Centre"
+                label="Event Requestor Department"
                 name="department"
                 value={formData.department}
                 onChange={handleInputChange}
@@ -1068,7 +1056,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
               <FormInput
                 icon={<Users />}
-                label="Requestor Name"
+                label="Event Requestor Name"
                 name="requestorName"
                 value={formData.requestorName}
                 onChange={handleInputChange}
@@ -1087,7 +1075,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
               <FormInput
                 icon={<Phone />}
-                label="Mobile Number"
+                label="Event Requestor Mobile Number"
                 name="mobile"
                 type="tel"
                 value={formData.mobile}
@@ -1098,7 +1086,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
               <FormInput
                 icon={<MapPin />}
-                label="Designation & Department"
+                label="Event Requestor Designation"
                 name="designation"
                 value={formData.designation}
                 onChange={handleInputChange}
@@ -1124,7 +1112,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
               <FormInput
                 icon={<CalendarDays />}
-                label="Date"
+                label="Requisition Date"
                 name="date"
                 type="date"
                 value={toDateInputValue(formData.date)}
