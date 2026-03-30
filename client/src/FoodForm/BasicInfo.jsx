@@ -53,7 +53,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Department/Centre
+            Event Requestor Department
           </label>
           <input
             type="text"
@@ -68,7 +68,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Requestor Name
+            Event Requestor Name
           </label>
           <input
             type="text"
@@ -82,7 +82,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Emp ID
+            Employee ID
           </label>
           <input
             type="text"
@@ -96,7 +96,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Designation & Department
+            Event Requestor Designation
           </label>
           <input
             type="text"
