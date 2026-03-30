@@ -787,21 +787,24 @@ const BasicEventForm = ({ eventData, nextForm }) => {
               />
             </div>
 
-            {/* Year Categories */}
+            {/* Category */}
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700">
-                Year Categories
+                Category
               </label>
-              <input
-                type="text"
-                value={formData.categories || ""}
+              <select
+                value={(Array.isArray(formData.categories) ? formData.categories[0] : formData.categories) || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, categories: e.target.value })
                 }
                 disabled={!isFormEditable}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="Enter year categories"
-              />
+              >
+                <option value="">Select Category</option>
+                <option value="Student">Student</option>
+                <option value="Faculty">Faculty</option>
+                <option value="Student & Faculty">Student & Faculty</option>
+              </select>
             </div>
 
             {/* Departments */}
