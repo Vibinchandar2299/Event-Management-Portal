@@ -15,6 +15,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { setEventData, clearEventData } from "../redux/EventSlice";
 import { toast } from "react-toastify";
+import Header from "../FoodForm/Header";
 
 function toDateInputValue(date) {
   if (!date) return '';
@@ -1061,8 +1062,10 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       <div className="max-w-full mx-auto">
         <div className="overflow-hidden">
           <div className="mb-6 rounded-xl bg-indigo-100/70 px-4 py-3 text-sm font-medium text-indigo-800">
-            Form 5: Guest House Booking
+            Form 5: Guest Room Booking
           </div>
+
+          <Header title="Requisition Form for Guest Room Booking" />
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
             <div className="xl:grid xl:grid-cols-3 gap-6">

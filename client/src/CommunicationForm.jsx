@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,12 +7,27 @@ import { useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { setEventData, clearEventData } from "./redux/EventSlice";
+import Header from "./FoodForm/Header";
 
 const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
   console.log("CommunicationForm - currentEventId at mount:", localStorage.getItem('currentEventId'));
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
+
+  const safeParseJSON = (raw) => {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  const formatDate = (value) => {
+    if (!value) return "";
+    return String(value).split("T")[0];
+  };
 
 
   
@@ -32,6 +47,10 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
     return state.event?.event?.communicationform || {};
   });
 
+  const reduxBasicEvent = useSelector((state) => state.event?.event?.basicEvent || {});
+  const [eventSummary, setEventSummary] = useState(null);
+  const didFetchEventSummaryRef = useRef(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState({});
   const [formData, setFormData] = useState({
@@ -43,6 +62,60 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
   const [isFormEditable, setIsFormEditable] = useState(false);
   const [originalFormData, setOriginalFormData] = useState(null);
   const [originalSelectedOptions, setOriginalSelectedOptions] = useState(null);
+
+  useEffect(() => {
+    const currentEventId = localStorage.getItem("currentEventId");
+    const basicFromStorage = safeParseJSON(localStorage.getItem("basicEvent"));
+    const currentEventData = safeParseJSON(localStorage.getItem("currentEventData"));
+    const basicFromCurrentEventData = currentEventData?.basicEvent || null;
+
+    const bestLocalBasicEvent =
+      (reduxBasicEvent && (reduxBasicEvent.eventName || reduxBasicEvent.iqacNumber) ? reduxBasicEvent : null) ||
+      (basicFromCurrentEventData && (basicFromCurrentEventData.eventName || basicFromCurrentEventData.iqacNumber)
+        ? basicFromCurrentEventData
+        : null) ||
+      (basicFromStorage && (basicFromStorage.eventName || basicFromStorage.iqacNumber) ? basicFromStorage : null);
+
+    if (bestLocalBasicEvent) {
+      setEventSummary(bestLocalBasicEvent);
+      return;
+    }
+
+    // Last-resort: fetch basic event for display only.
+    if (!currentEventId) return;
+    if (!/^[0-9a-fA-F]{24}$/.test(currentEventId)) return;
+    if (didFetchEventSummaryRef.current) return;
+    didFetchEventSummaryRef.current = true;
+
+    (async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/event/${currentEventId}`);
+        if (res.data && (res.data.eventName || res.data.iqacNumber)) {
+          setEventSummary(res.data);
+        }
+      } catch (err) {
+        // Silent: summary is optional and should not block the form.
+      }
+    })();
+  }, [reduxBasicEvent]);
+
+  const summary = eventSummary;
+  const summaryOrganizer = Array.isArray(summary?.organizers) ? summary.organizers[0] : null;
+  const summaryDepartment = (() => {
+    const values = [
+      ...(Array.isArray(summary?.departments) ? summary.departments : []),
+      ...(Array.isArray(summary?.academicdepartment) ? summary.academicdepartment : []),
+      ...(Array.isArray(summary?.professional) ? summary.professional : []),
+    ].filter(Boolean);
+    return Array.from(new Set(values)).join(", ");
+  })();
+
+  const SummaryItem = ({ label, value }) => (
+    <div className="rounded-lg border border-violet-900/10 bg-violet-50/50 px-3 py-2">
+      <div className="text-xs font-semibold text-slate-600">{label}</div>
+      <div className="mt-0.5 text-sm font-medium text-slate-900">{value || "—"}</div>
+    </div>
+  );
 
   useEffect(() => {
     setIsFormEditable(!isEditMode);
@@ -491,11 +564,36 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
           className="w-full p-4 md:p-6"
         >
           <div className="mb-6 rounded-xl bg-violet-100/70 px-4 py-3 text-sm font-medium text-violet-800">
-            Form 2: Communication & Media
+            Form 2: Communication & Media Requisition
           </div>
-          <h1 className="mb-6 text-start text-2xl font-bold text-slate-800 md:text-3xl">
-            Communication and Media {isEditMode ? "(Edit Mode)" : ""}
-          </h1>
+
+          <Header title="Requisition Form for Communication and Media" />
+
+          {currentEventId && (
+            <div className="mb-6 rounded-xl border border-violet-900/10 bg-white p-4 shadow-sm">
+              <div className="mb-3 text-sm font-semibold text-violet-900">
+                Event Summary (read-only)
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <SummaryItem label="IQAC Number" value={summary?.iqacNumber || ""} />
+                <SummaryItem label="Event Name" value={summary?.eventName || ""} />
+                <SummaryItem label="Event Type" value={summary?.eventType || ""} />
+                <SummaryItem
+                  label="Event Date"
+                  value={
+                    [formatDate(summary?.startDate), formatDate(summary?.endDate)]
+                      .filter(Boolean)
+                      .join(" - ")
+                  }
+                />
+                <SummaryItem label="Event Department" value={summaryDepartment} />
+                <SummaryItem label="Event Requestor Name" value={summaryOrganizer?.name || ""} />
+                <SummaryItem label="Event Requestor Mobile Number" value={summaryOrganizer?.phone || ""} />
+                <SummaryItem label="Event Requestor Designation" value={summaryOrganizer?.designation || ""} />
+              </div>
+            </div>
+          )}
+
           <div className="mb-6 flex flex-col gap-3 text-base font-semibold text-gray-700 md:text-lg">
             <label className="inline-flex ml-4 items-center">
               <input

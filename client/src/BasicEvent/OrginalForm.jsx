@@ -16,6 +16,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { setEventData, clearEventData, resetEventState } from "../redux/EventSlice";
+import Header from "../FoodForm/Header";
 
 function toDateInputValue(date) {
   if (!date) return '';
@@ -657,9 +658,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
           <div className="mb-6 rounded-xl bg-emerald-100/70 px-4 py-3 text-sm font-medium text-emerald-800">
             Form 1: Basic Event Information
           </div>
-          <h1 className="mb-8 text-center text-2xl font-bold text-slate-800 md:text-3xl">
-            Request to Organize Event
-          </h1>
+          <Header title="Request to Organize Event" />
 
           <form
             onSubmit={handleSubmit}
