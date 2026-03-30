@@ -65,6 +65,7 @@ export function TravelDetails({ data, setDetails, disabled = false }) {
           name="pickUpLocation"
           value={travelData.pickUpLocation}
           onChange={handleInputChange}
+          placeholder="Enter pickup location"
           disabled={disabled}
           className="mt-1"
         />
@@ -93,6 +94,7 @@ export function TravelDetails({ data, setDetails, disabled = false }) {
           name="dropLocation"
           value={travelData.dropLocation}
           onChange={handleInputChange}
+          placeholder="Enter drop location"
           disabled={disabled}
           className="mt-1"
         />
@@ -107,6 +109,7 @@ export function TravelDetails({ data, setDetails, disabled = false }) {
           name="numberOfPassengers"
           value={travelData.numberOfPassengers}
           onChange={handleInputChange}
+          placeholder="Enter number of passengers"
           min="1"
           disabled={disabled}
           className="mt-1"
@@ -142,6 +145,7 @@ export function TravelDetails({ data, setDetails, disabled = false }) {
           name="specialRequirements"
           value={travelData.specialRequirements}
           onChange={handleInputChange}
+          placeholder="Enter special requirements"
           disabled={disabled}
           className="mt-1"
         />

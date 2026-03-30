@@ -47,6 +47,7 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
             name="iqacNumber"
             value={formState.iqacNumber}
             onChange={handleChange}
+            placeholder="Enter IQAC number"
             disabled={disabled}
             className="mt-1"
             required
@@ -61,6 +62,7 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
             name="empId"
             value={formState.empId}
             onChange={handleChange}
+            placeholder="Enter employee ID"
             disabled={disabled}
             className="mt-1"
             required
@@ -75,6 +77,7 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
             name="requestorName"
             value={formState.requestorName}
             onChange={handleChange}
+            placeholder="Enter your name"
             disabled={disabled}
             className="mt-1"
             required
@@ -89,6 +92,7 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
             name="mobileNumber"
             value={formState.mobileNumber}
             onChange={handleChange}
+            placeholder="Enter mobile number"
             disabled={disabled}
             className="mt-1"
           />
@@ -102,6 +106,7 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
             name="designation"
             value={formState.designation}
             onChange={handleChange}
+            placeholder="Enter designation"
             disabled={disabled}
             className="mt-1"
           />
@@ -129,6 +134,7 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
             name="departmentName"
             value={formState.departmentName}
             onChange={handleChange}
+            placeholder="Enter department name"
             disabled={disabled}
             className="mt-1"
             required

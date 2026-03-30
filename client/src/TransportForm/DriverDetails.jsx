@@ -29,6 +29,7 @@ export function DriverDetails({ data, setDetails, disabled = false }) {
             name="name"
             value={driverInfo.name}
             onChange={handleInputChange}
+            placeholder="Enter driver name"
             disabled={disabled}
             className="mt-1"
           />
@@ -40,6 +41,7 @@ export function DriverDetails({ data, setDetails, disabled = false }) {
             name="mobileNumber"
             value={driverInfo.mobileNumber}
             onChange={handleInputChange}
+            placeholder="Enter mobile number"
             disabled={disabled}
             className="mt-1"
           />

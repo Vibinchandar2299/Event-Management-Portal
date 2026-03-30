@@ -31,6 +31,69 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="iqacNumber"
             value={formData.iqacNumber || ""}
             onChange={handleChange}
+            placeholder="Enter IQAC number"
+            autoComplete="off"
+            disabled={disabled}
+            className="w-full"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Employee ID
+          </label>
+          <input
+            type="text"
+            name="empId"
+            value={formData.empId || ""}
+            onChange={handleChange}
+            placeholder="Enter employee ID"
+            autoComplete="off"
+            disabled={disabled}
+            className="w-full"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Event Requestor Name
+          </label>
+          <input
+            type="text"
+            name="requestorName"
+            value={formData.requestorName || ""}
+            onChange={handleChange}
+            placeholder="Enter your name"
+            autoComplete="off"
+            disabled={disabled}
+            className="w-full"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Mobile Number
+          </label>
+          <input
+            type="tel"
+            name="mobileNumber"
+            value={formData.mobileNumber || ""}
+            onChange={handleChange}
+            placeholder="Enter mobile number"
+            autoComplete="off"
+            disabled={disabled}
+            className="w-full"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Event Requestor Designation
+          </label>
+          <input
+            type="text"
+            name="designationDepartment"
+            value={formData.designationDepartment || ""}
+            onChange={handleChange}
+            placeholder="Enter designation"
             autoComplete="off"
             disabled={disabled}
             className="w-full"
@@ -50,7 +113,6 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             className="w-full"
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Event Requestor Department
@@ -60,63 +122,7 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
             name="department"
             value={formData.department || ""}
             onChange={handleChange}
-            autoComplete="off"
-            disabled={disabled}
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Event Requestor Name
-          </label>
-          <input
-            type="text"
-            name="requestorName"
-            value={formData.requestorName || ""}
-            onChange={handleChange}
-            autoComplete="off"
-            disabled={disabled}
-            className="w-full"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Employee ID
-          </label>
-          <input
-            type="text"
-            name="empId"
-            value={formData.empId || ""}
-            onChange={handleChange}
-            autoComplete="off"
-            disabled={disabled}
-            className="w-full"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Event Requestor Designation
-          </label>
-          <input
-            type="text"
-            name="designationDepartment"
-            value={formData.designationDepartment || ""}
-            onChange={handleChange}
-            autoComplete="off"
-            disabled={disabled}
-            className="w-full"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Mobile Number
-          </label>
-          <input
-            type="tel"
-            name="mobileNumber"
-            value={formData.mobileNumber || ""}
-            onChange={handleChange}
+            placeholder="Enter department name"
             autoComplete="off"
             disabled={disabled}
             className="w-full"

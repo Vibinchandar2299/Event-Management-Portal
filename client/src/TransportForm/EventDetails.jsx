@@ -29,6 +29,7 @@ export function EventDetails({ data, setDetails, disabled = false }) {
           name="eventName"
           value={eventData.eventName}
           onChange={handleInputChange}
+          placeholder="Enter event name"
           disabled={disabled}
           className="mt-1"
         />
@@ -42,6 +43,7 @@ export function EventDetails({ data, setDetails, disabled = false }) {
           name="eventType"
           value={eventData.eventType}
           onChange={handleInputChange}
+          placeholder="Enter event type"
           disabled={disabled}
           className="mt-1"
         />
@@ -54,6 +56,7 @@ export function EventDetails({ data, setDetails, disabled = false }) {
           name="travellerDetails"
           value={eventData.travellerDetails}
           onChange={handleInputChange}
+          placeholder="Enter traveller details"
           disabled={disabled}
           className="mt-1"
           rows={3}

@@ -1068,21 +1068,11 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             <div className="xl:grid xl:grid-cols-3 gap-6">
               <FormInput
                 icon={<BookOpen />}
-                label="Event Requestor Department"
-                name="department"
-                value={formData.department}
+                label="IQAC Number"
+                name="iqacNumber"
+                value={formData.iqacNumber}
                 onChange={handleInputChange}
-                placeholder="Enter department name"
-                disabled={!canEdit || !isFormEditable}
-              />
-
-              <FormInput
-                icon={<Users />}
-                label="Event Requestor Name"
-                name="requestorName"
-                value={formData.requestorName}
-                onChange={handleInputChange}
-                placeholder="Enter your name"
+                placeholder="Enter IQAC number"
                 disabled={!canEdit || !isFormEditable}
               />
 
@@ -1096,22 +1086,12 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               />
 
               <FormInput
-                icon={<BookOpen />}
-                label="IQAC Number"
-                name="iqacNumber"
-                value={formData.iqacNumber}
+                icon={<Users />}
+                label="Event Requestor Name"
+                name="requestorName"
+                value={formData.requestorName}
                 onChange={handleInputChange}
-                placeholder="Enter IQAC number"
-                disabled={!canEdit || !isFormEditable}
-              />
-
-              <FormInput
-                icon={<Building2 />}
-                label="Event Name"
-                name="eventName"
-                value={formData.eventName}
-                onChange={handleInputChange}
-                placeholder="Enter event name"
+                placeholder="Enter your name"
                 disabled={!canEdit || !isFormEditable}
               />
 
@@ -1137,21 +1117,6 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 disabled={!canEdit || !isFormEditable}
               />
 
-              <div className="">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Purpose
-                </label>
-                <textarea
-                  name="purpose"
-                  value={formData.purpose}
-                  onChange={handleInputChange}
-                  className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
-                  rows={3}
-                  placeholder="Enter purpose of booking"
-                  disabled={!canEdit || !isFormEditable}
-                />
-              </div>
-
               <FormInput
                 icon={<CalendarDays />}
                 label="Requisition Date"
@@ -1159,6 +1124,35 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 type="date"
                 value={toDateInputValue(formData.date)}
                 onChange={handleInputChange}
+                disabled={!canEdit || !isFormEditable}
+              />
+
+              <FormInput
+                icon={<BookOpen />}
+                label="Event Requestor Department"
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
+                placeholder="Enter department name"
+                disabled={!canEdit || !isFormEditable}
+              />
+
+              <FormInput
+                icon={<Building2 />}
+                label="Event Name"
+                name="eventName"
+                value={formData.eventName}
+                onChange={handleInputChange}
+                placeholder="Enter event name"
+                disabled={!canEdit || !isFormEditable}
+              />
+
+              <FormInput
+                label="Event Type"
+                name="eventType"
+                value={formData.eventType}
+                onChange={handleInputChange}
+                placeholder="Enter event type"
                 disabled={!canEdit || !isFormEditable}
               />
 
@@ -1174,14 +1168,20 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 disabled={!canEdit || !isFormEditable}
               />
 
-              <FormInput
-                label="Event Type"
-                name="eventType"
-                value={formData.eventType}
-                onChange={handleInputChange}
-                placeholder="Enter event type"
-                disabled={!canEdit || !isFormEditable}
-              />
+              <div className="">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Purpose
+                </label>
+                <textarea
+                  name="purpose"
+                  value={formData.purpose}
+                  onChange={handleInputChange}
+                  className="border border-black p-2 rounded focus:outline-none focus:ring-2 focus:ring-black w-96"
+                  rows={3}
+                  placeholder="Enter purpose of booking"
+                  disabled={!canEdit || !isFormEditable}
+                />
+              </div>
             </div>
 
             <RoomSelection
