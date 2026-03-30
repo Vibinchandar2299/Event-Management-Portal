@@ -24,6 +24,16 @@ function toDateInputValue(date) {
   return d.toISOString().slice(0, 10);
 }
 
+const safeParseSessionJSON = (key) => {
+  const raw = sessionStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
 const BasicEventForm = ({ eventData, nextForm }) => {
   console.log("BasicEventForm - Component loaded");
   console.log("BasicEventForm - eventData prop:", eventData);
@@ -119,6 +129,11 @@ const BasicEventForm = ({ eventData, nextForm }) => {
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     
     if (isEditMode && event1Basics && event1Basics._id) {
+      // Ensure cross-form navigation has a stable event context.
+      // Some forms reset themselves if currentEventId is missing.
+      localStorage.setItem('currentEventId', String(event1Basics._id));
+      localStorage.setItem('basicEventId', String(event1Basics._id));
+
       const prefillOrganizers = normalizeOrganizers(event1Basics.organizers);
       const prefillResourcePersons = normalizeResourcePersons(event1Basics.resourcePersons);
       const prefillData = {
@@ -147,6 +162,10 @@ const BasicEventForm = ({ eventData, nextForm }) => {
       setIsEditMode(true);
       setIsFormEditable(false); // Start in read-only mode
     } else if (isEditMode && eventData && eventData._id) {
+      // Ensure cross-form navigation has a stable event context.
+      localStorage.setItem('currentEventId', String(eventData._id));
+      localStorage.setItem('basicEventId', String(eventData._id));
+
       const prefillOrganizers = normalizeOrganizers(eventData.organizers);
       const prefillResourcePersons = normalizeResourcePersons(eventData.resourcePersons);
       const prefillData = {
@@ -176,6 +195,29 @@ const BasicEventForm = ({ eventData, nextForm }) => {
       setIsFormEditable(false); // Start in read-only mode
     } else {
       // New event creation - start editable and prefill from saved flow data if available
+      const currentEventId = localStorage.getItem('currentEventId');
+
+      // If the user already started filling Basic and navigated away,
+      // restore their in-tab draft (session-scoped) before anything else.
+      if (!currentEventId) {
+        const draft = safeParseSessionJSON('basicDraft');
+        const draftOrganizers = safeParseSessionJSON('basicDraftOrganizers');
+        const draftResourcePersons = safeParseSessionJSON('basicDraftResourcePersons');
+
+        if (draft && typeof draft === 'object') {
+          setFormData((prev) => ({ ...prev, ...draft }));
+          if (Array.isArray(draftOrganizers)) {
+            setOrganizers(draftOrganizers);
+          }
+          if (Array.isArray(draftResourcePersons)) {
+            setResourcePersons(draftResourcePersons);
+          }
+          setIsEditMode(false);
+          setIsFormEditable(true);
+          return;
+        }
+      }
+
       const basicFromStorage = JSON.parse(localStorage.getItem('basicEvent') || 'null');
       const basicFromCommon = JSON.parse(localStorage.getItem('common_data') || 'null');
       const prefillSource = basicFromStorage && (basicFromStorage.eventName || basicFromStorage.iqacNumber)
@@ -211,6 +253,19 @@ const BasicEventForm = ({ eventData, nextForm }) => {
       setIsFormEditable(true);
     }
   }, [event1Basics, eventData]);
+
+  // Session-scoped draft persistence for new event creation.
+  // Keeps the Basic form from losing user input when they click other steps.
+  useEffect(() => {
+    const inEditMode = localStorage.getItem('isEditMode') === 'true';
+    const currentEventId = localStorage.getItem('currentEventId');
+    if (inEditMode) return;
+    if (currentEventId) return;
+
+    sessionStorage.setItem('basicDraft', JSON.stringify(formData));
+    sessionStorage.setItem('basicDraftOrganizers', JSON.stringify(organizers));
+    sessionStorage.setItem('basicDraftResourcePersons', JSON.stringify(resourcePersons));
+  }, [formData, organizers, resourcePersons]);
 
   useEffect(() => {
     const inEditMode = localStorage.getItem('isEditMode') === 'true';
@@ -386,6 +441,8 @@ const BasicEventForm = ({ eventData, nextForm }) => {
           );
           localStorage.setItem('currentEventId', eventformId);
           localStorage.setItem('basicEventId', eventformId);
+          localStorage.setItem('activeCreateFlow', 'true');
+          localStorage.setItem('activeCreateFlowAt', String(Date.now()));
 
           // Clear old form IDs to prevent loading old data
           localStorage.removeItem('foodFormId');
@@ -423,6 +480,12 @@ const BasicEventForm = ({ eventData, nextForm }) => {
           }, 1000);
 
           toast.success("Event created successfully!");
+
+          // Clear in-tab draft now that the event is created.
+          sessionStorage.removeItem('basicDraft');
+          sessionStorage.removeItem('basicDraftOrganizers');
+          sessionStorage.removeItem('basicDraftResourcePersons');
+
           console.log("About to navigate to:", nextForm);
           if (nextForm) {
             console.log("Navigating to nextForm:", nextForm);
@@ -986,6 +1049,24 @@ const BasicEventForm = ({ eventData, nextForm }) => {
 
             {/* Submit Button */}
             <div className="col-span-3 mt-8 flex justify-end gap-3">
+              {isEditMode && !isFormEditable && (
+                <button
+                  type="button"
+                  onClick={handleEditToggle}
+                  className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                >
+                  Edit Form
+                </button>
+              )}
+              {isEditMode && isFormEditable && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="h-10 rounded-md bg-slate-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+                >
+                  Cancel
+                </button>
+              )}
               <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
                 Save and Go Next
               </button>

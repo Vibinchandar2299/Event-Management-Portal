@@ -28,28 +28,6 @@ export function BasicDetails({ data, setDetails, disabled = false }) {
     }
   }, [data]);
 
-  // Load data from localStorage on component mount
-  useEffect(() => {
-    const local = JSON.parse(localStorage.getItem("common_data"));
-    if (local) {
-      const eventData = local;
-      const organizers = eventData.organizers || {};
-
-      const newState = {
-        iqacNumber: eventData.iqacNumber || "",
-        requisitionDate: eventData.startDate || "",
-        departmentName: eventData.departments ? eventData.departments.join(", ") : "",
-        requestorName: organizers.name || "",
-        empId: organizers.employeeId || "",
-        designation: organizers.designation || "",
-        mobileNumber: organizers.phone || "",
-      };
-
-      setFormState(newState);
-      setDetails(newState);
-    }
-  }, []);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     const newState = { ...formState, [name]: value };

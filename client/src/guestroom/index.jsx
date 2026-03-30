@@ -130,6 +130,33 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   const [isFormEditable, setIsFormEditable] = useState(false);
   const [originalFormData, setOriginalFormData] = useState(null);
 
+  const hasMeaningfulGuestData = (data) => {
+    if (!data || typeof data !== 'object') return false;
+    if (Array.isArray(data)) return data.length > 0;
+    const selectedRooms = Array.isArray(data.selectedRooms) ? data.selectedRooms : [];
+    return Boolean(
+      data.department ||
+      data.requestorName ||
+      data.empId ||
+      data.mobile ||
+      data.designation ||
+      data.purpose ||
+      data.date ||
+      data.guestCount ||
+      data.eventType ||
+      selectedRooms.length > 0
+    );
+  };
+
+  const safeParseJSON = (raw) => {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     setIsFormEditable(!isEditMode);
   }, [isEditMode]);
@@ -159,6 +186,13 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     console.log("userDept:", userDept);
     console.log("Raw user_dept from localStorage:", localStorage.getItem("user_dept"));
   }, [formData, canEdit, userDept]);
+
+  // Persist an actual draft only after the user starts editing.
+  useEffect(() => {
+    if (localStorage.getItem('guestRoomHasUnsavedChanges') === 'true') {
+      localStorage.setItem('guestRoomFormData', JSON.stringify(formData));
+    }
+  }, [formData]);
 
   useEffect(() => {
     // Only prefill from eventData prop if we're NOT in edit mode
@@ -291,6 +325,30 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
     // New event flow after Basic Event save: currentEventId exists, but no endform yet
     if (currentEventId && !endformId && !isEditMode) {
+      const storedGuestRoomForm = localStorage.getItem('guestRoomForm');
+      if (storedGuestRoomForm) {
+        try {
+          const parsedGuestData = JSON.parse(storedGuestRoomForm);
+          if (parsedGuestData && Object.keys(parsedGuestData).length > 0) {
+            setFormData({
+              department: parsedGuestData.department || "",
+              requestorName: parsedGuestData.requestorName || "",
+              empId: parsedGuestData.empId || "",
+              mobile: parsedGuestData.mobile || "",
+              designation: parsedGuestData.designation || "",
+              purpose: parsedGuestData.purpose || "",
+              date: parsedGuestData.date ? new Date(parsedGuestData.date).toISOString().split('T')[0] : "",
+              guestCount: parsedGuestData.guestCount || "",
+              eventType: parsedGuestData.eventType || "",
+              selectedRooms: parsedGuestData.selectedRooms || [],
+              _id: parsedGuestData._id || "",
+            });
+            return;
+          }
+        } catch (error) {
+          console.error("GuestRoom - Error parsing stored guest room data in creation flow:", error);
+        }
+      }
       console.log("GuestRoom - Applying Basic Event autofill for new flow");
       setFormData(getAutofilledGuestBase());
       return;
@@ -299,19 +357,27 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     // Existing flow: only use edit mode or endform-linked prefill.
     if (endformId || isEditMode) {
       // Check if we have unsaved changes (user was actively editing)
-      const existingFormData = localStorage.getItem('guestRoomForm');
+      const existingFormData = localStorage.getItem('guestRoomFormData') || localStorage.getItem('guestRoomForm');
       const hasUnsavedChanges = localStorage.getItem('guestRoomHasUnsavedChanges') === 'true';
       
       if (existingFormData && hasUnsavedChanges) {
         console.log("Using existing form data from localStorage (unsaved changes)");
-        const parsedData = JSON.parse(existingFormData);
-        setFormData(prevData => ({
-          ...prevData,
-          ...parsedData,
-          date: parsedData.date ? new Date(parsedData.date).toISOString().split('T')[0] : '',
-          selectedRooms: parsedData.selectedRooms || [],
-        }));
-        return; // Don't fetch from server if we have unsaved changes
+        const parsedData = safeParseJSON(existingFormData) || {};
+
+        // Ignore empty drafts; they should never block server prefill.
+        if (hasMeaningfulGuestData(parsedData)) {
+          setFormData(prevData => ({
+            ...prevData,
+            ...parsedData,
+            date: parsedData.date ? new Date(parsedData.date).toISOString().split('T')[0] : '',
+            selectedRooms: parsedData.selectedRooms || [],
+          }));
+          return; // Don't fetch from server if we have real unsaved changes
+        }
+
+        console.log('GuestRoom - Unsaved-changes flag set but draft is empty; clearing flag and continuing prefill');
+        localStorage.removeItem('guestRoomHasUnsavedChanges');
+        localStorage.removeItem('guestRoomFormData');
       }
       
       // Check if we have guest room form data in localStorage (set by Edit button)
@@ -335,30 +401,29 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
           });
           
           // Check if we have valid guest room data
-          if (!parsedGuestData || Object.keys(parsedGuestData).length === 0) {
-            console.log("GuestRoom - No valid guest room data found in localStorage, skipping");
+          if (!hasMeaningfulGuestData(parsedGuestData)) {
+            console.log("GuestRoom - No valid guest room data found in localStorage, continuing to fetch");
+          } else {
+            // Format the data to match our form structure
+            const formattedData = {
+              department: parsedGuestData.department || "",
+              requestorName: parsedGuestData.requestorName || "",
+              empId: parsedGuestData.empId || "",
+              mobile: parsedGuestData.mobile || "",
+              designation: parsedGuestData.designation || "",
+              purpose: parsedGuestData.purpose || "",
+              date: parsedGuestData.date ? new Date(parsedGuestData.date).toISOString().split('T')[0] : "",
+              guestCount: parsedGuestData.guestCount || "",
+              eventType: parsedGuestData.eventType || "",
+              selectedRooms: parsedGuestData.selectedRooms || [],
+              _id: parsedGuestData._id || "",
+            };
+            
+            console.log("GuestRoom - Final formatted data:", formattedData);
+            setFormData(formattedData);
+            console.log("GuestRoom - Set form data with localStorage data:", formattedData);
             return;
           }
-          
-          // Format the data to match our form structure
-          const formattedData = {
-            department: parsedGuestData.department || "",
-            requestorName: parsedGuestData.requestorName || "",
-            empId: parsedGuestData.empId || "",
-            mobile: parsedGuestData.mobile || "",
-            designation: parsedGuestData.designation || "",
-            purpose: parsedGuestData.purpose || "",
-            date: parsedGuestData.date ? new Date(parsedGuestData.date).toISOString().split('T')[0] : "",
-            guestCount: parsedGuestData.guestCount || "",
-            eventType: parsedGuestData.eventType || "",
-            selectedRooms: parsedGuestData.selectedRooms || [],
-            _id: parsedGuestData._id || "",
-          };
-          
-          console.log("GuestRoom - Final formatted data:", formattedData);
-          setFormData(formattedData);
-          console.log("GuestRoom - Set form data with localStorage data:", formattedData);
-          return;
         } catch (error) {
           console.error("GuestRoom - Error parsing stored guest room form data:", error);
         }
@@ -369,12 +434,33 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       // Only fetch data if there's an actual event being created and no localStorage data
       const fetchAndPrefill = async () => {
         try {
-          console.log("GuestRoom - Fetching data for editing from endformId:", endformId);
-          const response = await axios.get(`${import.meta.env.VITE_API_URL}/endform/${endformId}`);
-          console.log("GuestRoom - Response from endform:", response.data);
-          
-          if (response.data && response.data.guestform) {
-            const guestData = response.data.guestform;
+          const liveEndformId = localStorage.getItem('endformId');
+          const liveGuestRoomFormId = localStorage.getItem('guestRoomFormId');
+
+          let guestData = null;
+
+          if (liveEndformId) {
+            console.log("GuestRoom - Fetching data for editing from endformId:", liveEndformId);
+            const response = await axios.get(`${import.meta.env.VITE_API_URL}/endform/${liveEndformId}`);
+            console.log("GuestRoom - Response from endform:", response.data);
+
+            const guestRef = response?.data?.guestform;
+            if (guestRef && typeof guestRef === 'object' && hasMeaningfulGuestData(guestRef)) {
+              guestData = guestRef;
+            } else if (guestRef && typeof guestRef === 'string') {
+              console.log('GuestRoom - endform.guestform is an id; fetching booking by id');
+              const bookingRes = await axios.get(`${import.meta.env.VITE_API_URL}/guestroom/bookings/${guestRef}`);
+              guestData = bookingRes?.data || null;
+            }
+          }
+
+          if (!guestData && liveGuestRoomFormId) {
+            console.log('GuestRoom - Fetching booking by guestRoomFormId:', liveGuestRoomFormId);
+            const bookingRes = await axios.get(`${import.meta.env.VITE_API_URL}/guestroom/bookings/${liveGuestRoomFormId}`);
+            guestData = bookingRes?.data || null;
+          }
+
+          if (guestData && hasMeaningfulGuestData(guestData)) {
             console.log("GuestRoom - Found guest room data:", guestData);
             
             // Format the data to match our form structure
@@ -394,35 +480,17 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             
             setFormData(formattedData);
             console.log("GuestRoom - Set form data with formatted data:", formattedData);
+
+            // Clear any stale unsaved flag after successful prefill.
+            localStorage.removeItem('guestRoomHasUnsavedChanges');
+            localStorage.removeItem('guestRoomFormData');
           } else {
-            console.log("GuestRoom - No existing guest room data found, starting with empty form");
-            setFormData({
-              department: "",
-              requestorName: "",
-              empId: "",
-              mobile: "",
-              designation: "",
-              purpose: "",
-              date: "",
-              guestCount: "",
-              eventType: "",
-              selectedRooms: [],
-            });
+            console.log("GuestRoom - No existing guest room data found; applying Basic Event autofill");
+            setFormData(getAutofilledGuestBase());
           }
         } catch (error) {
           console.error("GuestRoom - Error fetching guest room data:", error);
-          setFormData({
-            department: "",
-            requestorName: "",
-            empId: "",
-            mobile: "",
-            designation: "",
-            purpose: "",
-            date: "",
-            guestCount: "",
-            eventType: "",
-            selectedRooms: [],
-          });
+          setFormData(getAutofilledGuestBase());
         }
       };
       fetchAndPrefill();
@@ -459,16 +527,31 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         console.log("Fetching from Endform...");
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/endform/${endformId}`);
         console.log("Endform response:", response.data);
-        if (response.data && response.data.guestform) {
-          const guestData = response.data.guestform;
-          console.log("Found guest data in Endform:", guestData);
+        const guestRef = response?.data?.guestform;
+        if (guestRef && typeof guestRef === 'object' && hasMeaningfulGuestData(guestRef)) {
+          console.log("Found guest data in Endform:", guestRef);
           setFormData(prevData => ({
             ...prevData,
-            ...guestData,
-            date: guestData.date ? new Date(guestData.date).toISOString().split('T')[0] : '',
-            selectedRooms: guestData.selectedRooms || [],
+            ...guestRef,
+            date: guestRef.date ? new Date(guestRef.date).toISOString().split('T')[0] : '',
+            selectedRooms: guestRef.selectedRooms || [],
           }));
           return;
+        }
+
+        if (guestRef && typeof guestRef === 'string') {
+          console.log('Endform guestform is id; fetching booking by id:', guestRef);
+          const bookingRes = await axios.get(`${import.meta.env.VITE_API_URL}/guestroom/bookings/${guestRef}`);
+          const guestData = bookingRes?.data;
+          if (guestData && hasMeaningfulGuestData(guestData)) {
+            setFormData(prevData => ({
+              ...prevData,
+              ...guestData,
+              date: guestData.date ? new Date(guestData.date).toISOString().split('T')[0] : '',
+              selectedRooms: guestData.selectedRooms || [],
+            }));
+            return;
+          }
         }
       }
       
@@ -539,14 +622,41 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       console.log("No event object or preventDefault not available");
     }
     
-    setIsLoading(true);
+    // Frontend validation for required fields (backend requires all of these)
+    const requiredFields = {
+      department: (formData.department || '').toString().trim(),
+      requestorName: (formData.requestorName || '').toString().trim(),
+      empId: (formData.empId || '').toString().trim(),
+      mobile: (formData.mobile || '').toString().trim(),
+      designation: (formData.designation || '').toString().trim(),
+      purpose: (formData.purpose || '').toString().trim(),
+      eventType: (formData.eventType || '').toString().trim(),
+      guestCount: formData.guestCount,
+      date: formData.date,
+    };
 
-    // Frontend validation for required field
-    if (!formData.eventType || formData.eventType.trim() === "") {
-      toast.error("Event Type is required.");
-      setIsLoading(false);
+    const missing = [];
+    if (!requiredFields.department) missing.push('Department/Centre');
+    if (!requiredFields.requestorName) missing.push('Requestor Name');
+    if (!requiredFields.empId) missing.push('Employee ID');
+    if (!requiredFields.mobile) missing.push('Mobile Number');
+    if (!requiredFields.designation) missing.push('Designation & Department');
+    if (!requiredFields.purpose) missing.push('Purpose');
+    if (!requiredFields.eventType) missing.push('Event Type');
+
+    const guestCountNumber = Number(requiredFields.guestCount);
+    if (!Number.isFinite(guestCountNumber) || guestCountNumber <= 0) missing.push('Number of Guests');
+
+    const dateObj = requiredFields.date ? new Date(requiredFields.date) : null;
+    const isValidDate = dateObj && !Number.isNaN(dateObj.getTime());
+    if (!isValidDate) missing.push('Date');
+
+    if (missing.length > 0) {
+      toast.error(`Please fill required fields: ${missing.join(', ')}`);
       return;
     }
+
+    setIsLoading(true);
 
     try {
       // Check if we have guest room data from Redux or localStorage
@@ -562,9 +672,10 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       
       let url;
       let method;
+      let updateId = null;
 
       if (isUpdating) {
-        const updateId = guestroomData?._id || guestRoomId;
+        updateId = guestroomData?._id || guestRoomId;
         url = `${import.meta.env.VITE_API_URL}/guestroom/bookings/${updateId}`;
         method = 'PUT';
       } else {
@@ -575,7 +686,16 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       // Format the date before sending
       const submitData = {
         ...formData,
-        date: formData.date ? new Date(formData.date).toISOString() : null
+        department: requiredFields.department,
+        requestorName: requiredFields.requestorName,
+        empId: requiredFields.empId,
+        mobile: requiredFields.mobile,
+        designation: requiredFields.designation,
+        purpose: requiredFields.purpose,
+        eventType: requiredFields.eventType,
+        guestCount: guestCountNumber,
+        date: dateObj.toISOString(),
+        selectedRooms: Array.isArray(formData.selectedRooms) ? formData.selectedRooms : [],
       };
 
       console.log("Submitting guest room data:", submitData);
@@ -600,20 +720,29 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       console.log("Server response status:", response.status);
       console.log("Server response data:", response.data);
 
-      if (response.data) {
-        // The backend sends the booking object directly
-        const updatedBooking = response.data;
-        
-        if (updatedBooking._id) {
+      if (response && response.status >= 200 && response.status < 300) {
+        const bookingPayload = response.data?.data || response.data?.booking || response.data || {};
+        const resolvedBookingId = bookingPayload?._id || bookingPayload?.id || updateId || guestRoomId || "";
+        const updatedBooking = {
+          ...bookingPayload,
+          _id: resolvedBookingId,
+        };
+
+        if (resolvedBookingId) {
           // Update localStorage with the response data from backend
           const guestRoom = {
             ...updatedBooking
           };
           localStorage.setItem("guestRoomForm", JSON.stringify(guestRoom));
-          localStorage.setItem('guestRoomFormId', updatedBooking._id);
+          localStorage.setItem('guestRoomFormId', resolvedBookingId);
+          const liveEndformId = localStorage.getItem('endformId');
+          if (liveEndformId) {
+            localStorage.setItem('guestRoomFormEndformId', String(liveEndformId));
+          }
           
           // Clear the unsaved changes flag since data was successfully saved
           localStorage.removeItem('guestRoomHasUnsavedChanges');
+          localStorage.removeItem('guestRoomFormData');
 
           if (isUpdating) {
             toast.success("Guest room updated successfully");
@@ -641,23 +770,21 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
               if (!isValidObjectId) {
                 console.error('Invalid event ID format:', eventId);
-                toast.error('Invalid event ID. Please start from the Basic Event form.');
-                return;
+                toast.warning('Guest room saved, but skipped event linking because event ID is invalid.');
+              } else {
+                try {
+                  await axios.put(
+                    `${import.meta.env.VITE_API_URL}/event/${eventId}`,
+                    { guestform: resolvedBookingId }
+                  );
+                } catch (err) {
+                  console.error('Failed to link updated guest room form to main event:', err);
+                  toast.error('Failed to link guest room form to main event. Please contact support if this persists.');
+                }
               }
-              
-              try {
-                await axios.put(
-                  `${import.meta.env.VITE_API_URL}/event/${eventId}`,
-                  { guestform: updatedBooking._id }
-                );
-              } catch (err) {
-                console.error('Failed to link updated guest room form to main event:', err);
-                toast.error('Failed to link guest room form to main event. Please contact support if this persists.');
-              }
-                         } else {
+            } else {
                console.error('No event ID found in basicEvent');
-               toast.error('No event ID found. Please start from the Basic Event form and create an event first.');
-               return;
+               toast.warning('Guest room saved, but no active event ID found to link.');
              }
             
             // Update the Endform with the updated guest room form ID
@@ -666,30 +793,29 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               try {
                 await axios.put(
                   `${import.meta.env.VITE_API_URL}/endform/${endformId}`,
-                  { guestform: updatedBooking._id }
+                  { guestform: resolvedBookingId }
                 );
               } catch (err) {
                 console.error('Failed to link updated guest room form to endform:', err);
               }
             }
             
-            // Refresh form data from backend after successful update
-            await refreshFormData();
-            
-            // Navigate after successful update
-            setTimeout(() => {
-              if (nextForm) {
-                navigate(nextForm);
-              } else {
-                console.log("Navigating to end form");
-                navigate("/forms/end");
-              }
-            }, 1000);
+            // Refresh in background to avoid blocking next-form navigation.
+            refreshFormData().catch((err) => {
+              console.error("GuestRoom - background refresh failed:", err);
+            });
+
+            if (nextForm) {
+              navigate(nextForm);
+            } else {
+              console.log("Navigating to end form");
+              navigate("/forms/end");
+            }
           } else {
             toast.success("Guest room form saved successfully");
             
             // After creating the guest room form, save the ID for EndForm
-            const subFormId = updatedBooking._id;
+            const subFormId = resolvedBookingId;
             
             // Save the guestRoomFormId for EndForm
             if (subFormId) {
@@ -732,37 +858,39 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
               if (!isValidObjectId) {
                 console.error('Invalid event ID format:', eventId);
-                toast.error('Invalid event ID. Please start from the Basic Event form.');
-                return;
+                toast.warning('Guest room saved, but skipped event linking because event ID is invalid.');
+              } else {
+                try {
+                  await axios.put(
+                    `${import.meta.env.VITE_API_URL}/event/${eventId}`,
+                    { guestform: subFormId }
+                  );
+                } catch (err) {
+                  console.error('Failed to link guest room form to main event:', err);
+                  toast.error('Failed to link guest room form to main event. Please contact support if this persists.');
+                }
               }
-              
-              try {
-                await axios.put(
-                  `${import.meta.env.VITE_API_URL}/event/${eventId}`,
-                  { guestform: subFormId }
-                );
-              } catch (err) {
-                console.error('Failed to link guest room form to main event:', err);
-                toast.error('Failed to link guest room form to main event. Please contact support if this persists.');
-              }
-                         } else if (!eventId) {
+            } else if (subFormId && !eventId) {
                console.error('No event ID found in basicEvent');
-               toast.error('No event ID found. Please start from the Basic Event form and create an event first.');
-               return;
+               toast.warning('Guest room saved, but no active event ID found to link.');
              }
             
-            setTimeout(() => {
-              if (nextForm) {
-                navigate(nextForm);
-              } else {
-                console.log("Navigating to end form");
-                navigate("/forms/end");
-              }
-            }, 1000);
+            if (nextForm) {
+              navigate(nextForm);
+            } else {
+              console.log("Navigating to end form");
+              navigate("/forms/end");
+            }
           }
         } else {
-          console.error("No ID in response:", response.data);
-          toast.success("Guest room form updated successfully");
+          console.warn("Guest room saved but no booking ID returned; continuing workflow.");
+          toast.success("Guest room form saved successfully");
+          if (nextForm) {
+            navigate(nextForm);
+          } else {
+            console.log("Navigating to end form");
+            navigate("/forms/end");
+          }
         }
       } else {
         console.error("Invalid response:", response);
@@ -775,7 +903,12 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         response: error.response?.data,
         status: error.response?.status
       });
-      toast.error(error.response?.data?.message || "There was an error submitting the form. Please try again.");
+      const backendMsg =
+        error.response?.data?.details ||
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "There was an error submitting the form. Please try again.";
+      toast.error(backendMsg);
     } finally {
       setIsLoading(false);
     }

@@ -272,7 +272,10 @@ const EndForm = () => {
       "foodForm",
       "guestRoomForm",
       "foodFormId",
+      "foodFormEventId",
+      "foodFormEndformId",
       "guestRoomFormId",
+      "guestRoomFormEndformId",
       "transportFormId",
       "communicationFormId",
       "basicEventId",
@@ -289,8 +292,15 @@ const EndForm = () => {
       "guestRoomHasUnsavedChanges",
       "transportHasUnsavedChanges",
       "communicationHasUnsavedChanges",
+      "activeCreateFlow",
+      "activeCreateFlowAt",
+      "foodFlowAccess",
+      "foodFlowAccessAt",
     ];
     keysToClear.forEach((key) => localStorage.removeItem(key));
+    sessionStorage.removeItem('formsFlowActive');
+    sessionStorage.removeItem('editFlowActive');
+    sessionStorage.removeItem('editFlowEndformId');
   }
 
   const handleSubmit = async (e) => {

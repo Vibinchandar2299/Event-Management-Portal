@@ -17,6 +17,17 @@ function FoodForm({ eventData, nextForm }) {
   const getBasicSourceData = () => {
     try {
       const currentEventId = localStorage.getItem("currentEventId");
+      const activeCreateFlow = localStorage.getItem('activeCreateFlow') === 'true';
+      const activeCreateFlowAt = Number(localStorage.getItem('activeCreateFlowAt') || 0);
+      const isRecentCreateFlow = Number.isFinite(activeCreateFlowAt)
+        && activeCreateFlowAt > 0
+        && (Date.now() - activeCreateFlowAt) < 60 * 60 * 1000;
+
+      // On direct visits or stale sessions, do not prefill from previous event cache.
+      if (!currentEventId || !activeCreateFlow || !isRecentCreateFlow) {
+        return {};
+      }
+
       const currentEventData = JSON.parse(localStorage.getItem("currentEventData") || "null");
       const basicFromCurrent = currentEventData?.basicEvent || null;
       const basicFromStorage = JSON.parse(localStorage.getItem("basicEvent") || "null");
@@ -35,7 +46,7 @@ function FoodForm({ eventData, nextForm }) {
 
       const isForCurrentFlow = (obj) => {
         if (!obj || typeof obj !== "object") return false;
-        if (!currentEventId) return true;
+        if (!currentEventId) return false;
         const objId = obj._id || obj.id;
         return objId ? String(objId) === String(currentEventId) : false;
       };
@@ -43,8 +54,8 @@ function FoodForm({ eventData, nextForm }) {
       // Prefer the just-saved Basic Event for the active flow.
       if (hasUsableBasicData(basicFromStorage) && isForCurrentFlow(basicFromStorage)) return basicFromStorage;
       if (hasUsableBasicData(basicFromCurrent) && isForCurrentFlow(basicFromCurrent)) return basicFromCurrent;
-      // Use common_data only as a last fallback to avoid stale cross-event leakage.
-      if (!currentEventId && hasUsableBasicData(basicFromCommon)) return basicFromCommon;
+      // Never use common_data when there is no active event flow.
+      // It can contain stale data from previous sessions.
       return {};
     } catch {
       return {};
@@ -93,6 +104,45 @@ function FoodForm({ eventData, nextForm }) {
     };
   };
   
+  // Convert dates from array format to object format for consistent handling
+  const normalizeDatesFormat = (dates, foodDetails) => {
+    if (!dates) return { dates: {}, foodDetails: {} };
+    
+    // If already in object format, return as is
+    if (!Array.isArray(dates)) {
+      return { dates: dates || {}, foodDetails: foodDetails || {} };
+    }
+    
+    // Convert array format back to object format
+    const normalizedDates = {};
+    const normalizedFoodDetails = { ...foodDetails } || {};
+    
+    dates.forEach(dateEntry => {
+      if (!dateEntry || !dateEntry.date) return;
+      
+      const startDate = typeof dateEntry.date === 'object' 
+        ? dateEntry.date.start 
+        : dateEntry.date;
+      const endDate = typeof dateEntry.date === 'object' 
+        ? dateEntry.date.end 
+        : dateEntry.date;
+      
+      if (startDate) {
+        normalizedDates[startDate] = {
+          start: startDate,
+          end: endDate || startDate
+        };
+        
+        // Extract foodDetails from the array entry if present
+        if (dateEntry.foodDetails) {
+          normalizedFoodDetails[startDate] = dateEntry.foodDetails;
+        }
+      }
+    });
+    
+    return { dates: normalizedDates, foodDetails: normalizedFoodDetails };
+  };
+  
   // Check if there's an active event at the very beginning
   const endformId = localStorage.getItem('endformId');
   const currentEventId = localStorage.getItem('currentEventId');
@@ -131,23 +181,47 @@ function FoodForm({ eventData, nextForm }) {
 
   // Define canEdit at the top to avoid temporal dead zone
   const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
-  const canEdit = userDept === "food" || userDept === "iqac" || userDept === "system admin" || !userDept;
+  const isCreationFlow = !!currentEventId && !endformId && localStorage.getItem('isEditMode') !== 'true';
   const [isFormEditable, setIsFormEditable] = useState(false);
   const [originalFormData, setOriginalFormData] = useState(null);
   const rawIsEditMode = localStorage.getItem('isEditMode') === 'true';
   const isEditMode = rawIsEditMode && !!endformId;
+  const isTrueEditContext = isEditMode && !!endformId;
+
+  const canEdit =
+    !isTrueEditContext ||
+    isCreationFlow ||
+    userDept === "food" ||
+    userDept === "iqac" ||
+    userDept === "system admin" ||
+    !userDept;
 
   useEffect(() => {
     // New create flow marker: basicEventId matches currentEventId.
-    // In this case, any leftover edit/endform keys are stale and must be cleared.
+    // In this case, only leftover edit/endform keys are stale and must be cleared.
     const currentId = localStorage.getItem('currentEventId');
     const basicId = localStorage.getItem('basicEventId');
-    if (currentId && basicId && String(currentId) === String(basicId)) {
+    const liveEndformId = localStorage.getItem('endformId');
+    const liveIsEditMode = localStorage.getItem('isEditMode') === 'true';
+    // Only clear stale edit keys when we're definitely in create flow
+    // (no endformId and not in edit mode). In edit mode, currentEventId will
+    // naturally equal basicEventId, so clearing here would break editing.
+    if (!liveIsEditMode && !liveEndformId && currentId && basicId && String(currentId) === String(basicId)) {
       localStorage.removeItem('endformId');
       localStorage.removeItem('isEditMode');
+    }
+    
+    // If there's no currentEventId and no endformId, clear all stale flags (direct visit)
+    if (!currentId && !localStorage.getItem('endformId')) {
+      localStorage.removeItem('isEditMode');
       localStorage.removeItem('foodForm');
+      localStorage.removeItem('foodFormId');
+      localStorage.removeItem('foodFormEventId');
       localStorage.removeItem('foodFormData');
       localStorage.removeItem('foodHasUnsavedChanges');
+      localStorage.removeItem('currentEventData');
+      localStorage.removeItem('basicEvent');
+      localStorage.removeItem('common_data');
     }
   }, []);
 
@@ -156,11 +230,25 @@ function FoodForm({ eventData, nextForm }) {
     if (rawIsEditMode && !endformId) {
       localStorage.removeItem('isEditMode');
     }
+
+    // Guard against stale endformId when edit mode is not active.
+    if (!rawIsEditMode && endformId) {
+      localStorage.removeItem('endformId');
+    }
   }, [rawIsEditMode, endformId]);
 
   useEffect(() => {
-    setIsFormEditable(!isEditMode);
-  }, [isEditMode]);
+    const liveEndformId = localStorage.getItem('endformId');
+    const liveCurrentEventId = localStorage.getItem('currentEventId');
+    const liveIsEditMode = localStorage.getItem('isEditMode') === 'true' && !!liveEndformId;
+
+    if (!liveIsEditMode || !liveEndformId || !liveCurrentEventId) {
+      setIsFormEditable(true);
+      return;
+    }
+
+    setIsFormEditable(false);
+  }, [endformId, rawIsEditMode]);
 
   const handleEditToggle = () => {
     if (!isFormEditable && formData) {
@@ -226,13 +314,76 @@ function FoodForm({ eventData, nextForm }) {
     const currentEventId = localStorage.getItem("currentEventId");
     const rawIsEditMode = localStorage.getItem('isEditMode') === 'true';
     const isEditMode = rawIsEditMode && !!endformId;
+    const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
     
     console.log("FoodForm - endformId:", endformId);
     console.log("FoodForm - currentEventId:", currentEventId);
     console.log("FoodForm - isEditMode:", isEditMode);
+    console.log("FoodForm - hasFormsFlowSession:", hasFormsFlowSession);
     console.log("FoodForm - All localStorage keys:", Object.keys(localStorage));
     console.log("FoodForm - foodForm in localStorage:", localStorage.getItem('foodForm'));
     console.log("FoodForm - foodFormId in localStorage:", localStorage.getItem('foodFormId'));
+
+    // Direct deep visit (without an active flow session) should always start empty.
+    if (!isEditMode && !endformId && !hasFormsFlowSession) {
+      console.log("FoodForm - Direct visit detected without active forms flow, clearing stale food cache");
+      [
+        'foodForm',
+        'foodFormId',
+        'foodFormEventId',
+        'foodFormData',
+        'foodHasUnsavedChanges',
+      ].forEach((key) => localStorage.removeItem(key));
+
+      setFormData({
+        iqacNumber: "",
+        requisitionDate: "",
+        department: "",
+        requestorName: "",
+        empId: "",
+        designationDepartment: "",
+        mobileNumber: "",
+        eventName: "",
+        eventType: "",
+        otherEventType: "",
+        dates: {},
+        foodDetails: {},
+        amenitiesIncharge: "",
+        signOfOS: "",
+        facultySignature: "",
+        recommendedBy: "",
+        deanClearance: "",
+      });
+      setHasInitialized(true);
+      return;
+    }
+
+    const basicEventId = localStorage.getItem('basicEventId');
+    const activeCreateFlow = localStorage.getItem('activeCreateFlow') === 'true';
+    const activeCreateFlowAt = Number(localStorage.getItem('activeCreateFlowAt') || 0);
+    const foodFlowAccess = localStorage.getItem('foodFlowAccess') === 'true';
+    const foodFlowAccessAt = Number(localStorage.getItem('foodFlowAccessAt') || 0);
+    const isRecentCreateFlow = Number.isFinite(activeCreateFlowAt)
+      && activeCreateFlowAt > 0
+      && (Date.now() - activeCreateFlowAt) < 60 * 60 * 1000;
+    const isRecentFoodFlowAccess = Number.isFinite(foodFlowAccessAt)
+      && foodFlowAccessAt > 0
+      && (Date.now() - foodFlowAccessAt) < 60 * 60 * 1000;
+    const currentEventData = JSON.parse(localStorage.getItem('currentEventData') || 'null');
+    const basicEventData = JSON.parse(localStorage.getItem('basicEvent') || 'null');
+    const linkedIds = [
+      basicEventId,
+      currentEventData?.basicEvent?._id,
+      currentEventData?._id,
+      basicEventData?._id,
+    ].filter(Boolean).map(String);
+    const hasLinkedBasicForCurrentEvent =
+      !!currentEventId &&
+      linkedIds.includes(String(currentEventId)) &&
+      activeCreateFlow &&
+      isRecentCreateFlow &&
+      foodFlowAccess &&
+      isRecentFoodFlowAccess;
     
     // No active flow yet: keep empty form.
     if (!currentEventId && !endformId && !isEditMode) {
@@ -260,16 +411,101 @@ function FoodForm({ eventData, nextForm }) {
       return;
     }
 
+    // Direct visit with stale currentEventId should not prefill old Food data.
+    if (currentEventId && !endformId && !isEditMode && !hasLinkedBasicForCurrentEvent) {
+      console.log("FoodForm - Stale create context detected, clearing stale food flow keys");
+      [
+        'currentEventId',
+        'foodForm',
+        'foodFormId',
+        'foodFormEventId',
+        'foodFormData',
+        'foodHasUnsavedChanges',
+        'basicEventId',
+        'activeCreateFlow',
+        'activeCreateFlowAt',
+        'foodFlowAccess',
+        'foodFlowAccessAt',
+      ].forEach((key) => localStorage.removeItem(key));
+
+      setFormData({
+        iqacNumber: "",
+        requisitionDate: "",
+        department: "",
+        requestorName: "",
+        empId: "",
+        designationDepartment: "",
+        mobileNumber: "",
+        eventName: "",
+        eventType: "",
+        otherEventType: "",
+        dates: {},
+        foodDetails: {},
+        amenitiesIncharge: "",
+        signOfOS: "",
+        facultySignature: "",
+        recommendedBy: "",
+        deanClearance: "",
+      });
+      setHasInitialized(true);
+      return;
+    }
+
     // New flow after Basic Event save: prefill only from current Basic details.
     if (currentEventId && !endformId && !isEditMode) {
+      const storedFoodForm = localStorage.getItem('foodForm');
+      const storedFoodFormEventId = localStorage.getItem('foodFormEventId');
+
+      // Never hydrate cached Food data from a different event.
+      // If we can't prove it belongs to the current event, treat it as stale.
+      if (storedFoodForm && (!storedFoodFormEventId || String(storedFoodFormEventId) !== String(currentEventId))) {
+        console.log('FoodForm - Clearing stale foodForm cache (event mismatch)');
+        ['foodForm', 'foodFormId', 'foodFormEventId', 'foodFormData', 'foodHasUnsavedChanges'].forEach((key) => localStorage.removeItem(key));
+      }
+
+      const safeStoredFoodForm = localStorage.getItem('foodForm');
+      if (safeStoredFoodForm) {
+        try {
+          const parsedFoodData = JSON.parse(safeStoredFoodForm);
+          if (parsedFoodData && Object.keys(parsedFoodData).length > 0) {
+            const { dates: normalizedDates, foodDetails: normalizedFoodDetails } = 
+              normalizeDatesFormat(parsedFoodData.dates, parsedFoodData.foodDetails);
+            
+            setFormData({
+              iqacNumber: parsedFoodData.iqacNumber || "",
+              requisitionDate: parsedFoodData.requisitionDate || "",
+              department: parsedFoodData.department || "",
+              requestorName: parsedFoodData.requestorName || "",
+              empId: parsedFoodData.empId || "",
+              designationDepartment: parsedFoodData.designationDepartment || "",
+              mobileNumber: parsedFoodData.mobileNumber || "",
+              eventName: parsedFoodData.eventName || "",
+              eventType: parsedFoodData.eventType || "",
+              otherEventType: parsedFoodData.otherEventType || "",
+              dates: normalizedDates,
+              foodDetails: normalizedFoodDetails,
+              amenitiesIncharge: parsedFoodData.amenitiesIncharge || "",
+              signOfOS: parsedFoodData.signOfOS || "",
+              facultySignature: parsedFoodData.facultySignature || "",
+              recommendedBy: parsedFoodData.recommendedBy || "",
+              deanClearance: parsedFoodData.deanClearance || "",
+              _id: parsedFoodData._id || "",
+            });
+            setHasInitialized(true);
+            return;
+          }
+        } catch (error) {
+          console.error("FoodForm - Error parsing stored food form data in creation flow:", error);
+        }
+      }
       console.log("FoodForm - New flow detected, applying Basic Event autofill");
       setFormData(getAutofilledFoodBase());
       setHasInitialized(true);
       return;
     }
     
-    // If we have an endformId OR isEditMode is true, this is an existing event being edited
-    if (endformId || isEditMode) {
+    // Only true edit mode should load existing event data.
+    if (isEditMode) {
       // Check if we have unsaved changes (user was actively editing)
       const existingFormData = localStorage.getItem('foodFormData');
       const hasUnsavedChanges = localStorage.getItem('foodHasUnsavedChanges') === 'true';
@@ -284,54 +520,63 @@ function FoodForm({ eventData, nextForm }) {
       
       // Check if we have food form data in localStorage (set by Edit button)
       const storedFoodForm = localStorage.getItem('foodForm');
+      const storedFoodFormEndformId = localStorage.getItem('foodFormEndformId');
       console.log("FoodForm - Checking for stored food form data");
       console.log("FoodForm - storedFoodForm exists:", !!storedFoodForm);
-      if (storedFoodForm) {
+
+      // In edit mode, only trust cached foodForm if it matches the current endformId.
+      // Otherwise it's almost certainly stale from a different event.
+      const canUseCachedFood =
+        !!storedFoodForm &&
+        !!storedFoodFormEndformId &&
+        String(storedFoodFormEndformId) === String(endformId);
+
+      if (storedFoodForm && !canUseCachedFood) {
+        console.log('FoodForm - Ignoring cached foodForm (missing/mismatched endform marker)');
+      }
+
+      if (canUseCachedFood) {
         try {
           console.log("FoodForm - Using stored food form data from localStorage");
           console.log("FoodForm - Raw stored data:", storedFoodForm);
           const parsedFoodData = JSON.parse(storedFoodForm);
-          console.log("FoodForm - Parsed food data:", parsedFoodData);
-          console.log("FoodForm - Parsed data keys:", Object.keys(parsedFoodData));
-          
-          // Check if we have valid food data
+
+          // If cached is empty, do NOT block backend fetch.
           if (!parsedFoodData || Object.keys(parsedFoodData).length === 0) {
-            console.log("FoodForm - No valid food data found in localStorage, skipping");
+            console.log('FoodForm - Cached foodForm is empty; continuing to fetch');
+          } else {
+            // Normalize dates format from array to object
+            const { dates: normalizedDates, foodDetails: normalizedFoodDetails } =
+              normalizeDatesFormat(parsedFoodData.dates, parsedFoodData.foodDetails);
+
+            const formattedData = {
+              iqacNumber: parsedFoodData.iqacNumber || "",
+              requisitionDate: parsedFoodData.requisitionDate || "",
+              department: parsedFoodData.department || "",
+              requestorName: parsedFoodData.requestorName || "",
+              empId: parsedFoodData.empId || "",
+              designationDepartment: parsedFoodData.designationDepartment || "",
+              mobileNumber: parsedFoodData.mobileNumber || "",
+              eventName: parsedFoodData.eventName || "",
+              eventType: parsedFoodData.eventType || "",
+              otherEventType: parsedFoodData.otherEventType || "",
+              dates: normalizedDates,
+              foodDetails: normalizedFoodDetails,
+              amenitiesIncharge: parsedFoodData.amenitiesIncharge || "",
+              signOfOS: parsedFoodData.signOfOS || "",
+              facultySignature: parsedFoodData.facultySignature || "",
+              recommendedBy: parsedFoodData.recommendedBy || "",
+              deanClearance: parsedFoodData.deanClearance || "",
+              _id: parsedFoodData._id || "",
+            };
+
+            setFormData(formattedData);
+            setHasInitialized(true);
             return;
           }
-          
-          // Format the data to match our form structure
-          const formattedData = {
-            iqacNumber: parsedFoodData.iqacNumber || "",
-            requisitionDate: parsedFoodData.requisitionDate || "",
-            department: parsedFoodData.department || "",
-            requestorName: parsedFoodData.requestorName || "",
-            empId: parsedFoodData.empId || "",
-            designationDepartment: parsedFoodData.designationDepartment || "",
-            mobileNumber: parsedFoodData.mobileNumber || "",
-            eventName: parsedFoodData.eventName || "",
-            eventType: parsedFoodData.eventType || "",
-            otherEventType: parsedFoodData.otherEventType || "",
-            dates: parsedFoodData.dates || {},
-            foodDetails: parsedFoodData.foodDetails || {},
-            amenitiesIncharge: parsedFoodData.amenitiesIncharge || "",
-            signOfOS: parsedFoodData.signOfOS || "",
-            facultySignature: parsedFoodData.facultySignature || "",
-            recommendedBy: parsedFoodData.recommendedBy || "",
-            deanClearance: parsedFoodData.deanClearance || "",
-            _id: parsedFoodData._id || "",
-          };
-          
-          console.log("FoodForm - Final formatted data:", formattedData);
-          setFormData(formattedData);
-          console.log("FoodForm - Set form data with localStorage data:", formattedData);
-          setHasInitialized(true);
-          return;
         } catch (error) {
           console.error("FoodForm - Error parsing stored food form data:", error);
         }
-      } else {
-        console.log("FoodForm - No foodForm data found in localStorage");
       }
       
       // Only fetch data if there's an actual event being created and no localStorage data
@@ -345,6 +590,10 @@ function FoodForm({ eventData, nextForm }) {
             const foodData = response.data.foodform;
             console.log("FoodForm - Found food data:", foodData);
             
+            // Normalize dates format from array to object
+            const { dates: normalizedDates, foodDetails: normalizedFoodDetails } = 
+              normalizeDatesFormat(foodData.dates, foodData.foodDetails);
+            
             // Format the data to match our form structure
             const formattedData = {
               iqacNumber: foodData.iqacNumber || "",
@@ -357,8 +606,8 @@ function FoodForm({ eventData, nextForm }) {
               eventName: foodData.eventName || "",
               eventType: foodData.eventType || "",
               otherEventType: foodData.otherEventType || "",
-              dates: foodData.dates || {},
-              foodDetails: foodData.foodDetails || {},
+              dates: normalizedDates,
+              foodDetails: normalizedFoodDetails,
               amenitiesIncharge: foodData.amenitiesIncharge || "",
               signOfOS: foodData.signOfOS || "",
               facultySignature: foodData.facultySignature || "",
@@ -462,10 +711,51 @@ function FoodForm({ eventData, nextForm }) {
     console.log("Starting form submission...");
     try {
       const eventId = localStorage.getItem("currentEventId");
-      if (!eventId) {
-        toast.error("No event ID found. Please start from the Basic Event form and create an event first.");
-        return;
-      }
+      const toISODateOrNull = (value) => {
+        if (!value) return null;
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return parsed.toISOString();
+      };
+      const toSafeString = (value) => (value == null ? "" : String(value));
+      const normalizeFoodDetailsForApi = (details = {}) => {
+        if (!details || typeof details !== "object") return {};
+
+        const getSection = (section) => {
+          if (!section || typeof section !== "object") return {};
+          return {
+            Veg: toSafeString(section.Veg),
+            NonVeg: toSafeString(section.NonVeg ?? section["Non Veg"]),
+          };
+        };
+
+        const getTotalSection = (section) => {
+          if (!section || typeof section !== "object") return {};
+          return { total: toSafeString(section.total) };
+        };
+
+        return {
+          Breakfast: {
+            participants: getSection(details.Breakfast?.participants),
+            guest: getSection(details.Breakfast?.guest),
+          },
+          Lunch: {
+            participants: getSection(details.Lunch?.participants),
+            guest: getSection(details.Lunch?.guest),
+          },
+          Dinner: {
+            participants: getSection(details.Dinner?.participants),
+            guest: getSection(details.Dinner?.guest),
+          },
+          MorningRefreshment: {
+            participants: getTotalSection(details.MorningRefreshment?.participants),
+          },
+          EveningRefreshment: {
+            participants: getTotalSection(details.EveningRefreshment?.participants),
+            guest: getTotalSection(details.EveningRefreshment?.guest),
+          },
+        };
+      };
       
       // Debug logs to inspect formData before formatting
       console.log("=== FOOD FORM SUBMIT DEBUG ===");
@@ -474,27 +764,26 @@ function FoodForm({ eventData, nextForm }) {
       // Format data for MongoDB
       const formattedData = {
         ...formData,
-        dates: Object.entries(formData.dates)
+        requisitionDate: toISODateOrNull(formData.requisitionDate),
+        dates: Object.entries(formData.dates || {})
           .filter(([_, dateValue]) => dateValue && dateValue.start)
           .map(([dateKey, dateValue]) => {
-            const start = dateValue.start;
-            const end = dateValue.end || start;
+            const start = toISODateOrNull(dateValue.start);
+            const end = toISODateOrNull(dateValue.end || dateValue.start);
+            if (!start) return null;
             return {
               date: { start, end },
-              foodDetails: formData.foodDetails[start] || {}
+              foodDetails: normalizeFoodDetailsForApi(
+                formData.foodDetails?.[dateValue.start] ||
+                formData.foodDetails?.[dateKey] ||
+                {}
+              ),
             };
           })
+          .filter(Boolean)
       };
       // Debug log to inspect formatted data
       console.log("Formatted data to submit:", formattedData);
-      
-      // Check if eventId is a valid MongoDB ObjectId (24 hex characters)
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
-      if (!isValidObjectId) {
-        console.error('Invalid event ID format:', eventId);
-        toast.error('Invalid event ID. Please start from the Basic Event form.');
-        return;
-      }
       
       const token = localStorage.getItem("token");
       const headers = {
@@ -504,29 +793,33 @@ function FoodForm({ eventData, nextForm }) {
       let response;
       const activeEndformId = localStorage.getItem('endformId');
       const activeIsEditMode = localStorage.getItem('isEditMode') === 'true' && !!activeEndformId;
+      const submitPayload = { ...formattedData };
+      if (submitPayload._id) {
+        delete submitPayload._id;
+      }
 
       if (activeIsEditMode || activeEndformId) {
         // Get the food form ID from the current form data
-        const foodFormId = formData._id;
+        const foodFormId = formData._id || localStorage.getItem('foodFormId');
         console.log("[DEBUG] Food form ID for update:", foodFormId);
         if (!foodFormId) {
-          console.error("[ERROR] Food form ID not found in formData:", formData);
-          toast.error("Food form ID not found. Please refresh the page or contact support.");
-          setIsLoading(false);
-          return;
+          console.warn("[WARN] Food form ID missing in edit mode, creating a new food entry as fallback.");
+          response = await axios.post(
+            `${import.meta.env.VITE_API_URL}/food`,
+            submitPayload,
+            { headers }
+          );
+        } else {
+          response = await axios.put(
+            `${import.meta.env.VITE_API_URL}/food/${foodFormId}`,
+            submitPayload,
+            { headers }
+          );
         }
-        response = await axios.put(
-          `${import.meta.env.VITE_API_URL}/food/${foodFormId}`,
-          formattedData,
-          { headers }
-        );
       } else {
-        if (formattedData._id) {
-          delete formattedData._id;
-        }
         response = await axios.post(
           `${import.meta.env.VITE_API_URL}/food`,
-          formattedData,
+          submitPayload,
           { headers }
         );
         // Debug log to confirm POST response and endformId
@@ -570,10 +863,33 @@ function FoodForm({ eventData, nextForm }) {
           }
         }
       }
-      if (response.data) {
+      if (response && response.status >= 200 && response.status < 300) {
+        const savedFood = {
+          ...submitPayload,
+          _id:
+            response.data?.requirement?._id ||
+            response.data?._id ||
+            response.data?.id ||
+            response.data?.data?._id ||
+            localStorage.getItem('foodFormId') ||
+            formData?._id ||
+            "",
+        };
+        localStorage.setItem('foodForm', JSON.stringify(savedFood));
+        const liveEndformId = localStorage.getItem('endformId');
+        if (liveEndformId) {
+          localStorage.setItem('foodFormEndformId', String(liveEndformId));
+        }
+        if (eventId) {
+          localStorage.setItem('foodFormEventId', String(eventId));
+        }
+        if (savedFood._id) {
+          localStorage.setItem('foodFormId', savedFood._id);
+        }
+
         toast.success("Food form saved successfully!");
         // Always fetch latest event data and update Redux after update/create
-        if (eventId) {
+        if (eventId && /^[0-9a-fA-F]{24}$/.test(eventId)) {
           try {
             const eventResponse = await axios.get(`${import.meta.env.VITE_API_URL}/event/${eventId}`);
             if (eventResponse.data) {
@@ -582,6 +898,8 @@ function FoodForm({ eventData, nextForm }) {
           } catch (err) {
             console.error("[ERROR] Failed to fetch latest event data after update:", err);
           }
+        } else if (eventId) {
+          console.warn("[WARN] Skipping event refresh due to invalid event ID:", eventId);
         }
         if (nextForm) {
           navigate(nextForm);
@@ -592,7 +910,13 @@ function FoodForm({ eventData, nextForm }) {
       }
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast.error("Failed to save form. Please try again.");
+      console.error("Food submit backend error payload:", error?.response?.data);
+      const backendMessage =
+        error?.response?.data?.details ||
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        "Failed to save form. Please try again.";
+      toast.error(backendMessage);
     } finally {
       setIsLoading(false);
     }
@@ -617,7 +941,12 @@ function FoodForm({ eventData, nextForm }) {
         <div className="p-6 space-y-6">
           <BasicInfo formData={formData} setFormData={setFormData} disabled={!canEdit || !isFormEditable} />
           <EventDetails formData={formData} setFormData={setFormData} disabled={!canEdit || !isFormEditable} />
-          <FoodTable formData={formData} setFormData={setFormData} disabled={!canEdit || !isFormEditable} />
+          <FoodTable formData={formData} setFormData={setFormData} disabled={isTrueEditContext && !isFormEditable} />
+          {formData.dates && Object.keys(formData.dates).length === 0 && isCreationFlow && (
+            <div className="px-6 py-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+              ℹ️ Please add event dates in the Event Details section above to show the food table.
+            </div>
+          )}
         </div>
         <div className="mt-8 flex justify-end gap-3 px-6 pb-6">
           {isEditMode && !isFormEditable && (

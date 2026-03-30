@@ -216,8 +216,14 @@ export const getEventById = async (req, res) => {
   try {
     const { id } = req.params;
     console.log("getEventById called with id:", id);
-    
-    const endform = await Endform.findById(id);
+
+    // NOTE: This endpoint is intended to resolve an EndForm by the BasicEvent id stored in
+    // EndForm.eventdata. Historically this incorrectly used findById(id) (EndForm _id).
+    // To remain backward compatible, try by eventdata first, then fallback to _id.
+    let endform = await Endform.findOne({ eventdata: id });
+    if (!endform) {
+      endform = await Endform.findById(id);
+    }
     
     if (!endform) {
       console.log("Endform not found for id:", id);

@@ -30,7 +30,8 @@ function AppLayout() {
   useEffect(() => {
     const endformId = localStorage.getItem('endformId');
     const currentEventId = localStorage.getItem('currentEventId');
-    if (!endformId || !currentEventId) {
+    // Only clear when there is no active create/edit flow at all.
+    if (!endformId && !currentEventId) {
       console.log('App - No active event, clearing Redux state');
       dispatch(clearEventData());
     }

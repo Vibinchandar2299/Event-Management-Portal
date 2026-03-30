@@ -20,6 +20,17 @@ const HeaderComponent = ({ showSidebar }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const mapDeptToFormType = (dept) => {
+    if (!dept) return '';
+    const d = String(dept).toLowerCase();
+    if (d === 'media' || d === 'communication') return 'communication';
+    if (d === 'food') return 'food';
+    if (d === 'transport') return 'transport';
+    if (d === 'guestroom' || d === 'guest room' || d === 'guest department' || d === 'guest deparment') return 'guestroom';
+    if (d === 'iqac') return 'iqac';
+    return d;
+  };
+
   useEffect(() => {
     console.log("Header component mounted.");
     const token = localStorage.getItem("token");
@@ -36,7 +47,7 @@ const HeaderComponent = ({ showSidebar }) => {
         
         // Store department if not already stored
         if (!userDept && decodedToken.dept) {
-          localStorage.setItem("user_dept", decodedToken.dept);
+          localStorage.setItem("user_dept", mapDeptToFormType(decodedToken.dept));
         }
         
         console.log("HeaderComponent - Authentication successful, userName:", decodedToken.name);

@@ -90,11 +90,40 @@ const FoodTable = ({ formData, setFormData, disabled = false }) => {
   }
 
   const meals = [
-    { name: "Breakfast", types: ["Veg", "Non Veg"] },
-    { name: "Morning Refreshment", types: [""] },
-    { name: "Lunch", types: ["Veg", "Non Veg"] },
-    { name: "Evening Refreshment", types: [""] },
-    { name: "Dinner", types: ["Veg", "Non Veg"] },
+    {
+      label: "Breakfast",
+      key: "Breakfast",
+      types: [
+        { label: "Veg", key: "Veg" },
+        { label: "Non Veg", key: "NonVeg" },
+      ],
+    },
+    {
+      label: "Morning Refreshment",
+      key: "MorningRefreshment",
+      types: [{ label: "Total", key: "total" }],
+    },
+    {
+      label: "Lunch",
+      key: "Lunch",
+      types: [
+        { label: "Veg", key: "Veg" },
+        { label: "Non Veg", key: "NonVeg" },
+      ],
+    },
+    {
+      label: "Evening Refreshment",
+      key: "EveningRefreshment",
+      types: [{ label: "Total", key: "total" }],
+    },
+    {
+      label: "Dinner",
+      key: "Dinner",
+      types: [
+        { label: "Veg", key: "Veg" },
+        { label: "Non Veg", key: "NonVeg" },
+      ],
+    },
   ];
 
   return (
@@ -148,15 +177,15 @@ const FoodTable = ({ formData, setFormData, disabled = false }) => {
         </thead>
         <tbody>
           {meals.map((meal) => (
-            <React.Fragment key={meal.name}>
+            <React.Fragment key={meal.key}>
               {meal.types.length > 1 ? (
                 meal.types.map((type) => (
                   <tr
-                    key={`${meal.name}-${type}`}
+                    key={`${meal.key}-${type.key}`}
                     className="odd:bg-white even:bg-gray-50"
                   >
                     <td className="px-4 py-2 text-gray-800">
-                      {type === "" ? meal.name : `${meal.name} - ${type}`}
+                      {`${meal.label} - ${type.label}`}
                     </td>
                     {dateKeys.map((dateKey, idx) => (
                       <React.Fragment key={dateKey || idx}>
@@ -167,15 +196,15 @@ const FoodTable = ({ formData, setFormData, disabled = false }) => {
                             className="w-20 p-1 border rounded text-sm"
                             disabled={disabled}
                             value={
-                              formData.foodDetails?.[dateKey]?.[meal.name]
-                                ?.participants?.[type] || ""
+                              formData.foodDetails?.[dateKey]?.[meal.key]
+                                ?.participants?.[type.key] || ""
                             }
                             onChange={(e) =>
                               handleChange(
                                 dateKey,
-                                meal.name,
+                                meal.key,
                                 "participants",
-                                type,
+                                type.key,
                                 e.target.value
                               )
                             }
@@ -188,15 +217,15 @@ const FoodTable = ({ formData, setFormData, disabled = false }) => {
                             className="w-20 p-1 border rounded text-sm"
                             disabled={disabled}
                             value={
-                              formData.foodDetails?.[dateKey]?.[meal.name]
-                                ?.guest?.[type] || ""
+                              formData.foodDetails?.[dateKey]?.[meal.key]
+                                ?.guest?.[type.key] || ""
                             }
                             onChange={(e) =>
                               handleChange(
                                 dateKey,
-                                meal.name,
+                                meal.key,
                                 "guest",
-                                type,
+                                type.key,
                                 e.target.value
                               )
                             }
@@ -208,7 +237,7 @@ const FoodTable = ({ formData, setFormData, disabled = false }) => {
                 ))
               ) : (
                 <tr className="odd:bg-white even:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-800">{meal.name}</td>
+                  <td className="px-4 py-2 text-gray-800">{meal.label}</td>
                   {dateKeys.map((dateKey, idx) => (
                     <React.Fragment key={dateKey || idx}>
                       <td className="px-2 py-1 text-center">
@@ -218,13 +247,13 @@ const FoodTable = ({ formData, setFormData, disabled = false }) => {
                           className="w-20 p-1 border rounded text-sm"
                           disabled={disabled}
                           value={
-                            formData.foodDetails?.[dateKey]?.[meal.name]
-                              ?.participants || ""
+                            formData.foodDetails?.[dateKey]?.[meal.key]
+                              ?.participants?.total || ""
                           }
                           onChange={(e) =>
                             handleChange(
                               dateKey,
-                              meal.name,
+                              meal.key,
                               "participants",
                               "total",
                               e.target.value
@@ -239,13 +268,13 @@ const FoodTable = ({ formData, setFormData, disabled = false }) => {
                           className="w-20 p-1 border rounded text-sm"
                           disabled={disabled}
                           value={
-                            formData.foodDetails?.[dateKey]?.[meal.name]?.guest ||
+                            formData.foodDetails?.[dateKey]?.[meal.key]?.guest?.total ||
                             ""
                           }
                           onChange={(e) =>
                             handleChange(
                               dateKey,
-                              meal.name,
+                              meal.key,
                               "guest",
                               "total",
                               e.target.value

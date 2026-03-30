@@ -73,7 +73,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
     const currentEventId = localStorage.getItem('currentEventId');
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     
-    if (!endformId || !currentEventId) {
+    if (!currentEventId) {
       dispatch(clearEventData());
       localStorage.removeItem('communicationFormId');
       localStorage.removeItem('communicationForm');
@@ -92,7 +92,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
     return () => {
       const endformId = localStorage.getItem('endformId');
       const currentEventId = localStorage.getItem('currentEventId');
-      if (!endformId || !currentEventId) {
+      if (!currentEventId) {
         dispatch(clearEventData());
       }
     };
@@ -116,6 +116,32 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
       setSelectedOptions({});
       setCommId('');
       return;
+    }
+
+    // Creation flow revisit: restore previously saved communication data.
+    if (currentEventId && !endformId && !isEditMode) {
+      const storedCommunicationForm = localStorage.getItem('communicationForm');
+      if (storedCommunicationForm) {
+        try {
+          const parsedCommData = JSON.parse(storedCommunicationForm);
+          setFormData({
+            photography: parsedCommData.cameraAction?.photography || false,
+            videography: parsedCommData.cameraAction?.videography || false,
+          });
+          setSelectedOptions({
+            "Event Poster": parsedCommData.eventPoster || [],
+            Videos: parsedCommData.videos || [],
+            "On Stage Requirements": parsedCommData.onStageRequirements || [],
+            "Flex Banners": parsedCommData.flexBanners || [],
+            "Reception TV Streaming Requirements": parsedCommData.receptionTVStreamingRequirements || [],
+            Communication: parsedCommData.communication || [],
+          });
+          setCommId(parsedCommData._id || localStorage.getItem('communicationFormId') || '');
+          return;
+        } catch (error) {
+          console.error("CommunicationForm - Error parsing stored communication form data in creation flow:", error);
+        }
+      }
     }
     
     // If we have an endformId OR isEditMode is true, this is an existing event being edited
@@ -295,16 +321,20 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
         }
       };
       let url;
-      let idToUse = commId;
+      let idToUse =
+        commId ||
+        localStorage.getItem('communicationFormId') ||
+        (() => {
+          try {
+            return JSON.parse(localStorage.getItem('communicationForm') || 'null')?._id || '';
+          } catch {
+            return '';
+          }
+        })();
       let commIdResp;
-      if (isEditMode) {
-        // Use commId from state only
+      if (isEditMode && idToUse) {
+        // Prefer update in edit mode when an existing ID is available.
         console.log('[DEBUG] Communication form ID for update:', idToUse);
-        if (!idToUse) {
-          toast.error('Communication form ID not found. Please refresh the page or contact support.');
-          setIsLoading(false);
-          return;
-        }
         url = `${import.meta.env.VITE_API_URL}/media/${idToUse}`;
         const response = await axios({
           method: "PUT",
@@ -316,6 +346,9 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
         });
         commIdResp = response.data?.requirement?._id || response.data?._id || response.data?.id;
       } else {
+        if (isEditMode && !idToUse) {
+          console.warn('CommunicationForm - Edit mode without ID, creating a new record as fallback.');
+        }
         // CREATE new MediaRequirements
         url = `${import.meta.env.VITE_API_URL}/media`;
         const response = await axios({
@@ -327,7 +360,10 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
         commIdResp = response.data?.requirement?._id || response.data?._id || response.data?.id;
       }
       if (commIdResp) {
-        localStorage.setItem('communicationForm', JSON.stringify({ objectId: commIdResp }));
+        localStorage.setItem('communicationForm', JSON.stringify({
+          ...formattedData,
+          _id: commIdResp,
+        }));
         localStorage.setItem('communicationFormId', commIdResp);
         setCommId(commIdResp);
         console.log('Saved communicationFormId to localStorage:', commIdResp);
@@ -372,24 +408,22 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
         const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
         if (!isValidObjectId) {
           console.error('Invalid event ID format:', eventId);
-          toast.error('Invalid event ID. Please start from the Basic Event form.');
-          return;
-        }
-        
-        try {
-          await axios.put(
-            `${import.meta.env.VITE_API_URL}/event/${eventId}`,
-            { communicationform: commIdResp },
-            { headers: { 'Content-Type': 'application/json' } }
-          );
-        } catch (err) {
-          console.error('Error updating main event:', err);
-          toast.error('Failed to link communication form to main event. Please contact support if this persists.');
+          toast.warning('Communication form saved, but skipped event linking because event ID is invalid.');
+        } else {
+          try {
+            await axios.put(
+              `${import.meta.env.VITE_API_URL}/event/${eventId}`,
+              { communicationform: commIdResp },
+              { headers: { 'Content-Type': 'application/json' } }
+            );
+          } catch (err) {
+            console.error('Error updating main event:', err);
+            toast.error('Failed to link communication form to main event. Please contact support if this persists.');
+          }
         }
       } else if (!eventId) {
         console.error('No event ID found in localStorage');
-        toast.error('No event ID found. Please start from the Basic Event form and create an event first.');
-        return;
+        toast.warning('Communication form saved, but no active event ID found to link.');
       }
       toast.success(
         isEditMode
@@ -400,7 +434,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
       console.log("CommunicationForm - Form submission successful, about to navigate");
       
       // Always fetch latest event data and update Redux after update/create
-      if (eventId) {
+      if (eventId && /^[0-9a-fA-F]{24}$/.test(eventId)) {
         try {
           const eventResponse = await axios.get(`${import.meta.env.VITE_API_URL}/event/${eventId}`);
           if (eventResponse.data) {
@@ -409,6 +443,8 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
         } catch (err) {
           console.error("Error fetching event data:", err);
         }
+      } else if (eventId) {
+        console.warn("CommunicationForm - Skipping event refresh due to invalid event ID:", eventId);
       }
       
       if (nextForm) {

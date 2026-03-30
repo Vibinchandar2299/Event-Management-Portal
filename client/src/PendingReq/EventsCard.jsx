@@ -117,11 +117,15 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
 
   // Helper to fetch and format event data for both details and edit
   const formatAndFetchEventData = async (eventData) => {
-    // Use existing nested structure if present
-    let basicEvent = eventData.basicEvent || null;
-    let communicationform = eventData.communicationform || null;
-    let foodform = eventData.foodform || null;
-    let transport = eventData.transport || null;
+    // EndForm schema keys:
+    // - basic event id: `eventdata` (String)
+    // - transport forms: `transportform` (ObjectId[])
+    // - other forms: `foodform`, `guestform`, `communicationform`
+    // Some pages may already provide fully-populated nested objects.
+    let basicEvent = eventData.basicEvent || eventData.eventdata || eventData.eventId || null;
+    let communicationform = eventData.communicationform || eventData.communicationForm || eventData.communicationdata || null;
+    let foodform = eventData.foodform || eventData.foodForm || null;
+    let transport = eventData.transportform || eventData.transport || null;
     let guestroom = eventData.guestform || null;
 
     // If any are just IDs (strings), fetch the full object
@@ -180,6 +184,18 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
     if (!basicEvent && eventData.eventName) basicEvent = eventData;
     if (!basicEvent && eventData.basicEvent) basicEvent = eventData.basicEvent;
     if (!basicEvent && eventData.eventdata) basicEvent = eventData.eventdata;
+
+    // If we derived basicEvent from a fallback key and it's still an id, fetch it now.
+    if (basicEvent && typeof basicEvent === 'string') {
+      try {
+        const basicResp = await axios.get(`/api/event/${basicEvent}`);
+        basicEvent = basicResp.data;
+        console.log("Fetched basic event data (fallback):", basicEvent);
+      } catch (e) {
+        console.error("Error fetching basic event data (fallback):", e);
+        basicEvent = {};
+      }
+    }
     
     // Debug: Log the basic event data
     console.log("=== Basic Event Debug ===");
@@ -193,7 +209,43 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
     if (!communicationform && (eventData.communicationdata || eventData.communicationForm || eventData.communicationform)) communicationform = eventData.communicationdata || eventData.communicationForm || eventData.communicationform;
     if (!foodform && (eventData.foodForm || eventData.foodform)) foodform = eventData.foodForm || eventData.foodform;
     if (!guestroom && eventData.guestform) guestroom = eventData.guestform;
-    if (!transport && eventData.transport) transport = eventData.transport;
+    if (!transport && (eventData.transportform || eventData.transport)) transport = eventData.transportform || eventData.transport;
+
+    // If any fallbacks produced ids, fetch them.
+    if (communicationform && typeof communicationform === 'string') {
+      try {
+        const commResp = await axios.get(`/api/media/${communicationform}`);
+        communicationform = commResp.data;
+      } catch (e) {
+        communicationform = {};
+      }
+    }
+    if (foodform && typeof foodform === 'string') {
+      try {
+        const foodResp = await axios.get(`/api/food/${foodform}`);
+        foodform = foodResp.data.data || foodResp.data;
+      } catch (e) {
+        foodform = {};
+      }
+    }
+    if (guestroom && typeof guestroom === 'string') {
+      try {
+        const guestResp = await axios.get(`/api/guestroom/bookings/${guestroom}`);
+        guestroom = guestResp.data;
+      } catch (e) {
+        guestroom = {};
+      }
+    }
+    if (Array.isArray(transport) && transport.length > 0 && typeof transport[0] === 'string') {
+      try {
+        const transResp = await axios.get(`/api/transport/transports`, {
+          params: { ids: transport.join(',') },
+        });
+        transport = transResp.data;
+      } catch (e) {
+        /* fallback to IDs */
+      }
+    }
 
     // Ensure all data is properly formatted
     console.log("=== formatAndFetchEventData Debug ===");
@@ -256,15 +308,31 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
     try {
       // Clear Redux state first to ensure clean slate
       dispatch(resetEventState());
+
+      // If the user previously started a create flow, ensure it doesn't wipe our edit context.
+      localStorage.removeItem('startNewFlow');
+      localStorage.removeItem('activeCreateFlow');
+      localStorage.removeItem('activeCreateFlowAt');
       
       // Clear localStorage to prevent old data from interfering
       localStorage.removeItem("common_data");
       localStorage.removeItem("basicEvent");
       localStorage.removeItem("iqacno");
       localStorage.removeItem("foodForm");
+      localStorage.removeItem("foodFormData");
+      localStorage.removeItem("foodHasUnsavedChanges");
+      localStorage.removeItem("foodFormEventId");
+      localStorage.removeItem("foodFormEndformId");
       localStorage.removeItem("guestRoomForm");
+      localStorage.removeItem("guestRoomFormData");
+      localStorage.removeItem("guestRoomHasUnsavedChanges");
+      localStorage.removeItem("guestRoomFormEndformId");
       localStorage.removeItem("transportForm");
+      localStorage.removeItem("transportFormData");
+      localStorage.removeItem("transportHasUnsavedChanges");
       localStorage.removeItem("communicationForm");
+      localStorage.removeItem("communicationFormData");
+      localStorage.removeItem("communicationHasUnsavedChanges");
       localStorage.removeItem("currentEventData");
       localStorage.removeItem("basicEventId");
       localStorage.removeItem("foodFormId");
@@ -272,24 +340,58 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
       localStorage.removeItem("transportFormId");
       localStorage.removeItem("communicationFormId");
       
-      // Set edit mode flag to distinguish from new event creation
-      localStorage.setItem('isEditMode', 'true');
-      
-      // Try to get the event data from the current events list first
-      const currentEvent = EventPopup.find(event => event._id === eventId);
-      console.log("Current event from EventPopup:", currentEvent);
-      
-      if (currentEvent) {
-        eventData = currentEvent;
-        console.log("Using event data from EventPopup");
-      } else {
-        // Fetch the complete endform data for this specific event
-        console.log("Fetching from API endpoint:", `/api/endform/event/${eventId}`);
-        const response = await axios.get(
-          `/api/endform/event/${eventId}`
+      // Resolve an EndForm document for this edit (supports both endformId and basicEventId inputs).
+      // We prefer an EndForm because it contains links to Food/Transport/Guest/Communication forms.
+      const looksLikeEndform = (obj) => {
+        if (!obj || typeof obj !== 'object') return false;
+        return (
+          !!obj._id && (
+            !!obj.eventdata ||
+            !!obj.basicEvent ||
+            !!obj.foodform ||
+            !!obj.guestform ||
+            !!obj.communicationform ||
+            !!obj.transport ||
+            !!obj.transportform
+          )
         );
-        eventData = response.data;
-        console.log("Fetched event data from API:", eventData);
+      };
+
+      // First try to reuse a cached EndForm-like object from EventPopup.
+      const currentEvent = EventPopup.find(
+        (event) => event?._id === eventId || event?.basicEvent?._id === eventId
+      );
+      console.log("Current event from EventPopup:", currentEvent);
+
+      if (currentEvent && looksLikeEndform(currentEvent)) {
+        eventData = currentEvent;
+        console.log("Using EndForm-like event data from EventPopup");
+      } else {
+        // Try /api/endform/:id (endformId) first.
+        try {
+          console.log("Fetching EndForm by id:", `/api/endform/${eventId}`);
+          const response = await axios.get(`/api/endform/${eventId}`);
+          if (looksLikeEndform(response.data)) {
+            eventData = response.data;
+            console.log("Fetched EndForm data from /api/endform/:id");
+          }
+        } catch (err) {
+          // ignore; we'll try /api/endform/event/:id next
+        }
+
+        // Fallback: treat eventId as BasicEvent id and fetch EndForm by event.
+        if (!eventData) {
+          console.log("Fetching EndForm by event id:", `/api/endform/event/${eventId}`);
+          const response = await axios.get(`/api/endform/event/${eventId}`);
+          eventData = response.data;
+          console.log("Fetched EndForm data from /api/endform/event/:id");
+        }
+      }
+
+      if (!eventData || !eventData._id) {
+        console.error("Edit init failed: EndForm could not be resolved for:", eventId, eventData);
+        toast.error("Cannot edit this event (EndForm not found)");
+        return;
       }
       
       console.log("Fetched event data for editing:", eventData);
@@ -300,17 +402,35 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
       // Set the new event data in Redux
       dispatch(setEventData(formattedEvent));
       localStorage.setItem('currentEventData', JSON.stringify(formattedEvent));
+
+      const resolvedEndformId = eventData?._id ? String(eventData._id) : "";
+      const resolvedBasicEventId = formattedEvent?.basicEvent?._id
+        ? String(formattedEvent.basicEvent._id)
+        : (resolveBasicEventId(eventData) ? String(resolveBasicEventId(eventData)) : "");
+
+      // Set edit mode flag only after we have a resolvable EndForm id.
+      localStorage.setItem('isEditMode', 'true');
       
       // Store the endform ID for forms to fetch data
-      if (eventData._id) {
-        localStorage.setItem('endformId', eventData._id);
-        console.log("Stored endformId:", eventData._id);
+      if (resolvedEndformId) {
+        localStorage.setItem('endformId', resolvedEndformId);
+        localStorage.setItem('foodFormEndformId', resolvedEndformId);
+        localStorage.setItem('guestRoomFormEndformId', resolvedEndformId);
+
+        // Mark this tab/session as an authorized edit entry.
+        // Prevents stale localStorage isEditMode from enabling edit flow on direct visits.
+        sessionStorage.setItem('editFlowActive', 'true');
+        sessionStorage.setItem('editFlowEndformId', resolvedEndformId);
+        sessionStorage.setItem('formsFlowActive', 'true');
+        console.log("Stored endformId:", resolvedEndformId);
       }
       
       // Store the current event ID for forms to check if there's an active event
-      if (eventData._id) {
-        localStorage.setItem('currentEventId', eventData._id);
-        console.log("Stored currentEventId:", eventData._id);
+      // IMPORTANT: currentEventId should be the BasicEvent id, not the EndForm id.
+      if (resolvedBasicEventId) {
+        localStorage.setItem('currentEventId', resolvedBasicEventId);
+        localStorage.setItem('foodFormEventId', resolvedBasicEventId);
+        console.log("Stored currentEventId (basicEventId):", resolvedBasicEventId);
       }
       
       // Store individual form data in localStorage for proper prefill
@@ -374,7 +494,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
       console.log("transportForm in localStorage:", localStorage.getItem('transportForm'));
       console.log("All localStorage keys:", Object.keys(localStorage));
       
-      navigate('/forms');
+      navigate('/forms/basic');
     } catch (error) {
       console.error("Error fetching event for editing:", error);
       console.error("Error details:", error.response?.data || error.message);

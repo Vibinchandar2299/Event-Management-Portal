@@ -44,6 +44,28 @@ const Form = () => {
     const isEditMode = localStorage.getItem('isEditMode') === 'true';
     const currentEventId = localStorage.getItem('currentEventId');
     const startNewFlow = localStorage.getItem('startNewFlow') === 'true';
+    const activeCreateFlow = localStorage.getItem('activeCreateFlow') === 'true';
+    const activeCreateFlowAt = Number(localStorage.getItem('activeCreateFlowAt') || 0);
+    const basicEventId = localStorage.getItem('basicEventId');
+    const hasRecentCreateFlow = Number.isFinite(activeCreateFlowAt)
+      && activeCreateFlowAt > 0
+      && (Date.now() - activeCreateFlowAt) < 6 * 60 * 60 * 1000;
+    const hasValidCreateContext =
+      activeCreateFlow &&
+      hasRecentCreateFlow &&
+      currentEventId &&
+      basicEventId &&
+      String(currentEventId) === String(basicEventId);
+
+    const hasFormsFlowSession = sessionStorage.getItem('formsFlowActive') === 'true';
+    const editFlowActive = sessionStorage.getItem('editFlowActive') === 'true';
+    const editFlowEndformId = sessionStorage.getItem('editFlowEndformId');
+    const hasValidEditContext =
+      isEditMode &&
+      !!endformId &&
+      editFlowActive &&
+      !!editFlowEndformId &&
+      String(editFlowEndformId) === String(endformId);
     
     console.log("Form - Initial values:");
     console.log("Form - endformId:", endformId);
@@ -51,8 +73,19 @@ const Form = () => {
     console.log("Form - isEditMode:", isEditMode);
     console.log("Form - startNewFlow:", startNewFlow);
 
+    const hasAnyEventContext = !!currentEventId || !!endformId;
+
+    // If the user is on the Basic step, treat this tab as being inside the forms flow.
+    // This prevents immediate redirects when they click other steps.
+    if (location.pathname === '/forms/basic') {
+      sessionStorage.setItem('formsFlowActive', 'true');
+    }
+
     // Explicit new-event action from dashboard/profile/pending: always reset flow state.
     if (startNewFlow) {
+      sessionStorage.removeItem('formsFlowActive');
+      sessionStorage.removeItem('editFlowActive');
+      sessionStorage.removeItem('editFlowEndformId');
       dispatch(clearEventData());
       dispatch(resetEventState());
       [
@@ -63,9 +96,20 @@ const Form = () => {
         'currentFormData', 'eventFormData', 'basicEventId', 'currentEventData',
         'eventData', 'formState', 'communicationState', 'transportState', 'foodState', 'guestRoomState',
         'currentEventId', 'endformId', 'isEditMode',
+        'activeCreateFlow', 'activeCreateFlowAt',
+        'foodFlowAccess', 'foodFlowAccessAt',
+        'foodFormEventId',
+        'foodFormEndformId',
+        'guestRoomFormEndformId',
         'foodHasUnsavedChanges', 'guestRoomHasUnsavedChanges', 'transportHasUnsavedChanges', 'communicationHasUnsavedChanges',
         'startNewFlow'
       ].forEach((key) => localStorage.removeItem(key));
+
+      // We are now intentionally inside the forms flow in this tab.
+      // Mark the session so navigation doesn't loop-trigger startNewFlow again.
+      if (location.pathname === '/forms/basic') {
+        sessionStorage.setItem('formsFlowActive', 'true');
+      }
       // Ensure user starts from Basic form in a clean state.
       if (location.pathname !== '/forms/basic') {
         navigate('/forms/basic');
@@ -73,17 +117,119 @@ const Form = () => {
       return;
     }
 
+    // If edit mode is set in localStorage but this tab did not enter via EventCard Edit,
+    // treat it as stale and force a clean start (empty forms).
+    if ((isEditMode || endformId) && !hasValidEditContext) {
+      console.log('Form - Clearing stale edit context (no valid edit session marker)');
+      sessionStorage.removeItem('formsFlowActive');
+      sessionStorage.removeItem('editFlowActive');
+      sessionStorage.removeItem('editFlowEndformId');
+      dispatch(clearEventData());
+      dispatch(resetEventState());
+      [
+        'endformId', 'isEditMode', 'currentEventId', 'basicEventId', 'currentEventData',
+        'basicEvent', 'common_data', 'iqacno',
+        'foodForm', 'foodFormId', 'foodFormData', 'foodFormEventId', 'foodFormEndformId',
+        'guestRoomForm', 'guestRoomFormId', 'guestRoomFormData', 'guestRoomFormEndformId',
+        'transportForm', 'transportFormId', 'transportFormData',
+        'communicationForm', 'communicationFormId', 'communicationFormData',
+        'foodHasUnsavedChanges', 'guestRoomHasUnsavedChanges', 'transportHasUnsavedChanges', 'communicationHasUnsavedChanges',
+        'activeCreateFlow', 'activeCreateFlowAt', 'foodFlowAccess', 'foodFlowAccessAt',
+      ].forEach((key) => localStorage.removeItem(key));
+
+      if (location.pathname !== '/forms/basic') {
+        navigate('/forms/basic');
+      }
+      return;
+    }
+
     // Direct /forms entry without edit mode should behave like starting a new event.
-    if (location.pathname === '/forms' && !isEditMode) {
+    if (location.pathname === '/forms' && !hasValidEditContext) {
+      sessionStorage.removeItem('formsFlowActive');
       localStorage.setItem('startNewFlow', 'true');
       navigate('/forms/basic');
       return;
     }
-    
-    // If we have isEditMode but no currentEventId, this is a stale edit mode - clear it
-    if (isEditMode && !currentEventId) {
-      console.log("Form - Clearing stale isEditMode flag");
-      localStorage.removeItem('isEditMode');
+
+    // If we reached the wrapper route during a valid create/edit session,
+    // always start on the Basic step (avoid landing on the index route).
+    if (location.pathname === '/forms' && (hasValidEditContext || hasValidCreateContext)) {
+      navigate('/forms/basic');
+      return;
+    }
+
+    // Direct deep-link into a later step without a valid create/edit context should NOT reuse stale caches.
+    // Force a clean start from Basic.
+    if (
+      location.pathname.startsWith('/forms') &&
+      location.pathname !== '/forms' &&
+      location.pathname !== '/forms/basic' &&
+      !hasValidEditContext &&
+      !hasValidCreateContext &&
+      !hasFormsFlowSession
+    ) {
+      sessionStorage.removeItem('formsFlowActive');
+
+      // Blocked deep-link from outside the forms flow.
+      // Clear stale cached form data so direct visits never show old prefills.
+      if (!isEditMode && !endformId) {
+        [
+          'currentEventId',
+          'basicEventId',
+          'currentEventData',
+          'basicEvent',
+          'common_data',
+          'iqacno',
+          'foodForm', 'foodFormId', 'foodFormEventId', 'foodFormEndformId', 'foodFormData',
+          'guestRoomForm', 'guestRoomFormId', 'guestRoomFormEndformId', 'guestRoomFormData',
+          'transportForm', 'transportFormId', 'transportFormData',
+          'communicationForm', 'communicationFormId', 'communicationFormData',
+          'foodHasUnsavedChanges', 'guestRoomHasUnsavedChanges', 'transportHasUnsavedChanges', 'communicationHasUnsavedChanges',
+          'activeCreateFlow', 'activeCreateFlowAt',
+          'foodFlowAccess', 'foodFlowAccessAt',
+        ].forEach((key) => localStorage.removeItem(key));
+
+        // Also clear any in-tab drafts.
+        sessionStorage.removeItem('basicDraft');
+        sessionStorage.removeItem('basicDraftOrganizers');
+        sessionStorage.removeItem('basicDraftResourcePersons');
+      }
+
+      navigate('/forms/basic');
+      return;
+    }
+
+    // Mark a valid in-tab forms flow when user is on Basic or edit flow.
+    if (location.pathname === '/forms/basic' || hasValidEditContext || hasValidCreateContext) {
+      sessionStorage.setItem('formsFlowActive', 'true');
+    }
+
+    // Prevent stale previous-event context from leaking into forms (notably Food prefill).
+    if (currentEventId && !endformId && !isEditMode && !hasValidCreateContext && !hasFormsFlowSession) {
+      console.log("Form - Clearing stale create context");
+      [
+        'currentEventId',
+        'currentEventData',
+        'activeCreateFlow',
+        'activeCreateFlowAt',
+        'foodFlowAccess',
+        'foodFlowAccessAt',
+        'foodForm',
+        'foodFormId',
+        'foodFormEventId',
+        'foodFormEndformId',
+        'foodFormData',
+        'guestRoomForm',
+        'guestRoomFormId',
+        'guestRoomFormEndformId',
+        'guestRoomFormData',
+        'transportForm',
+        'transportFormId',
+        'transportFormData',
+        'communicationForm',
+        'communicationFormId',
+        'communicationFormData',
+      ].forEach((key) => localStorage.removeItem(key));
     }
     
     // If we have isEditMode but no endformId, this is also a stale edit mode - clear it
@@ -114,7 +260,7 @@ const Form = () => {
     }
     
     // Clear stale data only when there is no active flow at all.
-    if (!currentEventId && !isEditMode) {
+    if (!currentEventId && !endformId && !isEditMode) {
       console.log("Form - No active flow, clearing stale local data for fresh start");
       
       dispatch(clearEventData());
@@ -128,7 +274,7 @@ const Form = () => {
         'transportFormState', 'communicationFormState', 'formData', 'selectedOptions',
         'currentFormData', 'eventFormData', 'basicEventId', 'currentEventData',
         'eventData', 'formState', 'communicationState', 'transportState', 'foodState', 'guestRoomState',
-        /* 'currentEventId', */ 'endformId', 'isEditMode'
+        /* 'currentEventId', */ 'endformId', 'isEditMode', 'activeCreateFlow', 'activeCreateFlowAt', 'foodFlowAccess', 'foodFlowAccessAt'
         // Do NOT clear currentEventId for fresh start, only when truly resetting the event flow
       ];
       
@@ -153,13 +299,9 @@ const Form = () => {
     // The nested routes will handle form rendering
   // We just need to render the Outlet
 
-  useEffect(() => {
-    return () => {
-      if (!hasActiveEvent) {
-        dispatch(clearEventData());
-      }
-    };
-  }, [dispatch, hasActiveEvent]);
+  // Intentionally no unmount cleanup for flow markers.
+  // In React 18 dev StrictMode, effects are mounted/unmounted twice.
+  // Clearing sessionStorage here would immediately break edit/create flow.
 
   const formSteps = [
     { to: "/forms/basic", icon: Home, label: "Basic Event", tone: "from-emerald-500 to-teal-600" },

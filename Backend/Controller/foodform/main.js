@@ -1,17 +1,89 @@
 import Event from "../../Schema/foodform/main.js";
 
+const normalizeFoodDetails = (details = {}) => {
+  if (!details || typeof details !== "object") return {};
+
+  const mealKeyMap = {
+    "Morning Refreshment": "MorningRefreshment",
+    "Evening Refreshment": "EveningRefreshment",
+  };
+
+  const normalized = {};
+
+  Object.entries(details).forEach(([mealKey, mealValue]) => {
+    const targetMealKey = mealKeyMap[mealKey] || mealKey;
+    const mealObj = mealValue && typeof mealValue === "object" ? mealValue : {};
+
+    const normalizeSection = (section) => {
+      if (section == null) return undefined;
+      if (typeof section !== "object") return section;
+      return {
+        ...section,
+        NonVeg: section.NonVeg ?? section["Non Veg"] ?? "",
+      };
+    };
+
+    normalized[targetMealKey] = {
+      ...(mealObj.participants ? { participants: normalizeSection(mealObj.participants) } : {}),
+      ...(mealObj.guest ? { guest: normalizeSection(mealObj.guest) } : {}),
+    };
+  });
+
+  return normalized;
+};
+
+const normalizePayload = (payload = {}) => {
+  const body = { ...payload };
+
+  if (Array.isArray(body.dates)) {
+    body.dates = body.dates.map((entry) => {
+      const dateObj = entry?.date && typeof entry.date === "object"
+        ? {
+            start: entry.date.start,
+            end: entry.date.end || entry.date.start,
+          }
+        : {
+            start: entry?.date || entry?.start,
+            end: entry?.end || entry?.date || entry?.start,
+          };
+
+      return {
+        date: dateObj,
+        foodDetails: normalizeFoodDetails(entry?.foodDetails || {}),
+      };
+    });
+  } else if (body.dates && typeof body.dates === "object") {
+    const rootFoodDetails = body.foodDetails && typeof body.foodDetails === "object" ? body.foodDetails : {};
+
+    body.dates = Object.entries(body.dates).map(([key, dateValue]) => {
+      const dateObj = dateValue && typeof dateValue === "object"
+        ? {
+            start: dateValue.start || key,
+            end: dateValue.end || dateValue.start || key,
+          }
+        : {
+            start: key,
+            end: key,
+          };
+
+      return {
+        date: dateObj,
+        foodDetails: normalizeFoodDetails(rootFoodDetails[key] || {}),
+      };
+    });
+  } else {
+    body.dates = [];
+  }
+
+  delete body.foodDetails;
+  return body;
+};
+
 export const createEvent = async (req, res) => {
   try {
     console.log("Incoming data:", JSON.stringify(req.body, null, 2));
 
-    const datesArray = Object.entries(req.body.dates).map(
-      ([key, dateValue]) => ({
-        date: dateValue,
-        foodDetails: req.body.foodDetails[key],
-      })
-    );
-
-    req.body.dates = datesArray;
+    const normalizedBody = normalizePayload(req.body);
 
     const {
       eventName,
@@ -21,7 +93,7 @@ export const createEvent = async (req, res) => {
       requestorName,
       requisitionDate,
       mobileNumber,
-    } = req.body;
+    } = normalizedBody;
     // eventname:eventName
     if (
       !eventName ||
@@ -36,7 +108,7 @@ export const createEvent = async (req, res) => {
     }
 
     // Create and save the event
-    const newEvent = new Event(req.body);
+    const newEvent = new Event(normalizedBody);
     const savedEvent = await newEvent.save();
     console.log("event comming into the backend : ", newEvent);
     res
@@ -77,7 +149,9 @@ export const getEventById = async (req, res) => {
 export const updateEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedEvent = await Event.findByIdAndUpdate(id, req.body, {
+    const normalizedBody = normalizePayload(req.body);
+
+    const updatedEvent = await Event.findByIdAndUpdate(id, normalizedBody, {
       new: true,
     });
     if (!updatedEvent)

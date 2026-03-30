@@ -20,6 +20,7 @@ const TransportForm = ({ eventData, nextForm }) => {
 
   const getBasicSourceData = () => {
     try {
+      const currentEventId = localStorage.getItem("currentEventId");
       const currentEventData = JSON.parse(localStorage.getItem("currentEventData") || "null");
       const basicFromCurrent = currentEventData?.basicEvent || null;
       const basicFromStorage = JSON.parse(localStorage.getItem("basicEvent") || "null");
@@ -36,9 +37,16 @@ const TransportForm = ({ eventData, nextForm }) => {
         );
       };
 
-      if (hasUsableBasicData(basicFromCurrent)) return basicFromCurrent;
-      if (hasUsableBasicData(basicFromStorage)) return basicFromStorage;
-      if (hasUsableBasicData(basicFromCommon)) return basicFromCommon;
+      const isForCurrentFlow = (obj) => {
+        if (!obj || typeof obj !== "object") return false;
+        if (!currentEventId) return false;
+        const objId = obj._id || obj.id;
+        return objId ? String(objId) === String(currentEventId) : false;
+      };
+
+      if (hasUsableBasicData(basicFromStorage) && isForCurrentFlow(basicFromStorage)) return basicFromStorage;
+      if (hasUsableBasicData(basicFromCurrent) && isForCurrentFlow(basicFromCurrent)) return basicFromCurrent;
+      if (hasUsableBasicData(basicFromCommon) && isForCurrentFlow(basicFromCommon)) return basicFromCommon;
       return {};
     } catch {
       return {};
@@ -151,8 +159,8 @@ const TransportForm = ({ eventData, nextForm }) => {
     },
     eventDetails: {
       eventName: "",
-      eventType: "General",
-      travellerDetails: "Not Provided"
+      eventType: "",
+      travellerDetails: ""
     },
     travelDetails: {
       pickUpDateTime: "",
@@ -209,6 +217,51 @@ const TransportForm = ({ eventData, nextForm }) => {
 
     // New event flow after Basic Event save: currentEventId exists, but no endform yet
     if (currentEventId && !endformId && !isEditMode) {
+      const storedTransportForm = localStorage.getItem('transportForm');
+      if (storedTransportForm) {
+        try {
+          const parsedTransportData = JSON.parse(storedTransportForm);
+          const transportData = Array.isArray(parsedTransportData)
+            ? parsedTransportData[0]
+            : parsedTransportData;
+
+          if (transportData && Object.keys(transportData).length > 0) {
+            setCurrentEvent({
+              basicDetails: {
+                departmentName: transportData.departmentName || transportData.basicDetails?.departmentName || "",
+                designation: transportData.designation || transportData.basicDetails?.designation || "",
+                empId: transportData.empId || transportData.basicDetails?.empId || "",
+                iqacNumber: transportData.iqacNumber || transportData.basicDetails?.iqacNumber || "",
+                mobileNumber: transportData.mobileNumber || transportData.basicDetails?.mobileNumber || "",
+                requestorName: transportData.requestorName || transportData.basicDetails?.requestorName || "",
+                requisitionDate: transportData.requisitionDate || transportData.basicDetails?.requisitionDate || "",
+              },
+              driverDetails: {
+                mobileNumber: transportData.driverDetails?.mobileNumber || "",
+                name: transportData.driverDetails?.name || "",
+              },
+              travelDetails: {
+                pickUpDateTime: transportData.travelDetails?.pickUpDateTime || "",
+                dropDateTime: transportData.travelDetails?.dropDateTime || "",
+                numberOfPassengers: transportData.travelDetails?.numberOfPassengers ?? "",
+                vehicleType: transportData.travelDetails?.vehicleType || "",
+                pickUpLocation: transportData.travelDetails?.pickUpLocation || "",
+                dropLocation: transportData.travelDetails?.dropLocation || "",
+                specialRequirements: transportData.travelDetails?.specialRequirements || "",
+              },
+              eventDetails: {
+                eventName: transportData.eventDetails?.eventName || "",
+                eventType: transportData.eventDetails?.eventType || "",
+                travellerDetails: transportData.eventDetails?.travellerDetails || "",
+              },
+              _id: transportData._id || "",
+            });
+            return;
+          }
+        } catch (error) {
+          console.error("TransportForm - Error parsing stored transport data in creation flow:", error);
+        }
+      }
       console.log("TransportForm - Applying Basic Event autofill for new flow");
       setCurrentEvent(getAutofilledTransportBase());
       return;
@@ -444,19 +497,6 @@ const TransportForm = ({ eventData, nextForm }) => {
 
     try {
       const eventId = localStorage.getItem("currentEventId");
-      if (!eventId) {
-        console.error("No event ID found. Please start from the event creation page.");
-        toast.error("No event ID found. Please start from the Basic Event form and create an event first.");
-        return;
-      }
-      
-      // Check if eventId is a valid MongoDB ObjectId (24 hex characters)
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
-      if (!isValidObjectId) {
-        console.error('Invalid event ID format:', eventId);
-        toast.error('Invalid event ID. Please start from the Basic Event form.');
-        return;
-      }
 
       // Format data for MongoDB
       const formattedData = {
@@ -503,7 +543,15 @@ const TransportForm = ({ eventData, nextForm }) => {
           currentEvent._id ||
           currentEvent.id ||
           (Array.isArray(events) && events[0]?._id) ||
-          (Array.isArray(events) && events[0]?.id);
+          (Array.isArray(events) && events[0]?.id) ||
+          localStorage.getItem('transportFormId') ||
+          (() => {
+            try {
+              return JSON.parse(localStorage.getItem('transportForm') || 'null')?._id || '';
+            } catch {
+              return '';
+            }
+          })();
         console.log("currentEvent for update:", currentEvent);
         console.log("events array for update:", events);
         console.log("Resolved transportId for update:", transportId);
@@ -525,17 +573,29 @@ const TransportForm = ({ eventData, nextForm }) => {
                   { headers }
                 );
               } else {
-                console.error("Transport ID not found. Please try again.");
-                return;
+                console.warn("Transport ID not found in edit mode, creating a new transport as fallback.");
+                response = await axios.post(
+                  `${import.meta.env.VITE_API_URL}/transportform/transports`,
+                  { events: [formattedData] },
+                  { headers }
+                );
               }
             } catch (error) {
               console.error("Error parsing stored transport data:", error);
-              console.error("Transport ID not found. Please try again.");
-              return;
+              console.warn("Transport ID parse failed in edit mode, creating a new transport as fallback.");
+              response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/transportform/transports`,
+                { events: [formattedData] },
+                { headers }
+              );
             }
           } else {
-            console.error("Transport ID not found. Please try again.");
-            return;
+            console.warn("Transport ID not found in edit mode, creating a new transport as fallback.");
+            response = await axios.post(
+              `${import.meta.env.VITE_API_URL}/transportform/transports`,
+              { events: [formattedData] },
+              { headers }
+            );
           }
         } else {
           // Update existing transport
@@ -601,23 +661,42 @@ const TransportForm = ({ eventData, nextForm }) => {
       console.log("Response:", response.data);
 
       if (response.data) {
-        toast.success("Transport form saved successfully!");
-        if (nextForm) {
-          navigate(nextForm);
-        } else {
-          console.log("Navigating to food form");
-          navigate("/forms/food");
+        const savedTransport = {
+          ...formattedData,
+          _id:
+            response.data?._id ||
+            response.data?.data?._id ||
+            (Array.isArray(response.data) ? response.data[0]?._id : undefined) ||
+            localStorage.getItem('transportFormId') ||
+            currentEvent?._id ||
+            "",
+        };
+        localStorage.setItem('transportForm', JSON.stringify(savedTransport));
+        if (savedTransport._id) {
+          localStorage.setItem('transportFormId', savedTransport._id);
         }
+
+        toast.success("Transport form saved successfully!");
+        const targetForm = nextForm || "/forms/food";
+        if (targetForm === "/forms/food") {
+          localStorage.setItem('foodFlowAccess', 'true');
+          localStorage.setItem('foodFlowAccessAt', String(Date.now()));
+        }
+        navigate(targetForm);
       }
 
       // After successful update, fetch latest event data and update Redux
       if (response.data && localStorage.getItem('isEditMode') === 'true') {
         const eventId = localStorage.getItem("currentEventId");
-        if (eventId) {
+        if (eventId && /^[0-9a-fA-F]{24}$/.test(eventId)) {
           const eventResponse = await axios.get(`${import.meta.env.VITE_API_URL}/event/${eventId}`);
           if (eventResponse.data) {
             dispatch(setEventData(eventResponse.data));
           }
+        } else if (eventId) {
+          console.warn("TransportForm - Skipping event refresh due to invalid event ID:", eventId);
+        } else {
+          console.warn("TransportForm - Skipping event refresh because no currentEventId is set.");
         }
       }
     } catch (error) {
