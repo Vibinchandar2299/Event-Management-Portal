@@ -21,6 +21,8 @@ const CalenderUI = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
+  const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
+
   useEffect(() => {
     const controller = new AbortController();
 
@@ -53,6 +55,33 @@ const CalenderUI = () => {
     return () => controller.abort();
   }, []);
 
+  const visibleEvents = useMemo(() => {
+    if (!userDept || userDept === "iqac") return events;
+
+    if (userDept === "transport") {
+      return events.filter((e) => Array.isArray(e?.transport) && e.transport.length > 0);
+    }
+
+    if (userDept === "food") {
+      return events.filter((e) => !!e?.foodform);
+    }
+
+    if (userDept === "guestroom") {
+      return events.filter((e) => !!e?.guestroom);
+    }
+
+    if (userDept === "communication") {
+      return events.filter((e) => !!e?.communicationform);
+    }
+
+    // Fallback for other departments: show only events tagged for that department.
+    const matchesDept = (arr) =>
+      Array.isArray(arr) &&
+      arr.some((v) => String(v || "").trim().toLowerCase() === userDept);
+
+    return events.filter((e) => matchesDept(e?.academicdepartment) || matchesDept(e?.departments));
+  }, [events, userDept]);
+
   const eventsByDayKey = useMemo(() => {
     const map = new Map();
 
@@ -69,7 +98,7 @@ const CalenderUI = () => {
       else map.set(dayKey, [evt]);
     };
 
-    for (const evt of events) {
+    for (const evt of visibleEvents) {
       const start = evt?.startDate;
       const end = evt?.endDate || evt?.startDate;
       if (!start) continue;
@@ -91,7 +120,7 @@ const CalenderUI = () => {
     }
 
     return map;
-  }, [events]);
+  }, [visibleEvents]);
 
   const daysInMonth = new Date(
     currentDate.getFullYear(),
