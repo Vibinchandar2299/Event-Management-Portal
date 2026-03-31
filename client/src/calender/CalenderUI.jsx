@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,16 +6,92 @@ import {
   List,
   Grid3X3,
 } from "lucide-react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import EndPopup from "../PopupModels/EndPopup";
 
 const CalenderUI = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("month");
 
-  const sampleEvents = [
-    { id: 1, name: "Team Meeting", startDate: "2025-01-25", endDate: "2025-01-26" },
-    { id: 2, name: "Project Demo", startDate: "2025-01-27", endDate: "2025-01-28" },
-    { id: 3, name: "Hackathon", startDate: "2025-01-29", endDate: "2025-02-01" },
-  ];
+  const [events, setEvents] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchEvents = async () => {
+      setIsLoading(true);
+      setLoadError("");
+
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get("/api/event", {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          signal: controller.signal,
+        });
+
+        const data = res?.data;
+        const list = Array.isArray(data) ? data : data?.events || [];
+        setEvents(Array.isArray(list) ? list : []);
+      } catch (err) {
+        // Ignore abort errors
+        if (controller.signal.aborted) return;
+
+        console.error("Failed to load calendar events:", err);
+        setLoadError("Failed to load events");
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
+    };
+
+    fetchEvents();
+    return () => controller.abort();
+  }, []);
+
+  const eventsByDayKey = useMemo(() => {
+    const map = new Map();
+
+    const toKey = (dateObj) => {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const d = String(dateObj.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    };
+
+    const addEventToDay = (dayKey, evt) => {
+      const existing = map.get(dayKey);
+      if (existing) existing.push(evt);
+      else map.set(dayKey, [evt]);
+    };
+
+    for (const evt of events) {
+      const start = evt?.startDate;
+      const end = evt?.endDate || evt?.startDate;
+      if (!start) continue;
+
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) continue;
+
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+      if (endDate < startDate) continue;
+
+      // Add the event to each day it spans
+      const cursor = new Date(startDate);
+      while (cursor <= endDate) {
+        addEventToDay(toKey(cursor), evt);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
+    return map;
+  }, [events]);
 
   const daysInMonth = new Date(
     currentDate.getFullYear(),
@@ -50,11 +126,26 @@ const CalenderUI = () => {
     } hover:bg-gray-50 cursor-pointer`;
   };
 
-  const isDateInRange = (date, startDate, endDate) => {
-    const current = new Date(date).setHours(0, 0, 0, 0);
-    const start = new Date(startDate).setHours(0, 0, 0, 0);
-    const end = new Date(endDate).setHours(0, 0, 0, 0);
-    return current >= start && current <= end;
+  const handleOpenEvent = async (eventId) => {
+    if (!eventId) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`/api/event/${eventId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      setSelectedEvent(res?.data || null);
+      setIsPopupOpen(true);
+    } catch (err) {
+      console.error("Failed to load event details:", err);
+      toast.error("Failed to load event details");
+    }
+  };
+
+  const closePopup = () => {
+    setIsPopupOpen(false);
+    setSelectedEvent(null);
   };
 
   const renderCalendarDays = () => {
@@ -66,15 +157,10 @@ const CalenderUI = () => {
       const dayNum = i - firstDayOfMonth + 1;
       const isValidDay = dayNum > 0 && dayNum <= daysInMonth;
 
-      const eventsForDay = sampleEvents.filter(
-        (event) =>
-          isValidDay &&
-          isDateInRange(
-            new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum),
-            event.startDate,
-            event.endDate
-          )
-      );
+      const dayKey = isValidDay
+        ? `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`
+        : "";
+      const eventsForDay = isValidDay ? eventsByDayKey.get(dayKey) || [] : [];
 
       days.push(
         <div key={i} className={getDayClass(dayNum)}>
@@ -86,10 +172,24 @@ const CalenderUI = () => {
               <div className="mt-6">
                 {eventsForDay.map((event) => (
                   <div
-                    key={event.id}
-                    className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded mb-1"
+                    key={event._id || event.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenEvent(event._id || event.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleOpenEvent(event._id || event.id);
+                      }
+                    }}
+                    title={event.eventName || event.name || ""}
+                    className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded mb-1 truncate"
                   >
-                    {event.name}
+                    {event.eventName || event.name}
                   </div>
                 ))}
               </div>
@@ -126,6 +226,13 @@ const CalenderUI = () => {
                 >
                   <ChevronRight className="w-5 h-5 text-gray-600" />
                 </button>
+
+                {isLoading && (
+                  <span className="text-sm text-gray-500">Loading…</span>
+                )}
+                {!isLoading && loadError && (
+                  <span className="text-sm text-red-600">{loadError}</span>
+                )}
               </div>
 
               <div className="flex items-center space-x-2">
@@ -181,6 +288,10 @@ const CalenderUI = () => {
           </div>
         </div>
       </div>
+
+      {isPopupOpen && selectedEvent && (
+        <EndPopup event={selectedEvent} onClose={closePopup} isOpen={isPopupOpen} />
+      )}
     </div>
   );
 };
