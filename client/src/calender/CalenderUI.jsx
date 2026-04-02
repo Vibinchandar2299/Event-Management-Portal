@@ -45,7 +45,9 @@ const CalenderUI = () => {
   };
 
   const getChipColorClasses = (chip) =>
-    isChipCompleted(chip) ? "bg-gray-100 text-gray-700" : "bg-green-100 text-green-700";
+    isChipCompleted(chip)
+      ? "bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-200"
+      : "bg-green-100 text-green-700 ring-1 ring-inset ring-green-200";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -392,9 +394,9 @@ const CalenderUI = () => {
     d.setHours(0, 0, 0, 0);
     const isToday = d.getTime() === today.getTime();
 
-    return `relative h-32 bg-white border-b border-r p-2 transition-colors ${
-      isToday ? "bg-blue-50" : ""
-    } hover:bg-gray-50 cursor-pointer`;
+    return `relative h-32 bg-white border-b border-r border-slate-200/70 p-2 transition-colors ${
+      isToday ? "bg-blue-50/60 ring-1 ring-inset ring-blue-200/60" : ""
+    } hover:bg-slate-50 cursor-pointer`;
   };
 
   const getDayClass = (dayNum) => {
@@ -403,9 +405,9 @@ const CalenderUI = () => {
       new Date().getMonth() === currentDate.getMonth() &&
       new Date().getFullYear() === currentDate.getFullYear();
 
-    return `relative h-32 bg-white border-b border-r p-2 transition-colors ${
-      isToday ? "bg-blue-50" : ""
-    } hover:bg-gray-50 cursor-pointer`;
+    return `relative h-32 bg-white border-b border-r border-slate-200/70 p-2 transition-colors ${
+      isToday ? "bg-blue-50/60 ring-1 ring-inset ring-blue-200/60" : ""
+    } hover:bg-slate-50 cursor-pointer`;
   };
 
   const handleOpenChip = (chip) => {
@@ -462,10 +464,10 @@ const CalenderUI = () => {
         <div key={i} className={getDayClass(dayNum)}>
           {isValidDay && (
             <>
-              <span className="absolute top-2  text-sm text-gray-500">
+              <span className="absolute top-2 left-2 inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-xs font-semibold text-slate-600 bg-white/70 ring-1 ring-inset ring-slate-200">
                 {dayNum}
               </span>
-              <div className="mt-6 max-h-[5.5rem] overflow-y-auto pr-1">
+              <div className="mt-8 max-h-[5.25rem] overflow-y-auto pr-1">
                 {chipsForDay.map((chip) => (
                   <div
                     key={chip.key}
@@ -483,7 +485,7 @@ const CalenderUI = () => {
                       }
                     }}
                     title={getChipText(chip)}
-                    className={`${getChipColorClasses(chip)} text-xs px-2 py-1 rounded mb-1 truncate`}
+                    className={`${getChipColorClasses(chip)} text-[11px] leading-4 px-2 py-1 rounded-lg mb-1 truncate hover:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200`}
                   >
                     {getChipText(chip)}
                   </div>
@@ -511,10 +513,10 @@ const CalenderUI = () => {
 
       days.push(
         <div key={dayKey} className={getDayBoxClassForDate(dateObj)}>
-          <span className="absolute top-2 text-sm text-gray-500">
+          <span className="absolute top-2 left-2 inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-xs font-semibold text-slate-600 bg-white/70 ring-1 ring-inset ring-slate-200">
             {dateObj.getDate()}
           </span>
-          <div className="mt-6 max-h-[5.5rem] overflow-y-auto pr-1">
+          <div className="mt-8 max-h-[5.25rem] overflow-y-auto pr-1">
             {chipsForDay.map((chip) => (
               <div
                 key={chip.key}
@@ -532,7 +534,7 @@ const CalenderUI = () => {
                   }
                 }}
                 title={getChipText(chip)}
-                className={`${getChipColorClasses(chip)} text-xs px-2 py-1 rounded mb-1 truncate`}
+                className={`${getChipColorClasses(chip)} text-[11px] leading-4 px-2 py-1 rounded-lg mb-1 truncate hover:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200`}
               >
                 {getChipText(chip)}
               </div>
@@ -559,8 +561,8 @@ const CalenderUI = () => {
       const chipsForDay = chipsByDayKey.get(dayKey) || [];
       if (chipsForDay.length > 0) {
         rows.push(
-          <div key={dayKey} className="border-b border-slate-200 py-3">
-            <div className="text-sm font-semibold text-slate-700">
+          <div key={dayKey} className="border-b border-slate-200/80 py-4">
+            <div className="text-sm font-semibold text-slate-800">
               {formatListDate(cursor)}
             </div>
             <div className="mt-2 space-y-1">
@@ -581,7 +583,7 @@ const CalenderUI = () => {
                     }
                   }}
                   title={getChipText(chip)}
-                  className={`${getChipColorClasses(chip)} text-xs px-2 py-1 rounded truncate`}
+                  className={`${getChipColorClasses(chip)} text-[11px] leading-4 px-2 py-1 rounded-lg truncate hover:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200`}
                 >
                   {getChipText(chip)}
                 </div>
@@ -596,103 +598,112 @@ const CalenderUI = () => {
 
     if (rows.length === 0) {
       return (
-        <div className="px-6 py-8 text-sm text-slate-500">No requests in this month.</div>
+        <div className="px-6 py-10 text-sm text-slate-500">No requests in this month.</div>
       );
     }
 
-    return <div className="px-6">{rows}</div>;
+    return <div className="px-6 py-2">{rows}</div>;
   };
 
   return (
-    <div className=" ">
-      <div className=" ml-20 px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-4">
+    <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
+      <div className="ml-20 px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/80 overflow-hidden">
+          <div className="p-5 sm:p-6 border-b border-slate-200/80">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigatePeriod("prev")}
-                  className="p-2 hover:bg-gray-100 rounded-full"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                  aria-label="Previous"
                 >
-                  <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  <ChevronLeft className="w-5 h-5 text-slate-700" />
                 </button>
-                <h2 className="text-2xl font-semibold text-gray-800">
-                  {currentDate.toLocaleString("default", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </h2>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 leading-tight">
+                    {currentDate.toLocaleString("default", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </h2>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {isLoading && "Loading…"}
+                    {!isLoading && loadError ? loadError : null}
+                  </div>
+                </div>
                 <button
                   onClick={() => navigatePeriod("next")}
-                  className="p-2 hover:bg-gray-100 rounded-full"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                  aria-label="Next"
                 >
-                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                  <ChevronRight className="w-5 h-5 text-slate-700" />
                 </button>
-
-                {isLoading && (
-                  <span className="text-sm text-gray-500">Loading…</span>
-                )}
-                {!isLoading && loadError && (
-                  <span className="text-sm text-red-600">{loadError}</span>
-                )}
               </div>
 
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setViewMode("month")}
-                  className={`p-2 rounded ${
-                    viewMode === "month"
-                      ? "bg-blue-100 text-blue-600"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  <Grid3X3 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode("week")}
-                  className={`p-2 rounded ${
-                    viewMode === "week"
-                      ? "bg-blue-100 text-blue-600"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  <CalendarDays className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-2 rounded ${
-                    viewMode === "list"
-                      ? "bg-blue-100 text-blue-600"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  <List className="w-5 h-5" />
-                </button>
+              <div className="flex items-center justify-end">
+                <div className="inline-flex items-center rounded-xl bg-slate-100 p-1 ring-1 ring-inset ring-slate-200/70">
+                  <button
+                    onClick={() => setViewMode("month")}
+                    className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${
+                      viewMode === "month"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    aria-pressed={viewMode === "month"}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Month</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode("week")}
+                    className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${
+                      viewMode === "week"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    aria-pressed={viewMode === "week"}
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    <span className="hidden sm:inline">Week</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${
+                      viewMode === "list"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    aria-pressed={viewMode === "list"}
+                  >
+                    <List className="w-4 h-4" />
+                    <span className="hidden sm:inline">List</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
           {viewMode !== "list" && (
-            <div className="flex flex-col flex-1 mt-4">
-              <div className="grid grid-cols-7 bg-gray-50">
+            <div className="flex flex-col flex-1">
+              <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200/80">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                   <div
                     key={day}
-                    className="py-2 text-center text-sm font-semibold text-gray-600 border-b border-r"
+                    className="py-2.5 text-center text-xs font-semibold tracking-wide text-slate-600 border-r border-slate-200/80 last:border-r-0"
                   >
                     {day}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 flex-1">
+              <div className="grid grid-cols-7 flex-1 border-l border-slate-200/80">
                 {viewMode === "week" ? renderWeekDays() : renderCalendarDays()}
               </div>
             </div>
           )}
 
           {viewMode === "list" && (
-            <div className="mt-2 max-h-[70vh] overflow-y-auto">
+            <div className="max-h-[70vh] overflow-y-auto">
               {renderListView()}
             </div>
           )}
