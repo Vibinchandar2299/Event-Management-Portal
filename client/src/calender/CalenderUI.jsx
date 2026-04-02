@@ -32,14 +32,58 @@ const CalenderUI = () => {
 
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("/api/event", {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+        const res = await axios.get("/api/endform/allpending", {
+          headers,
           signal: controller.signal,
         });
 
         const data = res?.data;
         const list = Array.isArray(data) ? data : data?.events || [];
-        setEvents(Array.isArray(list) ? list : []);
+
+        const hasId = (v) => {
+          if (!v) return false;
+          if (typeof v === "string") return v.trim().length > 0;
+          return !!v?._id;
+        };
+
+        const eventsList = (Array.isArray(list) ? list : []).map((endform) => {
+          const basic = endform?.basicEvent || {};
+
+          const transportDocs = Array.isArray(endform?.transport)
+            ? endform.transport.filter(Boolean)
+            : [];
+
+          const foodDoc = hasId(endform?.foodform) ? endform.foodform : null;
+          const guestDoc = hasId(endform?.guestform) ? endform.guestform : null;
+          const commDoc = hasId(endform?.communicationform)
+            ? endform.communicationform
+            : null;
+
+          return {
+            // Calendar event id (endform id)
+            _id: endform?._id,
+            // Basic event id (used to fetch populated endform via /api/endform/event/:id)
+            basicEventId: basic?._id || endform?.eventdata,
+
+            basicEvent: basic,
+
+            eventName: basic?.eventName,
+            startDate: basic?.startDate,
+            endDate: basic?.endDate,
+            departments: basic?.departments,
+            academicdepartment: basic?.academicdepartment,
+
+            // Attached forms (source of truth)
+            transport: transportDocs,
+            foodform: foodDoc,
+            guestroom: guestDoc,
+            communicationform: commDoc,
+          };
+        });
+
+        setEvents(eventsList);
       } catch (err) {
         // Ignore abort errors
         if (controller.signal.aborted) return;
@@ -53,7 +97,7 @@ const CalenderUI = () => {
 
     fetchEvents();
     return () => controller.abort();
-  }, []);
+  }, [userDept]);
 
   const visibleEvents = useMemo(() => {
     if (!userDept || userDept === "iqac") return events;
@@ -82,8 +126,18 @@ const CalenderUI = () => {
     return events.filter((e) => matchesDept(e?.academicdepartment) || matchesDept(e?.departments));
   }, [events, userDept]);
 
-  const eventsByDayKey = useMemo(() => {
+  const chipsByDayKey = useMemo(() => {
     const map = new Map();
+
+    const allowedTypes = (() => {
+      if (!userDept || userDept === "iqac") return ["event", "transport", "food", "guestroom", "communication"];
+      if (userDept === "transport") return ["transport"];
+      if (userDept === "food") return ["food"];
+      if (userDept === "guestroom") return ["guestroom"];
+      if (userDept === "communication") return ["communication"];
+      // Unknown department: keep existing behavior (show all chips within their visible events)
+      return ["event", "transport", "food", "guestroom", "communication"];
+    })();
 
     const toKey = (dateObj) => {
       const y = dateObj.getFullYear();
@@ -92,35 +146,160 @@ const CalenderUI = () => {
       return `${y}-${m}-${d}`;
     };
 
-    const addEventToDay = (dayKey, evt) => {
+    const parseAsDate = (value) => {
+      if (!value) return null;
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return null;
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+
+    const normalizeSpan = (startRaw, endRaw) => {
+      const start = parseAsDate(startRaw);
+      const end = parseAsDate(endRaw ?? startRaw);
+      if (!start || !end) return null;
+      if (end < start) return { startDate: end, endDate: start };
+      return { startDate: start, endDate: end };
+    };
+
+    const addChipToDay = (dayKey, chip) => {
       const existing = map.get(dayKey);
-      if (existing) existing.push(evt);
-      else map.set(dayKey, [evt]);
+      if (!existing) {
+        map.set(dayKey, [chip]);
+        return;
+      }
+      if (!existing.some((c) => c.key === chip.key)) existing.push(chip);
+    };
+
+    const addChipForSpan = (span, chip) => {
+      const startDate = parseAsDate(span?.startDate);
+      const endDate = parseAsDate(span?.endDate);
+      if (!startDate || !endDate) return;
+      if (endDate < startDate) return;
+
+      // Only mark start & end dates (no in-between days)
+      addChipToDay(toKey(startDate), chip);
+      addChipToDay(toKey(endDate), chip);
     };
 
     for (const evt of visibleEvents) {
-      const start = evt?.startDate;
-      const end = evt?.endDate || evt?.startDate;
-      if (!start) continue;
+      const basic = evt?.basicEvent || {};
+      const eventName = basic?.eventName || evt?.eventName || "";
 
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) continue;
+      if (allowedTypes.includes("event")) {
+        const basicId = basic?._id || evt?.basicEventId || evt?._id;
+        const startDate = parseAsDate(basic?.startDate || evt?.startDate);
+        const endDate = parseAsDate(basic?.endDate || evt?.endDate || basic?.startDate || evt?.startDate);
 
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(0, 0, 0, 0);
-      if (endDate < startDate) continue;
+        if (basicId && startDate) {
+          if (endDate && endDate.getTime() !== startDate.getTime()) {
+            addChipToDay(toKey(startDate), {
+              key: `event-start:${basicId}`,
+              typeKey: "event",
+              label: "Event Start",
+              eventName,
+              basicEvent: basic,
+            });
 
-      // Add the event to each day it spans
-      const cursor = new Date(startDate);
-      while (cursor <= endDate) {
-        addEventToDay(toKey(cursor), evt);
-        cursor.setDate(cursor.getDate() + 1);
+            addChipToDay(toKey(endDate), {
+              key: `event-end:${basicId}`,
+              typeKey: "event",
+              label: "Event End",
+              eventName,
+              basicEvent: basic,
+            });
+          } else {
+            addChipToDay(toKey(startDate), {
+              key: `event:${basicId}`,
+              typeKey: "event",
+              label: "Event",
+              eventName,
+              basicEvent: basic,
+            });
+          }
+        }
+      }
+
+      if (allowedTypes.includes("transport")) {
+        const transportDocs = Array.isArray(evt?.transport) ? evt.transport : [];
+        transportDocs.forEach((doc) => {
+          const id = doc?._id;
+          if (!id) return;
+
+          const span = normalizeSpan(
+            doc?.travelDetails?.pickUpDateTime || doc?.travelDetails?.dropDateTime,
+            doc?.travelDetails?.dropDateTime || doc?.travelDetails?.pickUpDateTime
+          );
+          if (!span) return;
+
+          const chip = {
+            key: `transport:${id}`,
+            typeKey: "transport",
+            label: "Transport",
+            eventName,
+            basicEvent: basic,
+            transportDoc: doc,
+          };
+
+          addChipForSpan(span, chip);
+        });
+      }
+
+      if (allowedTypes.includes("food") && evt?.foodform?._id) {
+        const id = evt.foodform._id;
+        const dates = Array.isArray(evt?.foodform?.dates) ? evt.foodform.dates : [];
+        const chip = {
+          key: `food:${id}`,
+          typeKey: "food",
+          label: "Food",
+          eventName,
+          basicEvent: basic,
+          foodDoc: evt.foodform,
+        };
+
+        if (dates.length > 0) {
+          dates.forEach((entry) => {
+            const span = normalizeSpan(entry?.date?.start ?? entry?.date, entry?.date?.end ?? entry?.date?.start ?? entry?.date);
+            if (span) addChipForSpan(span, chip);
+          });
+        }
+      }
+
+      if (allowedTypes.includes("guestroom") && evt?.guestroom?._id) {
+        const id = evt.guestroom._id;
+        const span = normalizeSpan(evt?.guestroom?.date, evt?.guestroom?.date);
+        if (span) {
+          const chip = {
+            key: `guestroom:${id}`,
+            typeKey: "guestroom",
+            label: "Guest Room",
+            eventName,
+            basicEvent: basic,
+            guestDoc: evt.guestroom,
+          };
+          addChipForSpan(span, chip);
+        }
+      }
+
+      if (allowedTypes.includes("communication") && evt?.communicationform?._id) {
+        const id = evt.communicationform._id;
+        const span = normalizeSpan(basic?.startDate || evt?.startDate, basic?.endDate || evt?.endDate || basic?.startDate || evt?.startDate);
+        if (span) {
+          const chip = {
+            key: `communication:${id}`,
+            typeKey: "communication",
+            label: "Communication",
+            eventName,
+            basicEvent: basic,
+            communicationDoc: evt.communicationform,
+          };
+          addChipForSpan(span, chip);
+        }
       }
     }
 
     return map;
-  }, [visibleEvents]);
+  }, [visibleEvents, userDept]);
 
   const daysInMonth = new Date(
     currentDate.getFullYear(),
@@ -155,26 +334,40 @@ const CalenderUI = () => {
     } hover:bg-gray-50 cursor-pointer`;
   };
 
-  const handleOpenEvent = async (eventId) => {
-    if (!eventId) return;
+  const handleOpenChip = (chip) => {
+    if (!chip) return;
 
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(`/api/event/${eventId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
+    const payload = {
+      basicEvent: chip.basicEvent || {},
+    };
 
-      setSelectedEvent(res?.data || null);
-      setIsPopupOpen(true);
-    } catch (err) {
-      console.error("Failed to load event details:", err);
-      toast.error("Failed to load event details");
+    if (chip.typeKey === "event") {
+      // Basic event details only
+    } else if (chip.typeKey === "transport") {
+      payload.transport = chip.transportDoc ? [chip.transportDoc] : [];
+    } else if (chip.typeKey === "food") {
+      payload.foodform = chip.foodDoc || null;
+    } else if (chip.typeKey === "guestroom") {
+      payload.guestform = chip.guestDoc || {};
+    } else if (chip.typeKey === "communication") {
+      payload.communicationform = chip.communicationDoc || {};
     }
+
+    setSelectedEvent(payload);
+    setIsPopupOpen(true);
   };
 
   const closePopup = () => {
     setIsPopupOpen(false);
     setSelectedEvent(null);
+  };
+
+  const getChipText = (chip) => {
+    const name = chip?.eventName || "";
+    const label = chip?.label || "";
+    if (!label) return name;
+    if (!name) return label;
+    return `${label}: ${name}`;
   };
 
   const renderCalendarDays = () => {
@@ -189,7 +382,7 @@ const CalenderUI = () => {
       const dayKey = isValidDay
         ? `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`
         : "";
-      const eventsForDay = isValidDay ? eventsByDayKey.get(dayKey) || [] : [];
+      const chipsForDay = isValidDay ? chipsByDayKey.get(dayKey) || [] : [];
 
       days.push(
         <div key={i} className={getDayClass(dayNum)}>
@@ -198,27 +391,27 @@ const CalenderUI = () => {
               <span className="absolute top-2  text-sm text-gray-500">
                 {dayNum}
               </span>
-              <div className="mt-6">
-                {eventsForDay.map((event) => (
+              <div className="mt-6 max-h-[5.5rem] overflow-y-auto pr-1">
+                {chipsForDay.map((chip) => (
                   <div
-                    key={event._id || event.id}
+                    key={chip.key}
                     role="button"
                     tabIndex={0}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleOpenEvent(event._id || event.id);
+                      handleOpenChip(chip);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         e.stopPropagation();
-                        handleOpenEvent(event._id || event.id);
+                        handleOpenChip(chip);
                       }
                     }}
-                    title={event.eventName || event.name || ""}
+                    title={getChipText(chip)}
                     className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded mb-1 truncate"
                   >
-                    {event.eventName || event.name}
+                    {getChipText(chip)}
                   </div>
                 ))}
               </div>
