@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post("/create", createEndform);
 router.get("/getallforms", getAllEndforms);
-router.get("/allpending", getOverallPendingEndforms);
+router.get("/allpending", auth, getOverallPendingEndforms);
 router.get("/event/:id", getEventById);
 router.put("/:id", updateEndform);
 router.delete("/:id", deleteEndform);

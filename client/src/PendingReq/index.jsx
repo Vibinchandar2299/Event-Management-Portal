@@ -22,12 +22,14 @@ function PendingDashboard() {
   const fetchPendingEndforms = async (retryCount = 0) => {
     console.log("Fetching events from:", `/api/endform/allpending`);
     try {
+      const token = localStorage.getItem("token");
       const response = await axios.get(
         `/api/endform/allpending`,
         {
           timeout: 30000, // 30 second timeout
           headers: {
             'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
             'Cache-Control': 'no-cache', // Prevent caching
             'Pragma': 'no-cache'
           }

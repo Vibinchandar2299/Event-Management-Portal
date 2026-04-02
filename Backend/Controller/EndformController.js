@@ -66,9 +66,31 @@ export const getAllEndforms = async (req, res) => {
 export const getOverallPendingEndforms = async (req, res) => {
   try {
     console.log("Fetching pending and approved endforms...");
+
+    const deptKey = String(req.user?.dept || "").trim().toLowerCase();
+    if (!deptKey) {
+      return res.status(403).json({ message: "User department missing in token" });
+    }
+    const roleKey = (() => {
+      if (!deptKey) return "";
+      if (deptKey === "iqac") return "iqac";
+      if (deptKey === "system admin" || deptKey === "systemadmin" || deptKey === "admin") return "iqac";
+      if (deptKey === "transport") return "transport";
+      if (deptKey === "food") return "food";
+      if (deptKey === "media" || deptKey === "communication") return "communication";
+      if (
+        deptKey === "guest deparment" ||
+        deptKey === "guest department" ||
+        deptKey === "guestroom" ||
+        deptKey === "guest room"
+      ) {
+        return "guestroom";
+      }
+      return deptKey;
+    })();
     
     // Get both pending and approved endforms so approved events don't disappear
-    const endforms = await Endform.find({ 
+    let endforms = await Endform.find({ 
       status: { $in: ["Pending", "Approved"] } 
     });
     console.log(`Found ${endforms.length} endforms (pending + approved)`);
@@ -77,24 +99,53 @@ export const getOverallPendingEndforms = async (req, res) => {
       return res.status(200).json([]); // Return empty array instead of 404
     }
 
-    // Collect all IDs for batch queries
-    const eventIds = endforms.map(e => e.eventdata).filter(Boolean);
-    const transportIds = endforms.flatMap(e => e.transportform || []).filter(Boolean);
-    const foodIds = endforms.map(e => e.foodform).filter(Boolean);
-    const guestIds = endforms.map(e => e.guestform).filter(Boolean);
-    const communicationIds = endforms.map(e => e.communicationform).filter(Boolean);
+    // Apply role-based scoping based on endform links.
+    // IQAC sees all. Department roles see only their relevant endforms.
+    if (roleKey && roleKey !== "iqac") {
+      if (roleKey === "transport") {
+        endforms = endforms.filter((e) => Array.isArray(e.transportform) && e.transportform.length > 0);
+      } else if (roleKey === "food") {
+        endforms = endforms.filter((e) => !!e.foodform);
+      } else if (roleKey === "guestroom") {
+        endforms = endforms.filter((e) => !!e.guestform);
+      } else if (roleKey === "communication") {
+        endforms = endforms.filter((e) => !!e.communicationform);
+      }
+    }
 
-    // Batch fetch all related data
-    const [basicEvents, transportForms, foodForms, guestForms, communicationForms] = await Promise.all([
-      BasicEvent.find({ _id: { $in: eventIds } }),
-      transport.find({ _id: { $in: transportIds } }),
-      foodformModel.find({ _id: { $in: foodIds } }),
-      guestroomform.find({ _id: { $in: guestIds } }),
-      communicationform.find({ _id: { $in: communicationIds } })
+    // Fetch basic event data first (also used for academic department scoping).
+    const eventIds = endforms.map((e) => e.eventdata).filter(Boolean);
+    const basicEvents = await BasicEvent.find({ _id: { $in: eventIds } });
+    const basicEventsMap = new Map(basicEvents.map((e) => [e._id.toString(), e]));
+
+    // If this is an academic department login (not a known role), scope by BasicEvent departments.
+    const isKnownRole = ["", "iqac", "transport", "food", "guestroom", "communication"].includes(roleKey);
+    if (roleKey && roleKey !== "iqac" && !isKnownRole) {
+      const matchesDept = (arr) =>
+        Array.isArray(arr) &&
+        arr.some((v) => String(v || "").trim().toLowerCase() === roleKey);
+
+      endforms = endforms.filter((endform) => {
+        const basic = endform?.eventdata ? basicEventsMap.get(endform.eventdata.toString()) : null;
+        return matchesDept(basic?.academicdepartment) || matchesDept(basic?.departments);
+      });
+    }
+
+    // Collect IDs only for scoped endforms
+    const scopedTransportIds = endforms.flatMap((e) => e.transportform || []).filter(Boolean);
+    const scopedFoodIds = endforms.map((e) => e.foodform).filter(Boolean);
+    const scopedGuestIds = endforms.map((e) => e.guestform).filter(Boolean);
+    const scopedCommunicationIds = endforms.map((e) => e.communicationform).filter(Boolean);
+
+    // Batch fetch the remaining related data
+    const [transportForms, foodForms, guestForms, communicationForms] = await Promise.all([
+      transport.find({ _id: { $in: scopedTransportIds } }),
+      foodformModel.find({ _id: { $in: scopedFoodIds } }),
+      guestroomform.find({ _id: { $in: scopedGuestIds } }),
+      communicationform.find({ _id: { $in: scopedCommunicationIds } })
     ]);
 
     // Create lookup maps for efficient access
-    const basicEventsMap = new Map(basicEvents.map(e => [e._id.toString(), e]));
     const transportMap = new Map(transportForms.map(t => [t._id.toString(), t]));
     const foodMap = new Map(foodForms.map(f => [f._id.toString(), f]));
     const guestMap = new Map(guestForms.map(g => [g._id.toString(), g]));

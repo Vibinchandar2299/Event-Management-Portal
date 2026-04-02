@@ -47,6 +47,7 @@ export const Signup = async (req, res) => {
         name: newUser.name,
         empid: newUser.empid,
         phonenumber: newUser.phoneNumber,
+        dept: newUser.dept,
       },
       secretKey,
       { expiresIn: "7d" }
