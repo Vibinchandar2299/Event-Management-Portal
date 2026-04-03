@@ -357,6 +357,18 @@ const getComprehensiveDashboardData = async (req, res) => {
 
     const { endforms, events, eventsMap } = await getTrackedEndformsAndEvents();
 
+    // College-relevant event totals (based on BasicEvent span)
+    const totalEvents = events.length;
+    let upcomingEvents = 0;
+    let ongoingEvents = 0;
+    let completedEvents = 0;
+    for (const ev of events) {
+      const spanStatus = getEventSpanStatus(ev);
+      if (spanStatus === "upcoming") upcomingEvents++;
+      else if (spanStatus === "ongoing") ongoingEvents++;
+      else if (spanStatus === "completed") completedEvents++;
+    }
+
     const pendingCollaborations = endforms.filter((ef) => ef.status === "Pending").length;
     const totalBookingsThisMonth = endforms.filter((ef) => {
       const event = eventsMap.get(String(ef.eventdata));
@@ -472,6 +484,10 @@ const getComprehensiveDashboardData = async (req, res) => {
       pendingCollaborations,
       totalBookingsThisMonth,
       eventsToday,
+      totalEvents,
+      upcomingEvents,
+      ongoingEvents,
+      completedEvents,
       mostEventBookingDepartment:
         mostEventBookingDepartment.length > 0
           ? mostEventBookingDepartment[0]._id
@@ -485,6 +501,7 @@ const getComprehensiveDashboardData = async (req, res) => {
         { name: "MECH", value: 2 },
         { name: "CIVIL", value: 2 },
       ],
+      activeDepartments: departmentBookings.length,
       eventTypes: eventTypes.length > 0 ? eventTypes : [
         { name: "Workshops", value: 25 },
         { name: "Seminars", value: 15 },

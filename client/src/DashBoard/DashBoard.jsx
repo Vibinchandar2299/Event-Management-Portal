@@ -1,13 +1,50 @@
 import { useState, useEffect } from "react";
-import calender from "../assets/calendar (5).png";
-import onlytoday from "../assets/only-today.png";
-import department from "../assets/department (1).png";
 import axios from "axios";
 import { FiMoreHorizontal } from "react-icons/fi";
 import DonutChart from "./DonutChart";
 import MonthlyChart from "./MonthlyChart";
 import { toast } from "react-toastify";
 import DepartmentDashboard from "./DepartmentDashboard";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Clock,
+  CheckCircle2,
+  Sparkles,
+  Building2,
+} from "lucide-react";
+
+const KpiCard = ({ title, value, icon, tone = "slate", subtitle }) => {
+  const tones = {
+    slate: "border-slate-200 bg-white",
+    rose: "border-rose-200 bg-rose-50/60",
+    amber: "border-amber-200 bg-amber-50/60",
+    indigo: "border-indigo-200 bg-indigo-50/60",
+    emerald: "border-emerald-200 bg-emerald-50/60",
+    sky: "border-sky-200 bg-sky-50/60",
+  };
+
+  const Icon = icon;
+
+  return (
+    <div className={`rounded-2xl border p-5 shadow-sm ${tones[tone] || tones.slate}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{title}</p>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+          {subtitle ? (
+            <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
+          ) : null}
+        </div>
+        {Icon ? (
+          <div className="rounded-xl bg-white/80 p-2 ring-1 ring-inset ring-slate-200">
+            <Icon className="h-5 w-5 text-slate-700" />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
 
 const Dashboard = () => {
   const userDept = localStorage.getItem("user_dept");
@@ -23,6 +60,10 @@ const Dashboard = () => {
     pendingCollaborations: 0,
     totalBookingsThisMonth: 0,
     eventsToday: 0,
+    totalEvents: 0,
+    upcomingEvents: 0,
+    ongoingEvents: 0,
+    completedEvents: 0,
     mostEventBookingDepartment: "N/A",
     userSatisfactionRating: "3.5",
     departmentBookings: [],
@@ -153,72 +194,67 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="mb-12 rounded-[24px] bg-gradient-to-b from-emerald-50/70 to-white p-4 md:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold text-slate-800 md:text-3xl">Dashboard</h1>
-        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 md:text-sm">
-          Pending Collaborations: {dashboardData.pendingCollaborations}
-        </span>
+    <div className="mb-12 rounded-[24px] bg-gradient-to-b from-slate-50 to-white p-4 md:p-6">
+      <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">IQAC Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-600">College-wide overview</p>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+          <Sparkles className="h-4 w-4" />
+          <span>Pending Requests: {dashboardData.pendingCollaborations}</span>
+        </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {/* Total Bookings in This Month */}
-        <div className="dashboard-card relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 text-white">
-          <div className="relative z-10">
-            <h3 className="text-4xl font-bold mb-1">
-              {dashboardData.totalBookingsThisMonth}
-            </h3>
-            <p className="text-sm opacity-90">Total bookings in this month</p>
-          </div>
-          <div className="absolute right-4 bottom-4">
-            <img src={calender} className="h-16 w-16 opacity-80" alt="Calendar" />
-          </div>
-        </div>
-
-        {/* Number of Events Today */}
-        <div className="dashboard-card relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 p-6 text-white">
-          <div className="relative z-10">
-            <h3 className="text-4xl font-bold mb-1">
-              {dashboardData.eventsToday}
-            </h3>
-            <p className="text-sm opacity-90">No. of events today</p>
-          </div>
-          <div className="absolute right-4 bottom-4">
-            <img src={onlytoday} className="h-16 w-16 opacity-80" alt="Today" />
-          </div>
-        </div>
-
-        {/* Most Event Booking Department */}
-        <div className="dashboard-card relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 p-6 text-white">
-          <div className="relative z-10">
-            <h3 className="text-4xl font-bold mb-1">
-              {dashboardData.mostEventBookingDepartment}
-            </h3>
-            <p className="text-sm opacity-90">
-              Most event booking department
-            </p>
-          </div>
-          <div className="absolute right-4 bottom-4">
-            <img src={department} className="h-16 w-16 opacity-80" alt="Department" />
-          </div>
-        </div>
-
-        {/* User Satisfaction Rating */}
-        <div className="dashboard-card relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 p-6 text-white">
-          <div className="relative z-10">
-            <h3 className="text-4xl font-bold mb-1">{dashboardData.userSatisfactionRating}</h3>
-            <p className="text-sm opacity-90">User satisfaction rating</p>
-          </div>
-          <div className="absolute right-4 bottom-4">
-            <img src={onlytoday} className="h-16 w-16 opacity-80" alt="Satisfaction" />
-          </div>
-        </div>
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <KpiCard
+          title="Pending Requests"
+          value={dashboardData.pendingCollaborations}
+          icon={AlertTriangle}
+          tone="rose"
+          subtitle="Awaiting approvals"
+        />
+        <KpiCard
+          title="Bookings This Month"
+          value={dashboardData.totalBookingsThisMonth}
+          icon={CalendarDays}
+          tone="emerald"
+          subtitle="New event requests"
+        />
+        <KpiCard
+          title="Events Today"
+          value={dashboardData.eventsToday}
+          icon={Clock}
+          tone="sky"
+          subtitle="Happening now"
+        />
+        <KpiCard
+          title="Upcoming"
+          value={dashboardData.upcomingEvents ?? 0}
+          icon={CalendarDays}
+          tone="indigo"
+          subtitle="Starts after today"
+        />
+        <KpiCard
+          title="Ongoing"
+          value={dashboardData.ongoingEvents ?? 0}
+          icon={Building2}
+          tone="amber"
+          subtitle="Currently running"
+        />
+        <KpiCard
+          title="Completed"
+          value={dashboardData.completedEvents ?? 0}
+          icon={CheckCircle2}
+          tone="slate"
+          subtitle="Already finished"
+        />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
         <div className="dashboard-card rounded-2xl bg-white p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-sm font-semibold text-slate-700">Happenings</h2>
+            <h2 className="text-sm font-semibold text-slate-700">Today's Events</h2>
             <button className="text-xs font-medium text-emerald-700">Show All</button>
           </div>
           <div className="rounded-xl border border-emerald-900/10 bg-white/60">
@@ -284,12 +320,11 @@ const Dashboard = () => {
       <DonutChart 
         departmentBookings={dashboardData.departmentBookings}
         eventTypes={dashboardData.eventTypes}
-        eventSatisfaction={dashboardData.eventSatisfaction}
       />
 
       <div className="dashboard-card rounded-2xl bg-white">
         <div className="flex justify-between items-center p-6">
-          <h2 className="text-lg font-semibold text-slate-800">Recent Bookings</h2>
+          <h2 className="text-lg font-semibold text-slate-800">Recent Requests</h2>
           <button className="text-sm font-medium text-emerald-700">Show All</button>
         </div>
         <div className="overflow-x-auto">
@@ -299,26 +334,45 @@ const Dashboard = () => {
                 <th className="px-6 py-4 font-semibold">No.</th>
                 <th className="px-6 py-4 font-semibold">Dept</th>
                 <th className="px-6 py-4 font-semibold">Date</th>
+                <th className="px-6 py-4 font-semibold">Event Type</th>
                 <th className="px-6 py-4 font-semibold">Title</th>
                 <th className="px-6 py-4 font-semibold">Status</th>
-                <th className="px-6 py-4 font-semibold">Priority</th>
-                <th className="px-6 py-4 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {dashboardData.recentBookings.length > 0 ? (
-                dashboardData.recentBookings.map((booking, idx) => (
-                  <FormComponent
-                    key={booking.id}
-                    form={booking}
-                    canEdit={booking.dept === userDept}
-                    index={idx + 1}
-                    bordered
-                  />
-                ))
+                dashboardData.recentBookings.map((booking, idx) => {
+                  const status = booking.status || "Pending";
+                  const statusClasses =
+                    status === "Completed" || status === "Approved"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : status === "Rejected"
+                        ? "bg-rose-100 text-rose-700"
+                        : status === "Corrections"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-700";
+
+                  return (
+                    <tr
+                      key={booking.id}
+                      className="border-b border-emerald-900/10 last:border-b-0 hover:bg-emerald-50/50 transition-colors"
+                    >
+                      <td className="px-6 py-3 font-medium text-gray-700">{idx + 1}</td>
+                      <td className="px-6 py-3 text-gray-600">{booking.dept}</td>
+                      <td className="px-6 py-3 text-gray-600">{booking.date}</td>
+                      <td className="px-6 py-3 text-gray-600">{booking.eventType || "Other"}</td>
+                      <td className="px-6 py-3 text-gray-800 font-semibold">{booking.title}</td>
+                      <td className="px-6 py-3">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${statusClasses}`}>
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
                     No recent bookings found.
                   </td>
                 </tr>
@@ -330,31 +384,6 @@ const Dashboard = () => {
     </div>
   );
 };
-
-function FormComponent({ form, canEdit, index, bordered }) {
-  const cellBorder = bordered ? "border border-emerald-900/10" : "";
-  return (
-    <tr className={`border-b border-emerald-900/10 last:border-b-0 hover:bg-emerald-50/50 transition-colors ${bordered ? 'border border-emerald-900/10' : ''}`}> 
-      <td className={`px-6 py-3 font-medium text-gray-700 ${cellBorder}`}>{index}</td>
-      <td className={`px-6 py-3 text-gray-600 ${cellBorder}`}>{form.dept}</td>
-      <td className={`px-6 py-3 text-gray-600 ${cellBorder}`}>{form.date}</td>
-      <td className={`px-6 py-3 text-gray-800 font-semibold ${cellBorder}`}>{form.title}</td>
-      <td className={`px-6 py-3 ${cellBorder}`}>
-        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${form.status === 'Completed' ? 'bg-green-100 text-green-700' : form.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{form.status}</span>
-      </td>
-      <td className={`px-6 py-3 ${cellBorder}`}>
-        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${form.priority === 'High' ? 'bg-red-100 text-red-700' : form.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{form.priority}</span>
-      </td>
-      <td className={`px-6 py-3 ${cellBorder}`}>
-        {canEdit ? (
-          <button className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700">Edit</button>
-        ) : (
-          <span className="text-gray-400 text-xs">View Only</span>
-        )}
-      </td>
-    </tr>
-  );
-}
 
 export default Dashboard;
 
