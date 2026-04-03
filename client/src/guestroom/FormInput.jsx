@@ -40,6 +40,14 @@ const FormInput = ({
           min={min}
           value={value}
           onChange={onChange}
+          onWheel={
+            type === "number"
+              ? (e) => {
+                  // Prevent mouse wheel from changing the value while scrolling
+                  e.currentTarget.blur();
+                }
+              : undefined
+          }
           disabled={disabled}
           className={`w-full rounded-lg border border-gray-300 pr-3 py-2 text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
           style={{ paddingLeft: renderedIcon ? "2.6rem" : undefined }}
