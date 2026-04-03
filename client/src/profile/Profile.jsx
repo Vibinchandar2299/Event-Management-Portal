@@ -61,8 +61,11 @@ function Profile() {
       setLoading(true);
       try {
         console.log("Fetching profile page data...");
-        
-        const response = await axios.get('/api/common/profile-page-data');
+
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/common/profile-page-data', {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         
         console.log("Profile page response:", response);
 

@@ -29,7 +29,9 @@ const getBookingDate = (endform, event) => {
 
 const getTrackedEndformsAndEvents = async () => {
   const rawEndforms = await Endform.find({ eventdata: { $exists: true, $ne: null } })
-    .select("eventdata status createdAt createdat")
+    .select(
+      "eventdata status createdAt createdat transportform foodform guestform communicationform approvals"
+    )
     .lean();
 
   const eventIds = [
@@ -60,6 +62,182 @@ const getTrackedEndformsAndEvents = async () => {
   const endforms = Array.from(uniqueEndformsMap.values());
 
   return { endforms, events, eventsMap };
+};
+
+const normalizeDeptKey = (raw) => {
+  const d = String(raw || "").trim().toLowerCase();
+  if (!d) return "";
+
+  if (d === "iqac") return "iqac";
+  if (d === "system admin" || d === "systemadmin" || d === "admin") return "iqac";
+  if (d === "transport") return "transport";
+  if (d === "food") return "food";
+  if (d === "media" || d === "communication") return "communication";
+  if (d === "guest deparment" || d === "guest department" || d === "guestroom" || d === "guest room") {
+    return "guestroom";
+  }
+  return d;
+};
+
+const getEventSpanStatus = (event) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = toDayDate(event?.startDate);
+  const end = toDayDate(event?.endDate);
+  if (!start || !end) return "unknown";
+  if (end < today) return "completed";
+  if (start > today) return "upcoming";
+  return "ongoing";
+};
+
+const daysUntil = (date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = toDayDate(date);
+  if (!d) return null;
+  const diffMs = d.getTime() - today.getTime();
+  return Math.round(diffMs / (24 * 60 * 60 * 1000));
+};
+
+export const getDepartmentDashboardData = async (req, res) => {
+  try {
+    const deptKey = normalizeDeptKey(req.user?.dept);
+    if (!deptKey) {
+      return res.status(403).json({ message: "User department missing in token" });
+    }
+
+    const { endforms, eventsMap } = await getTrackedEndformsAndEvents();
+
+    const isKnownRole = ["iqac", "transport", "food", "guestroom", "communication"].includes(deptKey);
+    const pickRelevant = (ef) => {
+      if (!ef) return false;
+      if (deptKey === "iqac") return true;
+      if (deptKey === "transport") return Array.isArray(ef.transportform) && ef.transportform.length > 0;
+      if (deptKey === "food") return !!ef.foodform;
+      if (deptKey === "guestroom") return !!ef.guestform;
+      if (deptKey === "communication") return !!ef.communicationform;
+
+      // Academic/other departments: match against BasicEvent departments
+      const ev = eventsMap.get(String(ef.eventdata));
+      const matchesDept = (arr) =>
+        Array.isArray(arr) &&
+        arr.some((v) => String(v || "").trim().toLowerCase() === deptKey);
+
+      return matchesDept(ev?.academicdepartment) || matchesDept(ev?.departments);
+    };
+
+    const relevantEndforms = endforms.filter(pickRelevant);
+
+    const getApprovalForDept = (ef) => {
+      if (!ef?.approvals || typeof ef.approvals !== "object") return null;
+      if (deptKey === "communication") return ef.approvals.communication || null;
+      if (deptKey === "food") return ef.approvals.food || null;
+      if (deptKey === "transport") return ef.approvals.transport || null;
+      if (deptKey === "guestroom") return ef.approvals.guestroom || null;
+      return null;
+    };
+
+    const approvalRequired = ["transport", "food", "guestroom", "communication"].includes(deptKey);
+
+    const queue = [];
+    const recentActions = [];
+
+    let totalRelevantEvents = 0;
+    let upcomingCount = 0;
+    let ongoingCount = 0;
+    let completedCount = 0;
+    let dueSoonCount = 0;
+    let overdueCount = 0;
+
+    let transportRequests = 0;
+    let foodRequests = 0;
+    let guestBookings = 0;
+    let communicationRequests = 0;
+
+    for (const ef of relevantEndforms) {
+      const ev = eventsMap.get(String(ef.eventdata)) || null;
+      if (!ev) continue;
+
+      totalRelevantEvents++;
+
+      const spanStatus = getEventSpanStatus(ev);
+      if (spanStatus === "upcoming") upcomingCount++;
+      else if (spanStatus === "ongoing") ongoingCount++;
+      else if (spanStatus === "completed") completedCount++;
+
+      // dept-specific request counters (cheap, based on refs)
+      transportRequests += Array.isArray(ef.transportform) ? ef.transportform.length : 0;
+      foodRequests += ef.foodform ? 1 : 0;
+      guestBookings += ef.guestform ? 1 : 0;
+      communicationRequests += ef.communicationform ? 1 : 0;
+
+      const approval = getApprovalForDept(ef);
+      const isApproved = approvalRequired ? Boolean(approval?.approved) : null;
+
+      const startInDays = daysUntil(ev.startDate);
+      const isDueSoon = typeof startInDays === "number" && startInDays >= 0 && startInDays <= 7;
+      const isOverdue = typeof startInDays === "number" && startInDays >= 0 && startInDays <= 2;
+
+      if (approvalRequired) {
+        if (!isApproved) {
+          if (isDueSoon) dueSoonCount++;
+          if (isOverdue) overdueCount++;
+
+          queue.push({
+            endformId: String(ef._id),
+            eventId: String(ev._id),
+            eventName: ev.eventName,
+            eventType: ev.eventType,
+            department: Array.isArray(ev.departments) ? ev.departments.join(", ") : (ev.departments || ""),
+            startDate: ev.startDate,
+            endDate: ev.endDate,
+            venue: ev.eventVenue,
+            status: ef.status,
+            startInDays,
+          });
+        }
+
+        if (isApproved && approval?.approvedAt) {
+          recentActions.push({
+            endformId: String(ef._id),
+            eventId: String(ev._id),
+            eventName: ev.eventName,
+            approvedAt: approval.approvedAt,
+            approvedBy: approval.approvedBy || "",
+          });
+        }
+      }
+    }
+
+    queue.sort((a, b) => (a.startInDays ?? 9999) - (b.startInDays ?? 9999));
+    recentActions.sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
+
+    const response = {
+      deptKey,
+      totals: {
+        totalRelevantEvents,
+        pendingApprovals: approvalRequired ? queue.length : 0,
+        dueSoon: approvalRequired ? dueSoonCount : 0,
+        overdue: approvalRequired ? overdueCount : 0,
+        upcoming: upcomingCount,
+        ongoing: ongoingCount,
+        completed: completedCount,
+      },
+      kpis: {
+        transportRequests,
+        foodRequests,
+        guestBookings,
+        communicationRequests,
+      },
+      myQueue: queue.slice(0, 10),
+      recentActions: recentActions.slice(0, 10),
+    };
+
+    return res.status(200).json(response);
+  } catch (error) {
+    console.error("Error generating department dashboard data:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 };
 
 const getCurrentDateEvents = async (req, res) => {

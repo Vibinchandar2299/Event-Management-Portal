@@ -39,8 +39,11 @@ const Dashboard = ({ refreshKey = 0 }) => {
       setLoading(true);
       try {
         console.log("Fetching pending page data...");
-        
-        const response = await axios.get('/api/common/pending-page-data');
+
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/common/pending-page-data', {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         
         console.log("Pending page response:", response);
 

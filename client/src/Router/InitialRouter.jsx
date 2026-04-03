@@ -23,7 +23,14 @@ const InitialRouter = () => {
     <div className="h-full">
       <Routes>
         <Route path="/" element={<Signup />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/forms" element={<Form />}>
           <Route index element={<TermsandCondition />} />
           <Route path="basic" element={<BasicEventForm />} />
@@ -41,7 +48,14 @@ const InitialRouter = () => {
             </ProtectedRoute>
           }
         />
-        <Route path="/profile" element={<Profile />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/pending"
           element={

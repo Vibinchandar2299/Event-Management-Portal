@@ -7,6 +7,7 @@ import { FiMoreHorizontal } from "react-icons/fi";
 import DonutChart from "./DonutChart";
 import MonthlyChart from "./MonthlyChart";
 import { toast } from "react-toastify";
+import DepartmentDashboard from "./DepartmentDashboard";
 
 const Dashboard = () => {
   const [currentEvents, setCurrentEvents] = useState([]);
@@ -30,17 +31,22 @@ const Dashboard = () => {
       setLoading(true);
       try {
         console.log("Fetching comprehensive dashboard data...");
+
+        const token = localStorage.getItem("token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         
         // Fetch comprehensive dashboard data
         const dashboardResponse = await axios.get(
-          `/api/common/comprehensive-dashboard-data`
+          `/api/common/comprehensive-dashboard-data`,
+          { headers }
         );
         
         console.log("Dashboard response:", dashboardResponse);
         
         // Fetch current events separately (keeping existing functionality)
         const eventsResponse = await axios.get(
-          `/api/common/current-date-events`
+          `/api/common/current-date-events`,
+          { headers }
         );
         
         console.log("Events response:", eventsResponse);
@@ -128,6 +134,17 @@ const Dashboard = () => {
   }
 
   const userDept = localStorage.getItem("user_dept");
+
+  const deptKey = String(userDept || "").trim().toLowerCase();
+  const isIqac =
+    deptKey === "iqac" ||
+    deptKey === "system admin" ||
+    deptKey === "systemadmin" ||
+    deptKey === "admin";
+
+  if (!isIqac) {
+    return <DepartmentDashboard />;
+  }
 
   return (
     <div className="mb-12 rounded-[24px] bg-gradient-to-b from-emerald-50/70 to-white p-4 md:p-6">
