@@ -10,6 +10,14 @@ import { toast } from "react-toastify";
 import DepartmentDashboard from "./DepartmentDashboard";
 
 const Dashboard = () => {
+  const userDept = localStorage.getItem("user_dept");
+  const deptKey = String(userDept || "").trim().toLowerCase();
+  const isIqac =
+    deptKey === "iqac" ||
+    deptKey === "system admin" ||
+    deptKey === "systemadmin" ||
+    deptKey === "admin";
+
   const [currentEvents, setCurrentEvents] = useState([]);
   const [dashboardData, setDashboardData] = useState({
     pendingCollaborations: 0,
@@ -27,6 +35,13 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!isIqac) {
+      // Department users should not load the IQAC dashboard payloads.
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
@@ -77,7 +92,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [isIqac]);
 
   const StatusBadge = ({ status }) => {
     const colors = {
@@ -125,25 +140,16 @@ const Dashboard = () => {
     ));
   };
 
+  if (!isIqac) {
+    return <DepartmentDashboard />;
+  }
+
   if (loading) {
     return <div className="p-8 text-center text-sm font-medium text-slate-500">Loading dashboard...</div>;
   }
 
   if (error) {
     return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">Error: {error}</div>;
-  }
-
-  const userDept = localStorage.getItem("user_dept");
-
-  const deptKey = String(userDept || "").trim().toLowerCase();
-  const isIqac =
-    deptKey === "iqac" ||
-    deptKey === "system admin" ||
-    deptKey === "systemadmin" ||
-    deptKey === "admin";
-
-  if (!isIqac) {
-    return <DepartmentDashboard />;
   }
 
   return (
