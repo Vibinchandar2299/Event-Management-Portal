@@ -172,7 +172,7 @@ router.get("/approvals/:id", auth, async (req, res) => {
   }
 });
 
-router.put("/edit/:id", auth, departmentAuthorize(), async (req, res) => {
+router.put("/edit/:id", auth, departmentAuthorize(["System Admin", "IQAC"]), async (req, res) => {
   try {
     const updatedEvent = await updateEndform(req, res);
     // If your updateEvent controller handles the response, you may not need to send another response here.

@@ -21,7 +21,27 @@ const CalenderUI = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
+  const rawUserDept = String(localStorage.getItem("user_dept") || "")
+    .trim()
+    .toLowerCase();
+
+  const userDept = (() => {
+    if (!rawUserDept) return "";
+    if (rawUserDept === "iqac") return "iqac";
+    if (rawUserDept === "system admin" || rawUserDept === "systemadmin" || rawUserDept === "admin") return "iqac";
+    if (rawUserDept === "transport") return "transport";
+    if (rawUserDept === "food") return "food";
+    if (rawUserDept === "media" || rawUserDept === "communication") return "communication";
+    if (
+      rawUserDept === "guest deparment" ||
+      rawUserDept === "guest department" ||
+      rawUserDept === "guestroom" ||
+      rawUserDept === "guest room"
+    ) {
+      return "guestroom";
+    }
+    return rawUserDept;
+  })();
 
   const toStartOfDay = (value) => {
     if (!value) return null;
@@ -82,7 +102,15 @@ const CalenderUI = () => {
             : [];
 
           const foodDoc = hasId(endform?.foodform) ? endform.foodform : null;
-          const guestDoc = hasId(endform?.guestform) ? endform.guestform : null;
+          const guestDoc = (() => {
+            const raw = endform?.guestform;
+            if (!raw) return null;
+            if (typeof raw === "string") return null; // can't derive date/range from an id-only payload
+            if (typeof raw === "object") {
+              return Object.keys(raw).length > 0 ? raw : null;
+            }
+            return null;
+          })();
           const commDoc = hasId(endform?.communicationform)
             ? endform.communicationform
             : null;
@@ -116,7 +144,18 @@ const CalenderUI = () => {
         if (controller.signal.aborted) return;
 
         console.error("Failed to load calendar events:", err);
-        setLoadError("Failed to load events");
+
+        const status = err?.response?.status;
+        if (status === 401) {
+          setLoadError("Unauthorized. Please login again.");
+          toast.error("Session expired. Please login again.");
+        } else if (status === 403) {
+          setLoadError("Access denied. Please login again.");
+          toast.error("Access denied. Please login again.");
+        } else {
+          setLoadError("Failed to load events");
+          toast.error("Failed to load calendar events");
+        }
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
       }
@@ -209,6 +248,19 @@ const CalenderUI = () => {
       addChipToDay(toKey(endDate), chip);
     };
 
+    const addChipForConsecutiveDays = (startDate, daysCount, chip, startOffsetDays = 0) => {
+      const start = parseAsDate(startDate);
+      if (!start) return;
+      const n = Number(daysCount);
+      const count = Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), 365) : 1;
+
+      for (let i = 0; i < count; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + startOffsetDays + i);
+        addChipToDay(toKey(d), chip);
+      }
+    };
+
     for (const evt of visibleEvents) {
       const basic = evt?.basicEvent || {};
       const eventName = basic?.eventName || evt?.eventName || "";
@@ -298,20 +350,34 @@ const CalenderUI = () => {
         }
       }
 
-      if (allowedTypes.includes("guestroom") && evt?.guestroom?._id) {
-        const id = evt.guestroom._id;
-        const span = normalizeSpan(evt?.guestroom?.date, evt?.guestroom?.date);
-        if (span) {
-          const chip = {
-            key: `guestroom:${id}`,
-            typeKey: "guestroom",
-            label: "Guest Room",
-            eventName,
-            basicEvent: basic,
-            endformStatus,
-            guestDoc: evt.guestroom,
-          };
-          addChipForSpan(span, chip);
+      if (allowedTypes.includes("guestroom") && evt?.guestroom) {
+        const guestDoc = evt.guestroom;
+        const hasGuestDate = !!parseAsDate(guestDoc?.date);
+        if (!hasGuestDate) {
+          continue;
+        }
+
+        const id =
+          guestDoc?._id ||
+          `${evt?._id || evt?.basicEventId || "guestroom"}:${String(guestDoc?.date || "")}`;
+
+        const chip = {
+          key: `guestroom:${id}`,
+          typeKey: "guestroom",
+          label: "Guest Room",
+          eventName,
+          basicEvent: basic,
+          endformStatus,
+          guestDoc,
+        };
+
+        const stayDays = Number(guestDoc?.stayDays);
+        if (Number.isFinite(stayDays) && stayDays > 0) {
+          // Show booking chips for the entered number of days starting from requisition date
+          addChipForConsecutiveDays(guestDoc?.date, stayDays, chip, 0);
+        } else {
+          const span = normalizeSpan(guestDoc?.date, guestDoc?.date);
+          if (span) addChipForSpan(span, chip);
         }
       }
 

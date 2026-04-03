@@ -59,6 +59,10 @@ const Guestroom = ({ guestroomData }) => {
           <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Number of Guests</h4>
           <p className="mt-1 text-sm font-medium text-slate-700">{guestroomData.guestCount || "N/A"}</p>
         </div>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Number of Days</h4>
+          <p className="mt-1 text-sm font-medium text-slate-700">{guestroomData.stayDays ?? "N/A"}</p>
+        </div>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">

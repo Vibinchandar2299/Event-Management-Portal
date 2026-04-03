@@ -184,6 +184,7 @@ const EndPopup = ({ event, onClose, isOpen }) => {
             {formattedEventData.guestform && Object.keys(formattedEventData.guestform).length > 0 ? (
               <div>
                 <p><strong>Date:</strong> {formattedEventData.guestform.date}</p>
+                <p><strong>Number of Days:</strong> {formattedEventData.guestform.stayDays ?? 'Not specified'}</p>
                 <p><strong>Department:</strong> {formattedEventData.guestform.department}</p>
                 <p><strong>Designation:</strong> {formattedEventData.guestform.designation}</p>
                 <p><strong>Number of Rooms:</strong> {formattedEventData.guestform.numberOfRooms}</p>

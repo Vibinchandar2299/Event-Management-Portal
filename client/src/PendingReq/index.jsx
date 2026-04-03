@@ -70,7 +70,11 @@ function PendingDashboard() {
         return;
       }
       
-      if (error.code === 'ECONNRESET') {
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+      } else if (error.response?.status === 403) {
+        toast.error("Access denied. Please login again.");
+      } else if (error.code === 'ECONNRESET') {
         console.error("Connection reset error - server might be overloaded");
         toast.error("Connection error. Please try again in a moment.");
       } else if (error.response) {

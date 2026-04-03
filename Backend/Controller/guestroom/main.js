@@ -1,9 +1,35 @@
 import Booking from "../../Schema/guestroom/main.js";
 
+const normalizeBookingPayload = (raw) => {
+  const payload = raw && typeof raw === "object" ? { ...raw } : {};
+
+  // Accept common aliases and coerce to a valid positive integer when possible.
+  const candidate =
+    payload.stayDays ?? payload.numberOfDays ?? payload.days ?? payload.daysCount;
+
+  if (candidate === "" || candidate === null || candidate === undefined) {
+    delete payload.stayDays;
+  } else {
+    const n = Number(candidate);
+    if (Number.isFinite(n) && n > 0) {
+      payload.stayDays = Math.floor(n);
+    } else {
+      delete payload.stayDays;
+    }
+  }
+
+  // Clean up aliases so the stored field is always stayDays
+  delete payload.numberOfDays;
+  delete payload.days;
+  delete payload.daysCount;
+
+  return payload;
+};
+
 export const createBooking = async (req, res) => {
   console.log("req.body of the bookings : ",req.body)
   try {
-    const booking = new Booking(req.body);
+    const booking = new Booking(normalizeBookingPayload(req.body));
     const savedBooking = await booking.save();
     res.status(201).json(savedBooking);
   } catch (error) {
@@ -43,7 +69,7 @@ export const getBookingById = async (req, res) => {
 export const updateBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedBooking = await Booking.findByIdAndUpdate(id, req.body, {
+    const updatedBooking = await Booking.findByIdAndUpdate(id, normalizeBookingPayload(req.body), {
       new: true,
     });
     if (!updatedBooking) {

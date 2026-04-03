@@ -31,6 +31,9 @@ const BookingSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  stayDays: {
+    type: Number,
+  },
   mobile: {
     type: String,
     required: true,

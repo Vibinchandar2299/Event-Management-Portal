@@ -89,6 +89,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       purpose: basic.description || "",
       date: basic.startDate ? new Date(basic.startDate).toISOString().split("T")[0] : "",
       guestCount: "",
+        stayDays: "",
       eventType: basic.eventType || "",
       selectedRooms: [],
     };
@@ -129,6 +130,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     purpose: "",
     date: "",
     guestCount: "",
+    stayDays: "",
     eventType: "",
     selectedRooms: [],
   });
@@ -155,6 +157,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       data.purpose ||
       data.date ||
       data.guestCount ||
+      data.stayDays ||
       data.eventType ||
       selectedRooms.length > 0
     );
@@ -346,6 +349,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         purpose: "",
         date: "",
         guestCount: "",
+        stayDays: "",
         eventType: "",
         selectedRooms: [],
       });
@@ -369,6 +373,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
           purpose: "",
           date: "",
           guestCount: "",
+          stayDays: "",
           eventType: "",
           selectedRooms: [],
         });
@@ -390,6 +395,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         purpose: "",
         date: "",
         guestCount: "",
+        stayDays: "",
         eventType: "",
         selectedRooms: [],
       });
@@ -414,6 +420,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               purpose: parsedGuestData.purpose || "",
               date: parsedGuestData.date ? new Date(parsedGuestData.date).toISOString().split('T')[0] : "",
               guestCount: parsedGuestData.guestCount || "",
+              stayDays: parsedGuestData.stayDays || "",
               eventType: parsedGuestData.eventType || "",
               selectedRooms: parsedGuestData.selectedRooms || [],
               _id: parsedGuestData._id || "",
@@ -491,6 +498,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               purpose: parsedGuestData.purpose || "",
               date: parsedGuestData.date ? new Date(parsedGuestData.date).toISOString().split('T')[0] : "",
               guestCount: parsedGuestData.guestCount || "",
+              stayDays: parsedGuestData.stayDays || "",
               eventType: parsedGuestData.eventType || "",
               selectedRooms: parsedGuestData.selectedRooms || [],
               _id: parsedGuestData._id || "",
@@ -552,6 +560,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               purpose: guestData.purpose || "",
               date: guestData.date ? new Date(guestData.date).toISOString().split('T')[0] : "",
               guestCount: guestData.guestCount || "",
+              stayDays: guestData.stayDays || "",
               eventType: guestData.eventType || "",
               selectedRooms: guestData.selectedRooms || [],
               _id: guestData._id || "",
@@ -587,6 +596,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         purpose: "",
         date: "",
         guestCount: "",
+        stayDays: "",
         eventType: "",
         selectedRooms: [],
       });
@@ -713,6 +723,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
       purpose: (formData.purpose || '').toString().trim(),
       eventType: (formData.eventType || '').toString().trim(),
       guestCount: formData.guestCount,
+      stayDays: formData.stayDays,
       date: formData.date,
     };
 
@@ -727,6 +738,13 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
     const guestCountNumber = Number(requiredFields.guestCount);
     if (!Number.isFinite(guestCountNumber) || guestCountNumber <= 0) missing.push('Number of Guests');
+
+    const stayDaysNumber = requiredFields.stayDays === "" || requiredFields.stayDays === null || requiredFields.stayDays === undefined
+      ? null
+      : Number(requiredFields.stayDays);
+    if (stayDaysNumber !== null && (!Number.isFinite(stayDaysNumber) || stayDaysNumber <= 0)) {
+      missing.push('Number of Days');
+    }
 
     const dateObj = requiredFields.date ? new Date(requiredFields.date) : null;
     const isValidDate = dateObj && !Number.isNaN(dateObj.getTime());
@@ -789,6 +807,8 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         purpose: requiredFields.purpose,
         eventType: requiredFields.eventType,
         guestCount: guestCountNumber,
+        // Important: do not send empty-string stayDays (causes N/A/0 issues)
+        stayDays: stayDaysNumber ?? undefined,
         date: dateObj.toISOString(),
         selectedRooms: Array.isArray(formData.selectedRooms) ? formData.selectedRooms : [],
       };
@@ -1023,6 +1043,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
         purpose: "",
         date: "",
         guestCount: "",
+        stayDays: "",
         eventType: "",
         selectedRooms: [],
       });
@@ -1127,6 +1148,17 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 type="date"
                 value={toDateInputValue(formData.date)}
                 onChange={handleInputChange}
+                disabled={!canEdit || !isFormEditable}
+              />
+
+              <FormInput
+                label="Number of Days"
+                name="stayDays"
+                type="number"
+                min="1"
+                value={formData.stayDays}
+                onChange={handleInputChange}
+                placeholder="Enter number of days"
                 disabled={!canEdit || !isFormEditable}
               />
 

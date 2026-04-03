@@ -4,6 +4,7 @@ import transport from "../Schema/transportform/main.js";
 import foodformModel from "../Schema/foodform/main.js";
 import communicationform from "../Schema/MedaiRequirements.js";
 import guestroomform from "../Schema/guestroom/main.js";
+import User from "../Schema/user.js";
 
 export const createEndform = async (req, res) => {
   try {
@@ -67,7 +68,26 @@ export const getOverallPendingEndforms = async (req, res) => {
   try {
     console.log("Fetching pending and approved endforms...");
 
-    const deptKey = String(req.user?.dept || "").trim().toLowerCase();
+    let deptKey = String(req.user?.dept || "").trim().toLowerCase();
+
+    // Backfill dept for older tokens that may not contain it.
+    if (!deptKey) {
+      try {
+        const tokenUserId = req.user?.userId;
+        const tokenEmail = req.user?.emailId;
+
+        const user = tokenUserId
+          ? await User.findById(tokenUserId).select("dept").lean()
+          : tokenEmail
+            ? await User.findOne({ emailId: tokenEmail }).select("dept").lean()
+            : null;
+
+        deptKey = String(user?.dept || "").trim().toLowerCase();
+      } catch (err) {
+        console.error("Failed to backfill dept from user record:", err);
+      }
+    }
+
     if (!deptKey) {
       return res.status(403).json({ message: "User department missing in token" });
     }

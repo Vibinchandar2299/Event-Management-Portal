@@ -33,9 +33,23 @@ const InitialRouter = () => {
           <Route path="guest-room" element={<GuestRoom />} />
           <Route path="end" element={<EndForm />} />
         </Route>
-        <Route path="/calender" element={<CalenderUI />} />
+        <Route
+          path="/calender"
+          element={
+            <ProtectedRoute>
+              <CalenderUI />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/pending" element={<PendingDashboard />} />
+        <Route
+          path="/pending"
+          element={
+            <ProtectedRoute>
+              <PendingDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route 
           path="/create-login" 
           element={
