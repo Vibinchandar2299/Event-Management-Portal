@@ -403,6 +403,35 @@ const getComprehensiveDashboardData = async (req, res) => {
         const end = toDayDate(ev.endDate);
         return start && end && start <= today && end >= today;
       }).length;
+
+    // Today's schedule (same source as /current-date-events, but embedded here
+    // so the IQAC dashboard can use a single endpoint).
+    const trackedCurrentEvents = endforms
+      .filter((ef) => ["Pending", "Approved"].includes(ef.status))
+      .map((ef) => eventsMap.get(String(ef.eventdata)))
+      .filter(Boolean)
+      .filter((ev) => {
+        const start = toDayDate(ev.startDate);
+        const end = toDayDate(ev.endDate);
+        return start && end && start <= today && end >= today;
+      });
+
+    const currentEvents = Array.from(
+      new Map(trackedCurrentEvents.map((ev) => [String(ev._id), ev])).values()
+    ).map((ev) => ({
+      _id: String(ev._id),
+      iqacNumber: ev.iqacNumber || "",
+      eventName: ev.eventName || "",
+      eventVenue: ev.eventVenue || "",
+      startTime: ev.startTime || "",
+      endTime: ev.endTime || "",
+      startDate: ev.startDate || "",
+      endDate: ev.endDate || "",
+      departments: Array.isArray(ev.departments) ? ev.departments : [],
+      academicdepartment: Array.isArray(ev.academicdepartment)
+        ? ev.academicdepartment
+        : [],
+    }));
     
     // Department bookings for donut chart - FIXED to show all departments
     const departmentCountMap = new Map();
@@ -588,7 +617,6 @@ const getComprehensiveDashboardData = async (req, res) => {
     
     // For now, use a default value to avoid MongoDB aggregation errors
     // TODO: Implement proper participants calculation when data structure is fixed
-    console.log("Using default participants value to avoid aggregation errors");
     totalParticipants = 0; // Default value
 
     const dashboardData = {
@@ -601,6 +629,7 @@ const getComprehensiveDashboardData = async (req, res) => {
       ongoingEvents,
       completedEvents,
       completedEventsList,
+      currentEvents,
       mostEventBookingDepartment:
         mostEventBookingDepartment.length > 0
           ? mostEventBookingDepartment[0]._id
@@ -632,7 +661,6 @@ const getComprehensiveDashboardData = async (req, res) => {
       }))
     };
 
-    console.log("Dashboard data generated successfully:", dashboardData);
     return res.status(200).json(dashboardData);
   } catch (error) {
     console.error("Error fetching comprehensive dashboard data:", error);
@@ -652,17 +680,11 @@ const getPendingPageData = async (req, res) => {
     const currentQuarter = Math.floor(currentMonth / 3) + 1; // Q1=1, Q2=2, Q3=3, Q4=4
     const currentYear = currentDate.getFullYear();
     
-    console.log(`Current Date: ${currentDate.toISOString()}`);
-    console.log(`Current Month: ${currentMonth} (${currentDate.toLocaleDateString('en-US', { month: 'long' })})`);
-    console.log(`Calculated Quarter: Q${currentQuarter}`);
-    console.log(`Current Year: ${currentYear}`);
     
     // Calculate quarter start and end dates
     const quarterStart = new Date(currentYear, (currentQuarter - 1) * 3, 1);
     const quarterEnd = new Date(currentYear, currentQuarter * 3, 0);
     
-    console.log(`Quarter Start: ${quarterStart.toISOString().split('T')[0]}`);
-    console.log(`Quarter End: ${quarterEnd.toISOString().split('T')[0]}`);
     
     const today = new Date(currentDate);
     today.setHours(0, 0, 0, 0);
@@ -690,7 +712,6 @@ const getPendingPageData = async (req, res) => {
     
     // For now, use a default value to avoid MongoDB aggregation errors
     // TODO: Implement proper participants calculation when data structure is fixed
-    console.log("Using default participants value to avoid aggregation errors");
     totalParticipants = 0; // Default value
     
     // Quarter-specific data
@@ -743,8 +764,6 @@ const getPendingPageData = async (req, res) => {
       rejectedEvents: endforms.filter((ef) => ef.status === "Rejected").length
     };
 
-    console.log("Pending page data generated successfully:", pendingPageData);
-    console.log(`Quarter Display: ${pendingPageData.quarter}`);
     return res.status(200).json(pendingPageData);
   } catch (error) {
     console.error("Error fetching pending page data:", error);
@@ -814,7 +833,6 @@ const getProfilePageData = async (req, res) => {
     
     // For now, use a default value to avoid MongoDB aggregation errors
     // TODO: Implement proper participants calculation when data structure is fixed
-    console.log("Using default participants value to avoid aggregation errors");
     totalParticipants = 0; // Default value
     
     const profileData = {
@@ -840,7 +858,6 @@ const getProfilePageData = async (req, res) => {
       recentEvents: formattedRecentEvents
     };
 
-    console.log("Profile page data generated successfully:", profileData);
     return res.status(200).json(profileData);
   } catch (error) {
     console.error("Error fetching profile page data:", error);

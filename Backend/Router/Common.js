@@ -13,12 +13,6 @@ import {
 
 const router = express.Router();
 
-// Add middleware to log all requests to this router
-router.use((req, res, next) => {
-  console.log(`[Common Router] ${req.method} ${req.path}`, req.query);
-  next();
-});
-
 router.get("/current-date-events", auth, getCurrentDateEvents);
 router.get("/dashboard-data", getDashboardData);
 router.get("/event-stats", getEventStats);

@@ -32,17 +32,12 @@ const HeaderComponent = ({ showSidebar }) => {
   };
 
   useEffect(() => {
-    console.log("Header component mounted.");
     const token = localStorage.getItem("token");
     const userDept = localStorage.getItem("user_dept");
-    
-    console.log("HeaderComponent - Token:", token ? 'Present' : 'Missing');
-    console.log("HeaderComponent - userDept:", userDept);
     
     if (token) {
       try {
         const decodedToken = jwtDecode(token);
-        console.log("Decoded token:", decodedToken);
         setUserName(decodedToken.name || "");
         
         // Store department if not already stored
@@ -50,7 +45,6 @@ const HeaderComponent = ({ showSidebar }) => {
           localStorage.setItem("user_dept", mapDeptToFormType(decodedToken.dept));
         }
         
-        console.log("HeaderComponent - Authentication successful, userName:", decodedToken.name);
       } catch (error) {
         console.error("Error decoding token:", error);
         // Clear invalid token
@@ -84,8 +78,6 @@ const HeaderComponent = ({ showSidebar }) => {
     if (!localStorage.getItem("guestRoomForm")) {
       localStorage.setItem("guestRoomForm", JSON.stringify({}));
     }
-
-    console.log("Local storage initialized with default forms.");
   }
 
   function clearLocalStorage() {

@@ -176,45 +176,25 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        console.log("Fetching comprehensive dashboard data...");
-
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         
-        // Fetch comprehensive dashboard data
+        // Single endpoint for the entire IQAC dashboard
         const dashboardResponse = await axios.get(
           `/api/common/comprehensive-dashboard-data`,
           { headers }
         );
-        
-        console.log("Dashboard response:", dashboardResponse);
-        
-        // Fetch current events separately (keeping existing functionality)
-        const eventsResponse = await axios.get(
-          `/api/common/current-date-events`,
-          { headers }
-        );
-        
-        console.log("Events response:", eventsResponse);
 
-        if (dashboardResponse.status === 200 && eventsResponse.status === 200) {
+        if (dashboardResponse.status === 200) {
           const comprehensiveData = dashboardResponse.data || {};
-          const eventsData = eventsResponse.data || [];
-          
-          console.log("Comprehensive dashboard data:", comprehensiveData);
-          console.log("Current events:", eventsData);
-          
           setDashboardData(comprehensiveData);
-          setCurrentEvents(eventsData);
+          setCurrentEvents(Array.isArray(comprehensiveData.currentEvents) ? comprehensiveData.currentEvents : []);
         } else {
-          console.error("Failed to fetch data. Dashboard status:", dashboardResponse.status, "Events status:", eventsResponse.status);
+          console.error("Failed to fetch data. Dashboard status:", dashboardResponse.status);
           setError("Failed to fetch data.");
           toast.error("Failed to fetch dashboard data.");
         }
       } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        console.error("Error response:", err.response);
-        console.error("Error message:", err.message);
         setError(`An error occurred while fetching data: ${err.message}`);
         toast.error(`Error fetching dashboard data: ${err.message}`);
       } finally {
@@ -329,71 +309,6 @@ const Dashboard = () => {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <ChartCard
-          title="Requests Trend (This Year)"
-          subtitle="Monthly request volume split by status"
-        >
-          <div className="h-[300px] w-full">
-            {trend.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600">
-                No trend data available.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trend} margin={{ top: 10, right: 16, left: -8, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="iqacPending" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#fb7185" stopOpacity={0.55} />
-                      <stop offset="95%" stopColor="#fb7185" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="iqacApproved" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#34d399" stopOpacity={0.55} />
-                      <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="pending" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#iqacPending)" />
-                  <Area type="monotone" dataKey="approved" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#iqacApproved)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </ChartCard>
-
-        <ChartCard title="Today's Schedule" subtitle="Events happening today">
-          <div className="space-y-3">
-            {currentEvents.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                No events running today.
-              </div>
-            ) : (
-              currentEvents.slice(0, 6).map((event) => (
-                <div key={event.iqacNumber} className="rounded-xl border border-slate-200 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold text-slate-900">{event.eventName}</div>
-                      <div className="mt-1 text-xs text-slate-600">
-                        {event.eventVenue} • {event.startTime} – {event.endTime}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {Array.isArray(event.departments) ? event.departments.join(", ") : ""}
-                      </div>
-                    </div>
-                    <div className="text-right text-xs text-slate-500">
-                      {event.startDate} → {event.endDate}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </ChartCard>
-      </div>
-
-      <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
         <ChartCard title="Top Departments" subtitle="By number of events">
           <div className="h-[300px] w-full">
             <div className="h-full overflow-auto rounded-xl border border-slate-200 bg-white p-4">
@@ -491,6 +406,71 @@ const Dashboard = () => {
                 ))
               )}
             </div>
+          </div>
+        </ChartCard>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <ChartCard
+          title="Requests Trend (This Year)"
+          subtitle="Monthly request volume split by status"
+        >
+          <div className="h-[300px] w-full">
+            {trend.length === 0 ? (
+              <div className="flex h-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600">
+                No trend data available.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trend} margin={{ top: 10, right: 16, left: -8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="iqacPending" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#fb7185" stopOpacity={0.55} />
+                      <stop offset="95%" stopColor="#fb7185" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="iqacApproved" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#34d399" stopOpacity={0.55} />
+                      <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="pending" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#iqacPending)" />
+                  <Area type="monotone" dataKey="approved" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#iqacApproved)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </ChartCard>
+
+        <ChartCard title="Today's Schedule" subtitle="Events happening today">
+          <div className="space-y-3">
+            {currentEvents.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                No events running today.
+              </div>
+            ) : (
+              currentEvents.slice(0, 6).map((event) => (
+                <div key={event._id || event.iqacNumber} className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">{event.eventName}</div>
+                      <div className="mt-1 text-xs text-slate-600">
+                        {event.eventVenue} • {event.startTime} – {event.endTime}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {Array.isArray(event.departments) ? event.departments.join(", ") : ""}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-slate-500">
+                      {event.startDate} → {event.endDate}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </ChartCard>
       </div>
