@@ -99,6 +99,7 @@ const Dashboard = () => {
     eventTypes: [],
     monthlyData: [],
     monthlyStatusTrend: [],
+    completedEventsList: [],
     servicePendingApprovals: {
       transport: 0,
       food: 0,
@@ -365,6 +366,52 @@ const Dashboard = () => {
                 </PieChart>
               </ResponsiveContainer>
             )}
+          </div>
+
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50">
+            <div className="flex items-center justify-between gap-2 px-4 py-3">
+              <div className="text-xs font-semibold text-slate-800">Completed Events</div>
+              <div className="text-xs text-slate-500">Latest first</div>
+            </div>
+
+            <div className="max-h-56 overflow-auto">
+              <table className="w-full table-auto text-left text-xs">
+                <thead className="sticky top-0 z-10 bg-slate-100 text-slate-600">
+                  <tr className="border-b border-slate-200">
+                    <th className="px-4 py-2 font-semibold">End Date</th>
+                    <th className="px-4 py-2 font-semibold">Event</th>
+                    <th className="px-4 py-2 font-semibold">Department</th>
+                    <th className="px-4 py-2 font-semibold">Venue</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {(Array.isArray(dashboardData.completedEventsList)
+                    ? dashboardData.completedEventsList
+                    : []
+                  ).length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-4 text-center text-slate-500">
+                        No completed events.
+                      </td>
+                    </tr>
+                  ) : (
+                    (dashboardData.completedEventsList || []).map((ev) => {
+                      const deptText = Array.isArray(ev.departments)
+                        ? ev.departments.join(", ")
+                        : "";
+                      return (
+                        <tr key={ev.eventId} className="border-b border-slate-100 last:border-b-0">
+                          <td className="px-4 py-2 text-slate-600">{ev.endDate || "—"}</td>
+                          <td className="px-4 py-2 font-semibold text-slate-900">{ev.eventName || "—"}</td>
+                          <td className="px-4 py-2 text-slate-600">{deptText || "—"}</td>
+                          <td className="px-4 py-2 text-slate-600">{ev.venue || "—"}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </ChartCard>
 

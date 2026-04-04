@@ -369,6 +369,25 @@ const getComprehensiveDashboardData = async (req, res) => {
       else if (spanStatus === "completed") completedEvents++;
     }
 
+    const completedEventsList = events
+      .filter((ev) => getEventSpanStatus(ev) === "completed")
+      .slice()
+      .sort((a, b) => {
+        const aEnd = toDayDate(a?.endDate) || new Date(0);
+        const bEnd = toDayDate(b?.endDate) || new Date(0);
+        return bEnd - aEnd;
+      })
+      .map((ev) => ({
+        eventId: String(ev._id),
+        iqacNumber: ev.iqacNumber || "",
+        eventName: ev.eventName || "Untitled Event",
+        eventType: ev.eventType || "Other",
+        endDate: ev.endDate || "",
+        venue: ev.eventVenue || "",
+        departments: Array.isArray(ev.departments) ? ev.departments : [],
+      }))
+      .slice(0, 100);
+
     const pendingCollaborations = endforms.filter((ef) => ef.status === "Pending").length;
     const totalBookingsThisMonth = endforms.filter((ef) => {
       const event = eventsMap.get(String(ef.eventdata));
@@ -581,6 +600,7 @@ const getComprehensiveDashboardData = async (req, res) => {
       upcomingEvents,
       ongoingEvents,
       completedEvents,
+      completedEventsList,
       mostEventBookingDepartment:
         mostEventBookingDepartment.length > 0
           ? mostEventBookingDepartment[0]._id
