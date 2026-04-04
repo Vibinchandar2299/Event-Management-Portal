@@ -13,6 +13,7 @@ const HeaderComponent = ({ showSidebar, children }) => {
     const dept = localStorage.getItem("user_dept");
     return dept ? String(dept) : "";
   });
+  const [logoFailed, setLogoFailed] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -266,6 +267,12 @@ const HeaderComponent = ({ showSidebar, children }) => {
     return "";
   }, [location.pathname]);
 
+  const publicLogoUrl = useMemo(() => {
+    const baseUrl = import.meta.env.BASE_URL || "/";
+    const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+    return `${normalizedBase}portal-logo.webp`;
+  }, []);
+
   // No-sidebar routes keep the same content padding but without sidebar/header.
   if (!showSidebar) {
     return (
@@ -279,22 +286,34 @@ const HeaderComponent = ({ showSidebar, children }) => {
 
   return (
     <div className="min-h-screen">
-      <aside className="glass-surface fixed left-0 top-0 z-30 h-full w-64">
+      <aside className="glass-surface fixed left-0 top-0 z-30 h-full w-56">
         <div className="flex h-full flex-col">
-          <div className="flex h-20 items-center gap-3 border-b border-emerald-900/10 px-4">
-            <div
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-500"
-              title="Dashboard"
+          <div className="border-b border-emerald-900/10 px-3 py-5">
+            <button
+              type="button"
               onClick={() => navigate("/dashboard")}
-              role="button"
-              tabIndex={0}
+              title="Dashboard"
+              className="flex w-full flex-col items-center justify-center gap-3"
             >
-              <FiGrid className="text-xl text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-base font-bold text-slate-800">Sri Eshwar</p>
-              <p className="truncate text-xs font-semibold text-slate-500">Event Management</p>
-            </div>
+              <div className="flex w-full items-center justify-center">
+                {!logoFailed ? (
+                  <img
+                    src={publicLogoUrl}
+                    alt="Sri Eshwar Logo"
+                    className="h-[72px] w-auto max-w-full object-contain"
+                    loading="eager"
+                    decoding="async"
+                    onError={() => setLogoFailed(true)}
+                  />
+                ) : (
+                  <ClipboardList className="h-8 w-8 text-emerald-800" strokeWidth={2.2} />
+                )}
+              </div>
+
+              <p className="text-center text-[11px] font-semibold tracking-wide text-slate-900">
+                Event Management Portal
+              </p>
+            </button>
           </div>
 
           <nav className="flex-1 space-y-1 px-3 py-4">
@@ -305,15 +324,15 @@ const HeaderComponent = ({ showSidebar, children }) => {
                 <button
                   key={item.key}
                   onClick={item.action}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${
+                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${
                     active
                       ? "bg-emerald-600/10 text-emerald-900 ring-1 ring-emerald-600/20"
-                      : "text-slate-700 hover:bg-white/60 hover:text-emerald-900"
+                      : "text-slate-700 hover:bg-emerald-600/10 hover:text-emerald-900 hover:ring-1 hover:ring-emerald-600/20"
                   }`}
                 >
                   <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white/80 ${
-                      active ? "text-emerald-700" : "text-slate-500"
+                    className={`flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white/80 transition-colors ${
+                      active ? "text-emerald-700" : "text-slate-500 group-hover:text-emerald-700"
                     }`}
                   >
                     <Icon className="text-[18px]" />
@@ -334,22 +353,13 @@ const HeaderComponent = ({ showSidebar, children }) => {
               </span>
               <span>Logout</span>
             </button>
-
-            <div className="mt-3 flex items-center justify-center rounded-xl bg-white/55 p-2 ring-1 ring-emerald-900/10">
-              <img
-                src="https://sece.ac.in/wp-content/uploads/2024/05/clg-logo2-scaled.webp"
-                alt="College Logo"
-                className="h-9 w-full object-contain"
-                title="College Logo"
-              />
-            </div>
           </div>
         </div>
       </aside>
 
-      <div className="ml-64 flex min-h-screen flex-col">
-        <header className="glass-surface fixed left-64 right-0 top-0 z-20 h-20">
-          <div className="mx-auto flex h-20 w-full max-w-[1500px] items-center justify-between px-4 md:px-6">
+      <div className="ml-56 flex min-h-screen flex-col">
+        <header className="fixed left-56 right-0 top-0 z-20 h-[88px] bg-white shadow-sm border-b border-emerald-900/10">
+          <div className="mx-auto flex h-[88px] w-full max-w-[1500px] items-center justify-between px-4 md:px-6">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-4">
                 <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-emerald-600/10 text-emerald-800 ring-1 ring-emerald-600/20">
@@ -370,10 +380,8 @@ const HeaderComponent = ({ showSidebar, children }) => {
           </div>
         </header>
 
-        <main className="relative w-full flex-1 pt-20 fade-in-up">
-          <div className="mx-auto w-full max-w-[1500px] px-3 py-4 md:px-6 md:py-7">
-            <div className="glass-surface rounded-[26px] p-2 md:p-4">{children}</div>
-          </div>
+        <main className="relative w-full flex-1 pt-[88px] fade-in-up">
+          <div className="w-full px-3 py-4 md:px-6 md:py-7">{children}</div>
         </main>
       </div>
     </div>
