@@ -284,7 +284,7 @@ function PendingDashboard() {
         </div>
 
         <div className="p-5 sm:p-6 space-y-6">
-          <Dashboard refreshKey={statsRefreshKey} />
+          <Dashboard refreshKey={statsRefreshKey} scopedEndforms={uniquePendingEvents} />
 
           {loading ? (
             <div className="py-10 text-sm text-slate-500">Loading pending events…</div>

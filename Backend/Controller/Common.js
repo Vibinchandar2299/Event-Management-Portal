@@ -845,6 +845,8 @@ const getComprehensiveDashboardData = async (req, res) => {
 
 const getPendingPageData = async (req, res) => {
   try {
+    const roleKey = normalizeDeptKey(req.user?.dept);
+
     // Get current quarter (Q1, Q2, Q3, Q4) - IMPROVED LOGIC
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth(); // 0-11 (Jan=0, Dec=11)
@@ -861,9 +863,38 @@ const getPendingPageData = async (req, res) => {
     today.setHours(0, 0, 0, 0);
     const { endforms, eventsMap } = await getTrackedEndformsAndEvents();
 
-    const trackedEvents = endforms
+    // Pending page list (/api/endform/allpending) shows Pending + Approved endforms.
+    // Keep KPI stats aligned with that same scope.
+    const visibleEndforms = endforms.filter((ef) => ["Pending", "Approved"].includes(String(ef?.status || "")));
+
+    // Apply role/department scoping:
+    // - IQAC sees all
+    // - Service roles see only relevant endforms
+    // - Academic departments see only their department's events
+    const isKnownRole = ["", "iqac", "transport", "food", "guestroom", "communication"].includes(roleKey);
+    const matchesDept = (arr) =>
+      Array.isArray(arr) && arr.some((v) => normalizeDeptKey(v) === roleKey);
+
+    const pickRelevant = (ef, ev) => {
+      if (!roleKey) return true;
+      if (roleKey === "iqac") return true;
+      if (roleKey === "transport") return Array.isArray(ef.transportform) && ef.transportform.length > 0;
+      if (roleKey === "food") return !!ef.foodform;
+      if (roleKey === "guestroom") return !!ef.guestform;
+      if (roleKey === "communication") return !!ef.communicationform;
+
+      // Academic/other departments: match against BasicEvent departments
+      if (!isKnownRole) {
+        return matchesDept(ev?.academicdepartment) || matchesDept(ev?.departments);
+      }
+
+      return true;
+    };
+
+    const trackedEvents = visibleEndforms
       .map((ef) => ({ endform: ef, event: eventsMap.get(String(ef.eventdata)) }))
-      .filter((row) => !!row.event);
+      .filter((row) => !!row.event)
+      .filter(({ endform, event }) => pickRelevant(endform, event));
 
     const totalEventsCount = trackedEvents.length;
 
@@ -930,9 +961,9 @@ const getPendingPageData = async (req, res) => {
       growthPercentage,
       
       // Additional metrics
-      pendingEvents: endforms.filter((ef) => ef.status === "Pending").length,
-      completedEventsCount: endforms.filter((ef) => ef.status === "Approved" || ef.status === "Completed").length,
-      rejectedEvents: endforms.filter((ef) => ef.status === "Rejected").length
+      pendingEvents: trackedEvents.filter(({ endform }) => endform?.status === "Pending").length,
+      completedEventsCount: trackedEvents.filter(({ endform }) => endform?.status === "Approved" || endform?.status === "Completed").length,
+      rejectedEvents: trackedEvents.filter(({ endform }) => endform?.status === "Rejected").length
     };
 
     return res.status(200).json(pendingPageData);

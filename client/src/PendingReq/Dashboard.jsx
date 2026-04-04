@@ -8,7 +8,7 @@ import {
   TicketIcon,
 } from "@heroicons/react/24/outline";
 
-const Dashboard = ({ refreshKey = 0 }) => {
+const Dashboard = ({ refreshKey = 0, scopedEndforms = null }) => {
   const [pendingPageData, setPendingPageData] = useState({
     totalEvents: 0,
     upcomingEvents: 0,
@@ -27,6 +27,45 @@ const Dashboard = ({ refreshKey = 0 }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const toDayDate = (value) => {
+      const d = value ? new Date(value) : null;
+      if (!d || Number.isNaN(d.getTime())) return null;
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+
+    // If the parent provides scoped endforms (already filtered by role/department),
+    // compute KPI counts from that same list so it always matches the events shown.
+    if (Array.isArray(scopedEndforms)) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const totalEvents = scopedEndforms.length;
+      const upcomingEvents = scopedEndforms.filter((ef) => {
+        const ev = ef?.basicEvent || ef;
+        const start = toDayDate(ev?.startDate);
+        return start && start >= today;
+      }).length;
+      const ongoingEvents = scopedEndforms.filter((ef) => {
+        const ev = ef?.basicEvent || ef;
+        const start = toDayDate(ev?.startDate);
+        const end = toDayDate(ev?.endDate);
+        return start && end && start <= today && end >= today;
+      }).length;
+      const pendingEvents = scopedEndforms.filter((ef) => String(ef?.status || "").trim() === "Pending").length;
+
+      setPendingPageData((prev) => ({
+        ...prev,
+        totalEvents,
+        upcomingEvents,
+        ongoingEvents,
+        pendingEvents,
+      }));
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchPendingPageData = async () => {
       setLoading(true);
       try {
@@ -58,7 +97,7 @@ const Dashboard = ({ refreshKey = 0 }) => {
     };
 
     fetchPendingPageData();
-  }, [refreshKey]);
+  }, [refreshKey, scopedEndforms]);
 
   const stats = [
     {
