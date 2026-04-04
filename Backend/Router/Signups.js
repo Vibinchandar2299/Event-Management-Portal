@@ -61,6 +61,10 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ emailId });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
+    if (user.isActive === false) {
+      return res.status(403).json({ message: "Account is blocked. Contact IQAC." });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
@@ -123,6 +127,79 @@ router.post("/admin/create-login", ...adminOnly, async (req, res) => {
         empid: user.empid,
         createdAt: user.createdAt,
       },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+router.patch("/admin/users/:id/status", ...adminOnly, async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+    if (!userId) return res.status(400).json({ message: "User id is required" });
+
+    const requestedActive = req.body?.isActive;
+    if (typeof requestedActive !== "boolean") {
+      return res.status(400).json({ message: "isActive must be a boolean" });
+    }
+
+    // Avoid locking out the current admin user.
+    if (req.user?.userId && String(req.user.userId) === String(userId)) {
+      return res.status(400).json({ message: "You cannot change your own account status" });
+    }
+
+    const target = await User.findById(userId).select("dept emailId isActive");
+    if (!target) return res.status(404).json({ message: "User not found" });
+
+    const targetDept = String(target.dept || "").trim().toLowerCase();
+    if (targetDept === "iqac" || targetDept === "system admin" || targetDept === "systemadmin" || targetDept === "admin") {
+      return res.status(403).json({ message: "This account cannot be blocked/unblocked" });
+    }
+
+    target.isActive = requestedActive;
+    await target.save();
+
+    return res.status(200).json({
+      message: requestedActive ? "Account unblocked" : "Account blocked",
+      user: {
+        _id: target._id,
+        emailId: target.emailId,
+        dept: target.dept,
+        isActive: target.isActive,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+router.delete("/admin/users/:id", ...adminOnly, async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+    if (!userId) return res.status(400).json({ message: "User id is required" });
+
+    if (req.user?.userId && String(req.user.userId) === String(userId)) {
+      return res.status(400).json({ message: "You cannot delete your own account" });
+    }
+
+    const target = await User.findById(userId).select("dept emailId");
+    if (!target) return res.status(404).json({ message: "User not found" });
+
+    const targetDept = String(target.dept || "").trim().toLowerCase();
+    if (
+      targetDept === "iqac" ||
+      targetDept === "system admin" ||
+      targetDept === "systemadmin" ||
+      targetDept === "admin"
+    ) {
+      return res.status(403).json({ message: "This account cannot be removed" });
+    }
+
+    await User.findByIdAndDelete(userId);
+
+    return res.status(200).json({
+      message: "Account removed permanently",
+      removed: { _id: userId, emailId: target.emailId, dept: target.dept },
     });
   } catch (err) {
     return res.status(500).json({ message: "Server error", error: err.message });

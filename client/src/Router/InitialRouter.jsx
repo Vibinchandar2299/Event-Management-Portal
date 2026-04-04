@@ -68,7 +68,7 @@ const InitialRouter = () => {
         <Route 
           path="/create-login" 
           element={
-            <ProtectedRoute requiredDepartment="iqac">
+            <ProtectedRoute requiredDepartment={["iqac", "system admin", "admin", "systemadmin"]}>
               <AdminController />
             </ProtectedRoute>
           } 

@@ -38,9 +38,22 @@ const ProtectedRoute = ({ children, requiredDepartment = null, blockAcademic = f
     }
   }
 
-  const deptRequired = typeof requiredDepartment === 'string' && requiredDepartment.trim().length > 0;
+  const normalize = (value) => String(value || '').trim().toLowerCase();
+  const canonicalize = (dept) => {
+    const d = normalize(dept);
+    if (!d) return '';
+    if (d === 'systemadmin' || d === 'admin') return 'system admin';
+    return d;
+  };
+
+  const requiredList = Array.isArray(requiredDepartment)
+    ? requiredDepartment.map(canonicalize).filter(Boolean)
+    : typeof requiredDepartment === 'string'
+      ? [canonicalize(requiredDepartment)].filter(Boolean)
+      : [];
+
   const hasDeptAccess =
-    !deptRequired || (effectiveDept || '').toLowerCase() === requiredDepartment.trim().toLowerCase();
+    requiredList.length === 0 || requiredList.includes(canonicalize(effectiveDept));
 
   if (!token) {
     return <Navigate to="/" replace />;

@@ -113,7 +113,12 @@ export const uploadUsersFromExcel = async (req, res) => {
       return res.status(400).json({ message: "Please upload an Excel file" });
     }
 
-    const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
+    const originalName = String(req.file.originalname || "").toLowerCase();
+    const isCsv = originalName.endsWith(".csv") || String(req.file.mimetype || "").includes("csv");
+
+    const workbook = isCsv
+      ? xlsx.read(req.file.buffer.toString("utf8"), { type: "string" })
+      : xlsx.read(req.file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
 
@@ -191,7 +196,7 @@ export const getallstaffs = async (req, res) => {
     }
 
     const users = await User.find(filter)
-      .select("name emailId phoneNumber dept designation empid createdAt updatedAt")
+      .select("name emailId phoneNumber dept designation empid isActive createdAt updatedAt")
       .sort({ createdAt: -1 })
       .lean();
 

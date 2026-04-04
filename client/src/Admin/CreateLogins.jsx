@@ -74,6 +74,8 @@ function CreateLogins() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState("");
   const [search, setSearch] = useState("");
+  const [rowBusyId, setRowBusyId] = useState("");
+  const [removeConfirmId, setRemoveConfirmId] = useState("");
 
   const inputBaseClass =
     "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600";
@@ -204,6 +206,65 @@ function CreateLogins() {
       toast.error(error.response?.data?.message || "Upload failed");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleToggleBlock = async (user) => {
+    if (!user?._id) return;
+    if (!authHeaders) {
+      toast.error("Missing login token. Please login again.");
+      return;
+    }
+
+    const nextActive = user.isActive === false;
+
+    if (rowBusyId) return;
+    setRowBusyId(user._id);
+
+    try {
+      await axios.patch(
+        `${apiBase}/sece/admin/users/${user._id}/status`,
+        { isActive: nextActive },
+        { headers: authHeaders }
+      );
+      toast.success(nextActive ? "Account unblocked" : "Account blocked");
+      await fetchUsers();
+    } catch (error) {
+      console.error("Error updating status", error);
+      toast.error(error.response?.data?.message || "Failed to update account status");
+    } finally {
+      setRowBusyId("");
+    }
+  };
+
+  const handleRemoveUser = async (user) => {
+    if (!user?._id) return;
+    if (!authHeaders) {
+      toast.error("Missing login token. Please login again.");
+      return;
+    }
+
+    if (rowBusyId) return;
+
+    if (removeConfirmId !== user._id) {
+      setRemoveConfirmId(user._id);
+      return;
+    }
+
+    setRowBusyId(user._id);
+
+    try {
+      await axios.delete(`${apiBase}/sece/admin/users/${user._id}`, {
+        headers: authHeaders,
+      });
+      toast.success("Account removed");
+      setRemoveConfirmId("");
+      await fetchUsers();
+    } catch (error) {
+      console.error("Error removing user", error);
+      toast.error(error.response?.data?.message || "Failed to remove account");
+    } finally {
+      setRowBusyId("");
     }
   };
 
@@ -338,7 +399,7 @@ function CreateLogins() {
           </div>
 
           <div className={`${surfaceClass} p-5 md:p-6`}>
-            <h2 className="text-base font-semibold text-slate-900">Bulk upload (Excel)</h2>
+            <h2 className="text-base font-semibold text-slate-900">Bulk upload (Excel / CSV)</h2>
             <p className="mt-1 text-sm text-slate-600">
               Columns supported: <span className="font-semibold">name, emailId, dept, phoneNumber, designation, empid</span>.
               Existing emails are skipped.
@@ -347,7 +408,7 @@ function CreateLogins() {
             <div className="mt-4 space-y-3">
               <input
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".xlsx,.xls,.csv"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 className={inputBaseClass}
               />
@@ -402,19 +463,21 @@ function CreateLogins() {
                     <th className="px-4 py-3">Phone</th>
                     <th className="px-4 py-3">Designation</th>
                     <th className="px-4 py-3">Emp ID</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Action</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-slate-200/70">
                   {usersLoading ? (
                     <tr>
-                      <td className="px-4 py-4 text-slate-600" colSpan={6}>
+                      <td className="px-4 py-4 text-slate-600" colSpan={8}>
                         Loading logins…
                       </td>
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-4 text-slate-600" colSpan={6}>
+                      <td className="px-4 py-4 text-slate-600" colSpan={8}>
                         No logins found.
                       </td>
                     </tr>
@@ -427,6 +490,67 @@ function CreateLogins() {
                         <td className="px-4 py-3 text-slate-700">{u.phoneNumber || "—"}</td>
                         <td className="px-4 py-3 text-slate-700">{u.designation || "—"}</td>
                         <td className="px-4 py-3 text-slate-700">{u.empid || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+                              u.isActive === false
+                                ? "bg-rose-50 text-rose-700 ring-rose-200"
+                                : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                            }`}
+                          >
+                            {u.isActive === false ? "Blocked" : "Active"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBlock(u)}
+                              disabled={Boolean(rowBusyId)}
+                              className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold ring-1 transition ${
+                                u.isActive === false
+                                  ? "bg-white text-emerald-700 ring-emerald-200 hover:bg-emerald-50"
+                                  : "bg-white text-rose-700 ring-rose-200 hover:bg-rose-50"
+                              } disabled:cursor-not-allowed disabled:opacity-60`}
+                            >
+                              {rowBusyId === u._id
+                                ? "Updating…"
+                                : u.isActive === false
+                                  ? "Unblock"
+                                  : "Block"}
+                            </button>
+
+                            {removeConfirmId === u._id ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveUser(u)}
+                                  disabled={rowBusyId === u._id}
+                                  className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {rowBusyId === u._id ? "Removing…" : "Confirm Remove"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRemoveConfirmId("")}
+                                  disabled={Boolean(rowBusyId)}
+                                  className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveUser(u)}
+                                disabled={Boolean(rowBusyId)}
+                                className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}

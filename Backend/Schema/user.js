@@ -10,6 +10,9 @@ const userSchema = new mongoose.Schema(
     dept: { type: String, required: true },
     empid: { type: String, required: false },
 
+    // Account state
+    isActive: { type: Boolean, required: false, default: true },
+
     // Shared-account settings (optional)
     accountOwnerName: { type: String, required: false, default: "" },
     accountOwnerEmail: { type: String, required: false, default: "" },
