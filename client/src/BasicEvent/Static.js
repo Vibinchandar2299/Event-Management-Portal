@@ -1,29 +1,15 @@
 // data.js
 
 export const departments = [
-    "CIE",
-    "CFRD",
-    "Academics",
-    "Alumni",
-    "IQAC",
-    "Placement",
-    "Mechatronics",
-    "IPR",
-    "Maintenance",
-    "COE",
-    "Library",
-    "Hostel",
-    "Medical",
-    "Higher Education Cell",
-    "R&D",
-    "NCC",
-    "NSS",
-    "YRC",
-    "IBA",
-    "SLC",
-    "IE",
-    "Women cell",
-    "ICC/POSH"
+  "CSE",
+  "IT",
+  "AIDS",
+  "AIML",
+  "CSBS",
+  "CYBER SECURITY",
+  "EEE",
+  "ECE",
+  "MECH"
   ];
   
   export const logos = [
