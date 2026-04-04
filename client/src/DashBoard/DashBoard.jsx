@@ -20,14 +20,66 @@ import {
   Tooltip,
 } from "recharts";
 import {
-  PieChart,
-  Pie,
   Cell,
-  Legend,
-  RadialBarChart,
-  RadialBar,
-  PolarAngleAxis,
+  BarChart,
+  Bar,
+  LabelList,
 } from "recharts";
+
+const PendingApprovalsTooltip = ({ active, payload }) => {
+  if (!active || !payload || payload.length === 0) return null;
+  const item = payload[0]?.payload;
+  const name = item?.name || "";
+  const value = typeof item?.value === "number" ? item.value : Number(item?.value || 0);
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm">
+      <div className="font-semibold text-slate-900">{name}</div>
+      <div className="mt-1 text-slate-600">{value} pending</div>
+    </div>
+  );
+};
+
+const LollipopChart = ({ data, colors }) => {
+  const safe = Array.isArray(data) ? data : [];
+  const maxValue = Math.max(1, ...safe.map((d) => Number(d.value || 0)));
+
+  if (safe.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600">
+        No department data available.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {safe.map((row, idx) => {
+        const value = Number(row.value || 0);
+        const pct = Math.max(0, Math.min(100, (value / maxValue) * 100));
+        const color = colors[idx % colors.length];
+        const circleLeft = pct <= 0 ? "0%" : `calc(${pct}% - 6px)`;
+
+        return (
+          <div key={row.name} className="flex items-center gap-3">
+            <div className="w-28 truncate text-xs font-semibold text-slate-700">{row.name}</div>
+            <div className="relative flex-1">
+              <div className="h-2 rounded-full bg-slate-100 ring-1 ring-inset ring-slate-200" />
+              <div
+                className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full"
+                style={{ width: `${pct}%`, backgroundColor: color }}
+              />
+              <div
+                className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ring-2 ring-white"
+                style={{ left: circleLeft, backgroundColor: color }}
+              />
+            </div>
+            <div className="w-10 text-right text-xs font-semibold text-slate-700">{value}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const KpiCard = ({ title, value, icon, tone = "slate", subtitle }) => {
   const tones = {
@@ -179,6 +231,10 @@ const Dashboard = () => {
     { name: "Guest Room", value: dashboardData.servicePendingApprovals?.guestroom ?? 0 },
     { name: "Media/Comm", value: dashboardData.servicePendingApprovals?.communication ?? 0 },
   ];
+
+  const sortedServiceApprovalsSeries = serviceApprovalsSeries
+    .slice()
+    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
   const topDepartments = Array.isArray(dashboardData.departmentBookings)
     ? dashboardData.departmentBookings.slice(0, 8).map((d) => ({
@@ -340,32 +396,9 @@ const Dashboard = () => {
       <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
         <ChartCard title="Top Departments" subtitle="By number of events">
           <div className="h-[300px] w-full">
-            {topDepartments.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600">
-                No department data available.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={topDepartments}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={110}
-                    paddingAngle={2}
-                  >
-                    {topDepartments.map((_, idx) => (
-                      <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={40} wrapperStyle={{ fontSize: 11 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
+            <div className="h-full overflow-auto rounded-xl border border-slate-200 bg-white p-4">
+              <LollipopChart data={topDepartments} colors={PIE_COLORS} />
+            </div>
           </div>
 
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50">
@@ -418,28 +451,22 @@ const Dashboard = () => {
         <ChartCard title="Pending Approvals (Service Teams)" subtitle="Items awaiting department action">
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <RadialBarChart
-                cx="50%"
-                cy="50%"
-                innerRadius="25%"
-                outerRadius="90%"
-                barSize={14}
-                data={serviceApprovalsSeries.map((d, idx) => ({
-                  ...d,
-                  fill: PIE_COLORS[idx % PIE_COLORS.length],
-                }))}
+              <BarChart
+                data={sortedServiceApprovalsSeries}
+                layout="vertical"
+                margin={{ top: 10, right: 24, left: 16, bottom: 0 }}
               >
-                <PolarAngleAxis type="number" domain={[0, "dataMax"]} tick={false} />
-                <RadialBar background dataKey="value" cornerRadius={8} />
-                <Legend
-                  iconSize={10}
-                  layout="vertical"
-                  verticalAlign="middle"
-                  align="right"
-                  wrapperStyle={{ fontSize: 11 }}
-                />
-                <Tooltip />
-              </RadialBarChart>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
+                <Tooltip content={<PendingApprovalsTooltip />} />
+                <Bar dataKey="value" radius={[10, 10, 10, 10]}>
+                  {sortedServiceApprovalsSeries.map((_, idx) => (
+                    <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                  ))}
+                  <LabelList dataKey="value" position="right" fill="#0f172a" fontSize={11} />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
 
