@@ -192,7 +192,14 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   
   // Define canEdit at the top to avoid temporal dead zone
   const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
-  const canEdit = userDept === "guestroom" || userDept === "guest department" || userDept === "guest deparment" || userDept === "iqac" || userDept === "system admin" || userDept === "communication";
+  const isCreationFlow = !!currentEventId && !endformId && !isEditMode;
+  const canEdit =
+    isCreationFlow ||
+    userDept === "guestroom" ||
+    userDept === "guest department" ||
+    userDept === "guest deparment" ||
+    userDept === "iqac" ||
+    userDept === "system admin";
 
   // Debug: Log form data changes
   useEffect(() => {

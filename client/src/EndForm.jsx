@@ -335,7 +335,17 @@ const EndForm = () => {
     };
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/endform/create`, endformData);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/endform/create`,
+        endformData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
       
       if (response.data && response.data.data && response.data.data._id) {
         // Store the endform ID

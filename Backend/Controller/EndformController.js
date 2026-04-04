@@ -6,6 +6,36 @@ import communicationform from "../Schema/MedaiRequirements.js";
 import guestroomform from "../Schema/guestroom/main.js";
 import User from "../Schema/user.js";
 
+const normalizeDeptKey = (dept) => {
+  if (!dept) return "";
+  const d = String(dept).toLowerCase().trim();
+
+  if (d === "iqac") return "iqac";
+  if (d === "system admin" || d === "systemadmin" || d === "admin") return "iqac";
+
+  if (d === "transport") return "transport";
+  if (d === "food") return "food";
+  if (d === "media" || d === "communication") return "communication";
+  if (d === "guestroom" || d === "guest room" || d === "guest department" || d === "guest deparment") {
+    return "guestroom";
+  }
+
+  // Academic department aliases (match BasicEvent `academicdepartment` values)
+  const alnum = d.replace(/[^a-z0-9]/g, "");
+  if (alnum === "aids" || alnum === "aiandds") return "ai & ds";
+  if (alnum === "aiml" || alnum === "aiandml") return "ai & ml";
+  if (alnum === "cybersecurity" || alnum === "cyber") return "cyber";
+  if (alnum === "csbs") return "csbs";
+  if (alnum === "cse" || alnum === "computerscienceengineering") return "cse";
+  if (alnum === "it" || alnum === "informationtechnology") return "it";
+  if (alnum === "ece" || alnum === "electronicsandcommunicationengineering") return "ece";
+  if (alnum === "eee" || alnum === "electricalandelectronicsengineering") return "eee";
+  if (alnum === "mech" || alnum === "mechanicalengineering") return "mech";
+  if (alnum === "cce") return "cce";
+
+  return d;
+};
+
 export const createEndform = async (req, res) => {
   try {
     const {
@@ -68,7 +98,7 @@ export const getOverallPendingEndforms = async (req, res) => {
   try {
     console.log("Fetching pending and approved endforms...");
 
-    let deptKey = String(req.user?.dept || "").trim().toLowerCase();
+    let deptKey = normalizeDeptKey(req.user?.dept);
 
     // Backfill dept for older tokens that may not contain it.
     if (!deptKey) {
@@ -82,7 +112,7 @@ export const getOverallPendingEndforms = async (req, res) => {
             ? await User.findOne({ emailId: tokenEmail }).select("dept").lean()
             : null;
 
-        deptKey = String(user?.dept || "").trim().toLowerCase();
+        deptKey = normalizeDeptKey(user?.dept);
       } catch (err) {
         console.error("Failed to backfill dept from user record:", err);
       }
@@ -91,23 +121,7 @@ export const getOverallPendingEndforms = async (req, res) => {
     if (!deptKey) {
       return res.status(403).json({ message: "User department missing in token" });
     }
-    const roleKey = (() => {
-      if (!deptKey) return "";
-      if (deptKey === "iqac") return "iqac";
-      if (deptKey === "system admin" || deptKey === "systemadmin" || deptKey === "admin") return "iqac";
-      if (deptKey === "transport") return "transport";
-      if (deptKey === "food") return "food";
-      if (deptKey === "media" || deptKey === "communication") return "communication";
-      if (
-        deptKey === "guest deparment" ||
-        deptKey === "guest department" ||
-        deptKey === "guestroom" ||
-        deptKey === "guest room"
-      ) {
-        return "guestroom";
-      }
-      return deptKey;
-    })();
+    const roleKey = normalizeDeptKey(deptKey);
     
     // Get both pending and approved endforms so approved events don't disappear
     let endforms = await Endform.find({ 
@@ -143,7 +157,7 @@ export const getOverallPendingEndforms = async (req, res) => {
     if (roleKey && roleKey !== "iqac" && !isKnownRole) {
       const matchesDept = (arr) =>
         Array.isArray(arr) &&
-        arr.some((v) => String(v || "").trim().toLowerCase() === roleKey);
+        arr.some((v) => normalizeDeptKey(v) === roleKey);
 
       endforms = endforms.filter((endform) => {
         const basic = endform?.eventdata ? basicEventsMap.get(endform.eventdata.toString()) : null;
@@ -264,16 +278,35 @@ export const deleteEndform = async (req, res) => {
     console.log("Request params:", req.params);
     console.log("Endform ID to delete:", req.params.id);
     console.log("ID type:", typeof req.params.id);
-    
-    const deletedEndform = await Endform.findByIdAndDelete(req.params.id);
-    console.log("Delete result:", deletedEndform);
-    
-    if (!deletedEndform) {
+
+    const userDeptKey = normalizeDeptKey(req.user?.dept);
+    if (!userDeptKey) {
+      return res.status(403).json({ message: "User department missing in token" });
+    }
+
+    const endform = await Endform.findById(req.params.id);
+    if (!endform) {
       console.log("Endform not found for ID:", req.params.id);
       return res.status(404).json({ message: "Endform not found" });
     }
-    
-    console.log("Endform deleted successfully:", deletedEndform._id);
+
+    if (userDeptKey !== 'iqac') {
+      const basicEvent = endform.eventdata ? await BasicEvent.findById(endform.eventdata).select('academicdepartment departments').lean() : null;
+      if (!basicEvent) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const deptValues = [
+        ...(Array.isArray(basicEvent.academicdepartment) ? basicEvent.academicdepartment : []),
+        ...(Array.isArray(basicEvent.departments) ? basicEvent.departments : []),
+      ].map((v) => normalizeDeptKey(v));
+
+      if (!deptValues.includes(userDeptKey)) {
+        return res.status(403).json({ message: "Not allowed to delete this event" });
+      }
+    }
+
+    await Endform.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Endform deleted successfully" });
   } catch (error) {
     console.error("Error in deleteEndform:", error);

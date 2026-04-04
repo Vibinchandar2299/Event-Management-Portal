@@ -22,12 +22,26 @@ const HeaderComponent = ({ showSidebar }) => {
 
   const mapDeptToFormType = (dept) => {
     if (!dept) return '';
-    const d = String(dept).toLowerCase();
+    const d = String(dept).toLowerCase().trim();
     if (d === 'media' || d === 'communication') return 'communication';
     if (d === 'food') return 'food';
     if (d === 'transport') return 'transport';
     if (d === 'guestroom' || d === 'guest room' || d === 'guest department' || d === 'guest deparment') return 'guestroom';
     if (d === 'iqac') return 'iqac';
+
+    // Academic department aliases (match BasicEvent `academicdepartment` values)
+    const alnum = d.replace(/[^a-z0-9]/g, '');
+    if (alnum === 'aids' || alnum === 'aiandds') return 'ai & ds';
+    if (alnum === 'aiml' || alnum === 'aiandml') return 'ai & ml';
+    if (alnum === 'cybersecurity' || alnum === 'cyber') return 'cyber';
+    if (alnum === 'csbs') return 'csbs';
+    if (alnum === 'cse' || alnum === 'computerscienceengineering') return 'cse';
+    if (alnum === 'it' || alnum === 'informationtechnology') return 'it';
+    if (alnum === 'ece' || alnum === 'electronicsandcommunicationengineering') return 'ece';
+    if (alnum === 'eee' || alnum === 'electricalandelectronicsengineering') return 'eee';
+    if (alnum === 'mech' || alnum === 'mechanicalengineering') return 'mech';
+    if (alnum === 'cce') return 'cce';
+
     return d;
   };
 
@@ -90,6 +104,18 @@ const HeaderComponent = ({ showSidebar }) => {
     localStorage.removeItem("guestRoomForm");
   }
 
+  const deptKey = mapDeptToFormType(localStorage.getItem("user_dept"));
+  const isAcademicUser = (() => {
+    const dept = String(deptKey || '').trim().toLowerCase();
+    if (!dept) return false;
+    const collegeWide = new Set(['iqac', 'admin', 'system admin', 'systemadmin']);
+    const serviceTeams = new Set(['communication', 'media', 'food', 'transport', 'guestroom', 'guest room', 'guest department', 'guest deparment']);
+    if (collegeWide.has(dept)) return false;
+    if (serviceTeams.has(dept)) return false;
+    if (dept.includes('admin')) return false;
+    return true;
+  })();
+
   const navItems = [
     {
       key: "dashboard",
@@ -108,29 +134,33 @@ const HeaderComponent = ({ showSidebar }) => {
       },
     },
     {
-      key: "calendar",
-      label: "Calendar",
-      icon: CalendarDays,
-      action: () => navigate("/calender"),
-    },
-    {
       key: "pending",
-      label: "Pending",
+      label: isAcademicUser ? "Event Management" : "Pending",
       icon: FiLayers,
       action: () => navigate("/pending"),
     },
-    {
-      key: "profile",
-      label: "Profile",
-      icon: FiUsers,
-      action: () => navigate("/profile"),
-    },
-    {
-      key: "logins",
-      label: "Create Login",
-      icon: FiLogIn,
-      action: () => navigate("/create-login"),
-    },
+    ...(!isAcademicUser
+      ? [
+          {
+            key: "calendar",
+            label: "Calendar",
+            icon: CalendarDays,
+            action: () => navigate("/calender"),
+          },
+          {
+            key: "profile",
+            label: "Profile",
+            icon: FiUsers,
+            action: () => navigate("/profile"),
+          },
+          {
+            key: "logins",
+            label: "Create Login",
+            icon: FiLogIn,
+            action: () => navigate("/create-login"),
+          },
+        ]
+      : []),
   ];
 
   return (

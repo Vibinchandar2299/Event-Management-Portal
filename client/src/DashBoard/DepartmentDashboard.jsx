@@ -28,6 +28,20 @@ const normalizeDeptKey = (raw) => {
   if (d === "system admin" || d === "systemadmin" || d === "admin") return "iqac";
   if (d === "media" || d === "communication") return "communication";
   if (d === "guest deparment" || d === "guest department" || d === "guestroom" || d === "guest room") return "guestroom";
+
+  // Academic department aliases
+  const alnum = d.replace(/[^a-z0-9]/g, "");
+  if (alnum === "aids" || alnum === "aiandds") return "ai & ds";
+  if (alnum === "aiml" || alnum === "aiandml") return "ai & ml";
+  if (alnum === "cybersecurity" || alnum === "cyber") return "cyber";
+  if (alnum === "csbs") return "csbs";
+  if (alnum === "cse" || alnum === "computerscienceengineering") return "cse";
+  if (alnum === "it" || alnum === "informationtechnology") return "it";
+  if (alnum === "ece" || alnum === "electronicsandcommunicationengineering") return "ece";
+  if (alnum === "eee" || alnum === "electricalandelectronicsengineering") return "eee";
+  if (alnum === "mech" || alnum === "mechanicalengineering") return "mech";
+  if (alnum === "cce") return "cce";
+
   return d;
 };
 

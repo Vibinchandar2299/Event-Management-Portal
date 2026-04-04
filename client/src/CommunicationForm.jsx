@@ -139,7 +139,13 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
 
   // Define canEdit at the top to avoid temporal dead zone
   const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
-  const canEdit = userDept === "communication" || userDept === "iqac" || userDept === "system admin" || !userDept;
+  const isCreationFlow = !!currentEventId && !endformId && !isEditMode;
+  const canEdit =
+    isCreationFlow ||
+    userDept === "communication" ||
+    userDept === "iqac" ||
+    userDept === "system admin" ||
+    !userDept;
 
   useEffect(() => {
     const endformId = localStorage.getItem('endformId');

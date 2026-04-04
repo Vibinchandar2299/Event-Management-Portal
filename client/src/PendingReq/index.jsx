@@ -4,9 +4,25 @@ import EventsCard from "./EventsCard";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
+import { jwtDecode } from "jwt-decode";
 
 function isValidObjectId(id) {
   return typeof id === 'string' && id.length === 24 && /^[a-fA-F0-9]+$/.test(id);
+}
+
+function normalizeMongoId(id) {
+  if (!id) return '';
+  if (typeof id === 'string') {
+    const m = id.match(/[a-fA-F0-9]{24}/);
+    return m ? m[0] : id;
+  }
+  if (typeof id === 'object') {
+    // Support Extended JSON shapes or raw ObjectId instances
+    if (typeof id.$oid === 'string') return id.$oid;
+    if (typeof id.toHexString === 'function') return id.toHexString();
+    if (typeof id.toString === 'function') return id.toString();
+  }
+  return '';
 }
 
 function PendingDashboard() {
@@ -18,6 +34,35 @@ function PendingDashboard() {
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
   const location = useLocation();
   const skipFirstPathRefetch = useRef(true);
+
+  const token = localStorage.getItem('token');
+  let effectiveDept = localStorage.getItem('user_dept') || '';
+  if (!effectiveDept && token) {
+    try {
+      effectiveDept = jwtDecode(token)?.dept || '';
+    } catch {
+      effectiveDept = '';
+    }
+  }
+  const deptKey = String(effectiveDept || '').trim().toLowerCase();
+  const isAcademicUser = (() => {
+    if (!deptKey) return false;
+    const collegeWide = new Set(['iqac', 'admin', 'system admin', 'systemadmin']);
+    const serviceTeams = new Set([
+      'communication',
+      'media',
+      'food',
+      'transport',
+      'guestroom',
+      'guest room',
+      'guest department',
+      'guest deparment',
+    ]);
+    if (collegeWide.has(deptKey)) return false;
+    if (serviceTeams.has(deptKey)) return false;
+    if (deptKey.includes('admin')) return false;
+    return true;
+  })();
 
   const fetchPendingEndforms = async (retryCount = 0) => {
     console.log("Fetching events from:", `/api/endform/allpending`);
@@ -43,14 +88,25 @@ function PendingDashboard() {
       
       if (Array.isArray(data)) {
         // Ensure each event has the required structure
-        const formattedEvents = data.map(event => ({
-          ...event,
-          basicEvent: event.basicEvent || {},
+        const formattedEvents = data.map(event => {
+          const normalizedEndformId = normalizeMongoId(event?._id);
+          const basic = event?.basicEvent || {};
+          const normalizedBasicId = normalizeMongoId(basic?._id);
+
+          return {
+            ...event,
+            _id: normalizedEndformId || event?._id,
+            eventdata: normalizeMongoId(event?.eventdata) || event?.eventdata,
+            basicEvent: {
+              ...basic,
+              _id: normalizedBasicId || basic?._id,
+            },
           transport: Array.isArray(event.transport) ? event.transport : [event.transport].filter(Boolean),
           foodform: event.foodform || {},
           guestform: event.guestform || {},
           communicationdata: event.communicationdata || {}
-        }));
+          };
+        });
         
         console.log("Formatted pending events:", formattedEvents);
         setPendingEvents(formattedEvents);
@@ -111,8 +167,8 @@ function PendingDashboard() {
     }
 
     console.log("Location changed:", location.pathname);
-    // Assuming the dashboard route is '/', adjust if it's different
-    if (location.pathname === '/pending-requests') { // Replace '/pending-requests' with the actual dashboard path if different
+    // Refetch when navigating back to pending route
+    if (location.pathname === '/pending') {
       console.log("Navigated to dashboard, refetching events...");
       fetchPendingEndforms();
     }
@@ -122,7 +178,7 @@ function PendingDashboard() {
   const uniqueEventsMap = new Map();
   pendingEvents.forEach(event => {
     // Use eventdata (event ID) as the unique key
-    const key = event.eventdata || event.basicEvent?._id;
+    const key = normalizeMongoId(event.eventdata) || normalizeMongoId(event.basicEvent?._id) || normalizeMongoId(event._id);
     // Always keep the latest (last in array)
     uniqueEventsMap.set(key, event);
   });
@@ -137,7 +193,7 @@ function PendingDashboard() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <Dashboard refreshKey={statsRefreshKey} />
-        
+
         <div className="flex gap-6 mb-6 border-b border-gray-200">
           {["All", "Upcoming", "Ongoing", "Completed"].map((tab) => (
             <button
@@ -159,17 +215,20 @@ function PendingDashboard() {
         ) : uniquePendingEvents.length > 0 ? (
           (() => {
             const filteredEvents = uniquePendingEvents.filter(event => {
-              const id = event._id || event.basicEvent?._id;
+              const id = normalizeMongoId(event?._id || event?.basicEvent?._id);
               const isValid = isValidObjectId(id);
               console.log(`Event ${event.eventName || 'Unknown'}: ID=${id}, Valid=${isValid}`);
               return isValid;
             });
             console.log(`Total events: ${uniquePendingEvents.length}, Valid events: ${filteredEvents.length}`);
+
+            const displayEvents = filteredEvents.length > 0 ? filteredEvents : uniquePendingEvents;
             return (
               <EventsCard 
-                Events={filteredEvents} 
+                Events={displayEvents} 
                 EventPopup={uniquePendingEvents} 
                 onEventUpdate={handleEventUpdate}
+                viewerMode={isAcademicUser ? 'requester' : 'default'}
               />
             );
           })()

@@ -188,7 +188,13 @@ const TransportForm = ({ eventData, nextForm }) => {
 
   // Define canEdit at the top to avoid temporal dead zone
   const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
-  const canEdit = userDept === "transport" || userDept === "iqac" || userDept === "system admin" || !userDept;
+  const isCreationFlow = !!currentEventId && !endformId && !isEditMode;
+  const canEdit =
+    isCreationFlow ||
+    userDept === "transport" ||
+    userDept === "iqac" ||
+    userDept === "system admin" ||
+    !userDept;
 
   const defaultCurrentEvent = {
     basicDetails: {

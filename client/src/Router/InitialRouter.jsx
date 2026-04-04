@@ -43,7 +43,7 @@ const InitialRouter = () => {
         <Route
           path="/calender"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockAcademic>
               <CalenderUI />
             </ProtectedRoute>
           }
@@ -51,7 +51,7 @@ const InitialRouter = () => {
         <Route
           path="/profile"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockAcademic>
               <Profile />
             </ProtectedRoute>
           }

@@ -1,6 +1,42 @@
 import Event from "../Schema/EventSchema.js";
+import Endform from "../Schema/EndForm.js";
 import multer from "multer";
 import path from "path";
+
+const normalizeDeptKey = (dept) => {
+  if (!dept) return "";
+  const d = String(dept).toLowerCase().trim();
+
+  if (d === "iqac") return "iqac";
+  if (d === "system admin" || d === "systemadmin" || d === "admin") return "iqac";
+
+  if (d === "transport") return "transport";
+  if (d === "food") return "food";
+  if (d === "media" || d === "communication") return "communication";
+  if (d === "guestroom" || d === "guest room" || d === "guest department" || d === "guest deparment") {
+    return "guestroom";
+  }
+
+  const alnum = d.replace(/[^a-z0-9]/g, "");
+  if (alnum === "aids" || alnum === "aiandds") return "ai & ds";
+  if (alnum === "aiml" || alnum === "aiandml") return "ai & ml";
+  if (alnum === "cybersecurity" || alnum === "cyber") return "cyber";
+  if (alnum === "csbs") return "csbs";
+  if (alnum === "cse" || alnum === "computerscienceengineering") return "cse";
+  if (alnum === "it" || alnum === "informationtechnology") return "it";
+  if (alnum === "ece" || alnum === "electronicsandcommunicationengineering") return "ece";
+  if (alnum === "eee" || alnum === "electricalandelectronicsengineering") return "eee";
+  if (alnum === "mech" || alnum === "mechanicalengineering") return "mech";
+  if (alnum === "cce") return "cce";
+
+  return d;
+};
+
+const isAcademicDeptKey = (deptKey) => {
+  if (!deptKey) return false;
+  const known = new Set(["iqac", "transport", "food", "guestroom", "communication"]);
+  return !known.has(deptKey);
+};
 
 const createEvent = async (req, res) => {
   console.log("Event Request form data:", req.body);
@@ -29,10 +65,27 @@ const createEvent = async (req, res) => {
       transport
     } = req.body;
 
+    const creatorDeptRaw = req.user?.dept;
+    const creatorDeptKey = normalizeDeptKey(creatorDeptRaw);
+    const shouldAttachAcademicDept = isAcademicDeptKey(creatorDeptKey);
+
+    const safeDepartments = Array.isArray(departments) ? departments : [];
+    const safeAcademic = Array.isArray(academicdepartment) ? academicdepartment : [];
+
+    // Ensure academic creators always have their dept on the event.
+    // This prevents academic pending scoping from filtering out their own events
+    // when they forget to select the academic department.
+    const patchedAcademic = shouldAttachAcademicDept
+      ? (() => {
+          const alreadyHas = safeAcademic.some((v) => normalizeDeptKey(v) === creatorDeptKey);
+          return alreadyHas ? safeAcademic : [...safeAcademic, String(creatorDeptRaw || creatorDeptKey || "").trim()].filter(Boolean);
+        })()
+      : safeAcademic;
+
     const newEvent = new Event({
       iqacNumber,
-      departments,
-      academicdepartment,
+      departments: safeDepartments,
+      academicdepartment: patchedAcademic,
       professional,
       eventName,
       eventType,
@@ -140,6 +193,34 @@ const uploadPoster = async (req, res) => {
   try {
     const { eventId } = req.body;
     console.log("Event ID:", eventId);
+    if (!eventId) {
+      return res.status(400).json({ message: "Missing eventId" });
+    }
+    if (!req.file || !req.file.filename) {
+      return res.status(400).json({ message: "Missing poster file" });
+    }
+
+    const userDeptKey = normalizeDeptKey(req.user?.dept);
+    if (!userDeptKey) {
+      return res.status(403).json({ message: "User department missing in token" });
+    }
+
+    const existingEvent = await Event.findById(eventId).select('academicdepartment departments').lean();
+    if (!existingEvent) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (userDeptKey !== 'iqac') {
+      const deptValues = [
+        ...(Array.isArray(existingEvent.academicdepartment) ? existingEvent.academicdepartment : []),
+        ...(Array.isArray(existingEvent.departments) ? existingEvent.departments : []),
+      ].map((v) => normalizeDeptKey(v));
+
+      if (!deptValues.includes(userDeptKey)) {
+        return res.status(403).json({ message: "Not allowed to upload poster for this event" });
+      }
+    }
+
     const posterUrl = `/uploads/${req.file.filename}`;
 
     const event = await Event.findByIdAndUpdate(

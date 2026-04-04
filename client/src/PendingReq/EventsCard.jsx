@@ -19,7 +19,7 @@ import Forms from "../Components/Form";
 import { toast,ToastContainer } from "react-toastify";
 import { setEventData, resetEventState, clearEventData } from "../redux/EventSlice";
 
-const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
+const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' }) => {
   console.log("=== EventsCard Component Loading ===");
   console.log("Events received:", Events);
   console.log("EventPopup received:", EventPopup);
@@ -34,6 +34,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
   const navigate = useNavigate();
 
   const apiBaseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "");
+  const isRequesterView = viewerMode === 'requester';
 
   const resolveBasicEventId = (event) => {
     return event?.basicEvent?._id || event?.eventdata || event?.eventId || null;
@@ -625,6 +626,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
@@ -746,7 +748,12 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
     try {
       console.log("Making delete request to:", `/api/endform/${eventId}`);
       const response = await axios.delete(
-        `/api/endform/${eventId}`
+        `/api/endform/${eventId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
       );
       
       console.log("Delete response:", response);
@@ -946,7 +953,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                     </div>
                   </div>
                   {/* Guest Department approval button - hover visible */}
-                  {userDepartment === 'Guest Deparment' && !status?.guestroom?.approved && (
+                  {!isRequesterView && userDepartment === 'Guest Deparment' && !status?.guestroom?.approved && (
                     <button
                       onClick={() => handleApproval(eventId, 'guestroom')}
                       className="rounded-lg bg-purple-500 px-3 py-1 text-xs text-white hover:bg-purple-600"
@@ -967,7 +974,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                       canApproveGuestroom: canApproveDepartment('guestroom'),
                       status
                     })}
-                    {canApproveDepartment('communication') && !status?.communication?.approved && (
+                    {!isRequesterView && canApproveDepartment('communication') && !status?.communication?.approved && (
                       <button
                         onClick={() => handleApproval(eventId, 'communication')}
                         className="px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
@@ -975,7 +982,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                         Approve Communication
                       </button>
                     )}
-                    {canApproveDepartment('food') && !status?.food?.approved && (
+                    {!isRequesterView && canApproveDepartment('food') && !status?.food?.approved && (
                       <button
                         onClick={() => handleApproval(eventId, 'food')}
                         className="px-3 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded-lg"
@@ -983,7 +990,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                         Approve Food
                       </button>
                     )}
-                    {canApproveDepartment('transport') && !status?.transport?.approved && (
+                    {!isRequesterView && canApproveDepartment('transport') && !status?.transport?.approved && (
                       <button
                         onClick={() => handleApproval(eventId, 'transport')}
                         className="px-3 py-1 text-xs bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg"
@@ -992,7 +999,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                       </button>
                     )}
 
-                    {canApproveDepartment('iqac') && 
+                    {!isRequesterView && canApproveDepartment('iqac') && 
                      status?.communication?.approved && 
                      status?.food?.approved && 
                      status?.transport?.approved && 
@@ -1032,19 +1039,21 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate }) => {
                     >
                       Delete
                     </button>
-                    <button
-                      onClick={() => {
-                        if (event._id) {
-                          handleEditClick(event._id);
-                        } else {
-                          console.warn('No event ID found for event:', event);
-                          toast.warn('Cannot edit: Event is missing its ID.');
-                        }
-                      }}
-                      className="px-4 py-2 text-sm bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg"
-                    >
-                      Edit
-                    </button>
+                    {!isRequesterView && (
+                      <button
+                        onClick={() => {
+                          if (event._id) {
+                            handleEditClick(event._id);
+                          } else {
+                            console.warn('No event ID found for event:', event);
+                            toast.warn('Cannot edit: Event is missing its ID.');
+                          }
+                        }}
+                        className="px-4 py-2 text-sm bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg"
+                      >
+                        Edit
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         console.log("=== DETAILS BUTTON CLICKED ===");

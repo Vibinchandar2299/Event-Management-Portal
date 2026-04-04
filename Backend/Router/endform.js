@@ -12,7 +12,7 @@ router.get("/getallforms", getAllEndforms);
 router.get("/allpending", auth, getOverallPendingEndforms);
 router.get("/event/:id", getEventById);
 router.put("/:id", updateEndform);
-router.delete("/:id", deleteEndform);
+router.delete("/:id", auth, deleteEndform);
 
 // Approval endpoints for each department
 router.post("/approve/communication/:id", auth, checkDepartment('Media'), async (req, res) => {

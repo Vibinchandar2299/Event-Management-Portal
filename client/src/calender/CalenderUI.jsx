@@ -40,6 +40,20 @@ const CalenderUI = () => {
     ) {
       return "guestroom";
     }
+
+    // Academic department aliases
+    const alnum = rawUserDept.replace(/[^a-z0-9]/g, "");
+    if (alnum === "aids" || alnum === "aiandds") return "ai & ds";
+    if (alnum === "aiml" || alnum === "aiandml") return "ai & ml";
+    if (alnum === "cybersecurity" || alnum === "cyber") return "cyber";
+    if (alnum === "csbs") return "csbs";
+    if (alnum === "cse" || alnum === "computerscienceengineering") return "cse";
+    if (alnum === "it" || alnum === "informationtechnology") return "it";
+    if (alnum === "ece" || alnum === "electronicsandcommunicationengineering") return "ece";
+    if (alnum === "eee" || alnum === "electricalandelectronicsengineering") return "eee";
+    if (alnum === "mech" || alnum === "mechanicalengineering") return "mech";
+    if (alnum === "cce") return "cce";
+
     return rawUserDept;
   })();
 
