@@ -324,70 +324,55 @@ const Form = () => {
   // Clearing sessionStorage here would immediately break edit/create flow.
 
   const formSteps = [
-    { to: "/forms/basic", icon: Home, label: "Basic Event", tone: "from-emerald-500 to-teal-600" },
-    { to: "/forms/communication", icon: MessageCircle, label: "Communication", tone: "from-violet-500 to-fuchsia-600" },
-    { to: "/forms/transport", icon: Bus, label: "Transport", tone: "from-sky-500 to-cyan-600" },
-    { to: "/forms/food", icon: Utensils, label: "Food", tone: "from-amber-500 to-orange-600" },
-    { to: "/forms/guest-room", icon: Bed, label: "Guest Room", tone: "from-indigo-500 to-blue-700" },
-    { to: "/forms/end", icon: Flag, label: "End Form", tone: "from-rose-500 to-red-600" },
+    { to: "/forms/basic", icon: Home, label: "Basic Event" },
+    { to: "/forms/communication", icon: MessageCircle, label: "Communication" },
+    { to: "/forms/transport", icon: Bus, label: "Transport" },
+    { to: "/forms/food", icon: Utensils, label: "Food" },
+    { to: "/forms/guest-room", icon: Bed, label: "Guest Room" },
+    { to: "/forms/end", icon: Flag, label: "End Form" },
   ];
 
-  const formThemes = {
-    "/forms/basic": "bg-emerald-50 border-emerald-200/70",
-    "/forms/communication": "bg-violet-50 border-violet-200/70",
-    "/forms/transport": "bg-sky-50 border-sky-200/70",
-    "/forms/food": "bg-amber-50 border-amber-200/70",
-    "/forms/guest-room": "bg-indigo-50 border-indigo-200/70",
-    "/forms/end": "bg-rose-50 border-rose-200/70",
-  };
-
-  const activeTheme =
-    Object.entries(formThemes).find(([path]) => location.pathname.startsWith(path))?.[1] ||
-    "bg-white border-slate-200";
-
   return (
-    <div className="min-h-screen w-full">
-      <header className="sticky top-0 z-40 border-b border-emerald-900/10 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 md:px-7">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-xl font-bold text-slate-800 md:text-2xl">Event Form Navigator</h1>
-            <p className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-              Complete all sections in sequence
-            </p>
+    <div className="w-full">
+      <div className="w-full bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/80 overflow-hidden">
+        <div className="p-5 sm:p-6 border-b border-slate-200/80">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-slate-800 md:text-2xl">Event Form Navigator</h1>
+              <p className="mt-1 text-sm text-slate-500">Complete all sections in sequence</p>
+            </div>
+
+            <nav className="custom-scrollbar overflow-x-auto">
+              <ul className="flex min-w-max items-center gap-2">
+                {formSteps.map((step) => {
+                  const Icon = step.icon;
+                  const active = location.pathname === step.to;
+
+                  return (
+                    <li key={step.to}>
+                      <Link
+                        to={step.to}
+                        className={`group flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                          active
+                            ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
+                            : "border-emerald-900/10 bg-white text-slate-600 hover:border-emerald-400/40 hover:bg-emerald-50 hover:text-emerald-900"
+                        }`}
+                      >
+                        <Icon size={16} />
+                        <span>{step.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
           </div>
-
-          <nav className="custom-scrollbar overflow-x-auto pb-1">
-            <ul className="flex min-w-max items-center gap-2">
-              {formSteps.map((step) => {
-                const Icon = step.icon;
-                const active = location.pathname === step.to;
-
-                return (
-                  <li key={step.to}>
-                    <Link
-                      to={step.to}
-                      className={`group flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all duration-200 ${
-                        active
-                          ? `border-transparent bg-gradient-to-r ${step.tone} text-white shadow-md`
-                          : "border-emerald-900/10 bg-white text-slate-600 hover:border-emerald-400/40 hover:bg-emerald-50"
-                      }`}
-                    >
-                      <Icon size={16} />
-                      <span>{step.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
         </div>
-      </header>
 
-      <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-3 py-4 md:px-7 md:py-6">
-        <div className={`forms-uniform min-h-[72vh] rounded-2xl border p-3 md:p-6 ${activeTheme}`}>
+        <div className="forms-uniform p-3 sm:p-6">
           <Outlet />
         </div>
-      </main>
+      </div>
     </div>
   );
 };

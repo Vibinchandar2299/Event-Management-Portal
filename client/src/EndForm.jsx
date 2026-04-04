@@ -406,7 +406,7 @@ const EndForm = () => {
           className={`w-full rounded-lg px-4 py-2 text-base font-semibold text-white transition md:w-56 ${
             !allFormsComplete
               ? "cursor-not-allowed bg-gray-400"
-              : "bg-rose-600 hover:bg-rose-700"
+              : "bg-emerald-600 hover:bg-emerald-700"
           }`}
           disabled={!allFormsComplete}
         >

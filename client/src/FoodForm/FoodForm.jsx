@@ -1013,7 +1013,7 @@ function FoodForm({ eventData, nextForm }) {
     <div className="xl:w-full px-2 py-4">
       {isLoading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 shadow-lg z-50">
-          <div className="h-16 w-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="h-16 w-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
       <form
@@ -1021,7 +1021,7 @@ function FoodForm({ eventData, nextForm }) {
         autoComplete="off"
         className="mx-auto max-w-full overflow-hidden"
       >
-        <div className="mb-6 rounded-xl bg-amber-100/70 px-4 py-3 text-sm font-medium text-amber-800">
+        <div className="mb-6 rounded-xl bg-emerald-100/70 px-4 py-3 text-sm font-medium text-emerald-800">
           Form 4: Food Requisition
         </div>
         <Header />
@@ -1030,14 +1030,14 @@ function FoodForm({ eventData, nextForm }) {
           <EventDetails formData={formData} setFormData={setFormDataFromUser} disabled={!canEdit || !isFormEditable} />
           <FoodTable formData={formData} setFormData={setFormDataFromUser} disabled={isTrueEditContext && !isFormEditable} />
           {formData.dates && Object.keys(formData.dates).length === 0 && isCreationFlow && (
-            <div className="px-6 py-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+            <div className="px-6 py-3 bg-emerald-50 border border-emerald-200 rounded text-sm text-emerald-800">
               ℹ️ Please add event dates in the Event Details section above to show the food table.
             </div>
           )}
         </div>
         <div className="mt-8 flex justify-end gap-3 px-6 pb-6">
           {isEditMode && !isFormEditable && (
-            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2" disabled={!canEdit}>
+            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
               Edit Form
             </button>
           )}
@@ -1046,13 +1046,13 @@ function FoodForm({ eventData, nextForm }) {
               <button type="button" onClick={handleCancel} className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
                 Cancel
               </button>
-              <button type="submit" className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
+              <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
                 Save and Go Next
               </button>
             </>
           )}
           {!isEditMode && !isFormEditable && (
-            <button type="submit" className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2" disabled={!canEdit}>
+            <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
               Save and Go Next
             </button>
           )}

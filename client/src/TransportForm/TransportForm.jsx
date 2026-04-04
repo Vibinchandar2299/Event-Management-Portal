@@ -743,14 +743,14 @@ const TransportForm = ({ eventData, nextForm }) => {
   console.log("events:", events);
 
   return (
-    <div className="xl:w-full px-2 py-4">
+      <div className="xl:w-full px-2 py-4">
       {isLoading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 shadow-lg z-50">
-          <div className="h-16 w-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="h-16 w-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
       <form onSubmit={handleSubmit} className="mx-auto max-w-full overflow-hidden">
-        <div className="mb-6 rounded-xl bg-sky-100/70 px-4 py-3 text-sm font-medium text-sky-800">
+        <div className="mb-6 rounded-xl bg-emerald-100/70 px-4 py-3 text-sm font-medium text-emerald-800">
           Form 3: Transport Requisition
         </div>
         <Header title="Requisition Form for Transport" />
@@ -762,7 +762,7 @@ const TransportForm = ({ eventData, nextForm }) => {
         </div>
         <div className="mt-8 flex justify-end gap-3 px-6 pb-6">
           {isEditMode && !isFormEditable && (
-            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-sky-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2" disabled={!canEdit}>
+            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
               Edit Form
             </button>
           )}
@@ -771,13 +771,13 @@ const TransportForm = ({ eventData, nextForm }) => {
               <button type="button" onClick={handleCancel} className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
                 Cancel
               </button>
-              <button type="submit" className="h-10 rounded-md bg-sky-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2">
+              <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
                 Save and Go Next
               </button>
             </>
           )}
           {!isEditMode && !isFormEditable && (
-            <button type="submit" className="h-10 rounded-md bg-sky-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2" disabled={!canEdit}>
+            <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
               Save and Go Next
             </button>
           )}

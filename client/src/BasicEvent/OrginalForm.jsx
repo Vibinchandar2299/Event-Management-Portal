@@ -676,7 +676,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, iqacNumber: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -693,7 +693,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, eventName: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -707,7 +707,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 value={formData.eventType || ""}
                 onChange={(e) => handleEventTypeChange(e.target.value)}
                       disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               >
                 <option value="">Select Event Type</option>
@@ -731,7 +731,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, eventVenue: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -748,7 +748,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, startDate: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -765,7 +765,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, endDate: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -782,7 +782,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, year: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -798,7 +798,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, categories: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
               >
                 <option value="">Select Category</option>
                 <option value="Student">Student</option>
@@ -816,7 +816,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 value={(formData.departments && formData.departments[0]) || ""}
                 onChange={(e) => handleDepartmentChange(e.target.value)}
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
               >
                 <option value="">Select Department</option>
                 {departments.map((dept) => (
@@ -836,7 +836,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 value={(formData.logos && formData.logos[0]) || ""}
                 onChange={(e) => handleLogoChange(e.target.value)}
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
               >
                 <option value="">Select Logo</option>
                 {logos.map((logo) => (
@@ -856,7 +856,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 value={(formData.professional && formData.professional[0]) || ""}
                 onChange={(e) => handelProfessionalBodeis(e.target.value)}
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
               >
                 <option value="">Select Professional Society</option>
                 {professionalBodies.map((society) => (
@@ -879,7 +879,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, startTime: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -896,7 +896,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   setFormData({ ...formData, endTime: e.target.value })
                 }
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -913,7 +913,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 }
                 rows="4"
                 disabled={!isFormEditable}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                 required
               />
             </div>
@@ -935,7 +935,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                       updated[idx].name = e.target.value;
                       setResourcePersons(updated);
                     }}
-                    className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                     required
                   />
                   <input
@@ -948,7 +948,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                       updated[idx].affiliation = e.target.value;
                       setResourcePersons(updated);
                     }}
-                    className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                     required
                   />
                   <button
@@ -990,7 +990,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                       updated[idx].employeeId = e.target.value;
                       setOrganizers(updated);
                     }}
-                    className="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                     required
                   />
                   <input
@@ -1003,7 +1003,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                       updated[idx].name = e.target.value;
                       setOrganizers(updated);
                     }}
-                    className="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                     required
                   />
                   <input
@@ -1016,7 +1016,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                       updated[idx].designation = e.target.value;
                       setOrganizers(updated);
                     }}
-                    className="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                     required
                   />
                   <input
@@ -1029,7 +1029,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                       updated[idx].phone = e.target.value;
                       setOrganizers(updated);
                     }}
-                    className="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                     required
                   />
                   <button
@@ -1060,7 +1060,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                 <button
                   type="button"
                   onClick={handleEditToggle}
-                  className="h-10 rounded-md bg-amber-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                  className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
                 >
                   Edit Form
                 </button>

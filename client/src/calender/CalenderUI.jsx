@@ -686,9 +686,9 @@ const CalenderUI = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
-      <div className="ml-20 px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/80 overflow-hidden">
+    <div className="w-full">
+      <div className="w-full">
+        <div className="w-full bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/80 overflow-hidden">
           <div className="p-5 sm:p-6 border-b border-slate-200/80">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
@@ -782,11 +782,7 @@ const CalenderUI = () => {
             </div>
           )}
 
-          {viewMode === "list" && (
-            <div className="max-h-[70vh] overflow-y-auto">
-              {renderListView()}
-            </div>
-          )}
+          {viewMode === "list" && <div className="flex-1 overflow-y-auto">{renderListView()}</div>}
         </div>
       </div>
 

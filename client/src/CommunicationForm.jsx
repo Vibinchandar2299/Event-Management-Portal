@@ -111,7 +111,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
   })();
 
   const SummaryItem = ({ label, value }) => (
-    <div className="rounded-lg border border-violet-900/10 bg-violet-50/50 px-3 py-2">
+    <div className="rounded-lg border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
       <div className="text-xs font-semibold text-slate-600">{label}</div>
       <div className="mt-0.5 text-sm font-medium text-slate-900">{value || "—"}</div>
     </div>
@@ -561,7 +561,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
     <div className="relative w-full">
       {isLoading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 shadow-lg z-50">
-          <div className="h-16 w-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="h-16 w-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
       <div className="w-full">
@@ -569,15 +569,15 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
           onSubmit={handleSubmit}
           className="w-full p-4 md:p-6"
         >
-          <div className="mb-6 rounded-xl bg-violet-100/70 px-4 py-3 text-sm font-medium text-violet-800">
+          <div className="mb-6 rounded-xl bg-emerald-100/70 px-4 py-3 text-sm font-medium text-emerald-800">
             Form 2: Communication & Media Requisition
           </div>
 
           <Header title="Requisition Form for Communication and Media" />
 
           {currentEventId && (
-            <div className="mb-6 rounded-xl border border-violet-900/10 bg-white p-4 shadow-sm">
-              <div className="mb-3 text-sm font-semibold text-violet-900">
+            <div className="mb-6 rounded-xl border border-emerald-900/10 bg-white p-4 shadow-sm">
+              <div className="mb-3 text-sm font-semibold text-emerald-900">
                 Event Summary (read-only)
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -607,7 +607,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 name="photography"
                 checked={formData.photography}
                 onChange={handleChange}
-                className="mt-0.5 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
+                className="mt-0.5 h-4 w-4 shrink-0 align-top text-emerald-600 border-gray-300 rounded"
                 disabled={!canEdit || !isFormEditable}
               />
               <span className="ml-2 text-gray-700 leading-6">
@@ -620,7 +620,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 name="videography"
                 checked={formData.videography}
                 onChange={handleChange}
-                className="mt-0.5 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
+                className="mt-0.5 h-4 w-4 shrink-0 align-top text-emerald-600 border-gray-300 rounded"
                 disabled={!canEdit || !isFormEditable}
               />
               <span className="ml-2 text-gray-700 leading-6">
@@ -630,15 +630,15 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {categories.map((category, idx) => (
-              <div key={idx} className="rounded-xl border border-violet-900/10 bg-violet-50/50 p-5 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold text-violet-900">
+              <div key={idx} className="rounded-xl border border-emerald-900/10 bg-emerald-50/50 p-5 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-emerald-900">
                   {category.category}
                 </h2>
                 <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
                   {category.options.map((option, index) => (
                     <label
                       key={index}
-                      className="flex min-h-[88px] cursor-pointer items-start gap-2 rounded-lg border border-violet-900/10 bg-white p-3.5 transition hover:bg-violet-50"
+                      className="flex min-h-[88px] cursor-pointer items-start gap-2 rounded-lg border border-emerald-900/10 bg-white p-3.5 transition hover:bg-emerald-50"
                     >
                       <input
                         type="checkbox"
@@ -651,7 +651,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                             option
                           ) || false
                         }
-                        className="mt-1 h-4 w-4 shrink-0 align-top text-blue-600 border-gray-300 rounded"
+                        className="mt-1 h-4 w-4 shrink-0 align-top text-emerald-600 border-gray-300 rounded"
                         disabled={!canEdit || !isFormEditable}
                       />
                       <span className="block w-full whitespace-normal break-words text-sm text-gray-800 leading-6">{option}</span>
@@ -666,7 +666,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
               <button
                 type="button"
                 onClick={handleEditToggle}
-                className="h-10 rounded-md bg-violet-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+                className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
               >
                 Edit Form
               </button>
@@ -681,7 +681,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                 </button>
                 <button
                   type="submit"
-                  className="h-10 rounded-md bg-violet-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+                  className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
                   disabled={!canEdit}
                 >
                   Save and Go Next
@@ -690,7 +690,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
             ) : (
               <button
                 type="submit"
-                className="h-10 rounded-md bg-violet-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+                className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
                 disabled={!canEdit}
               >
                 Save and Go Next

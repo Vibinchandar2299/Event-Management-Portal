@@ -18,7 +18,7 @@ const Signatures = ({ formData, setFormData }) => {
           name="amenitiesIncharge"
           value={formData.amenitiesIncharge}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
         />
       </div>
 
@@ -29,7 +29,7 @@ const Signatures = ({ formData, setFormData }) => {
           name="signOfOS"
           value={formData.signOfOS}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
         />
       </div>
 
@@ -41,7 +41,7 @@ const Signatures = ({ formData, setFormData }) => {
             name="facultySignature"
             value={formData.facultySignature}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
           />
         </div>
         <div>
@@ -51,7 +51,7 @@ const Signatures = ({ formData, setFormData }) => {
             name="recommendedBy"
             value={formData.recommendedBy}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
           />
         </div>
         <div>
@@ -61,7 +61,7 @@ const Signatures = ({ formData, setFormData }) => {
             name="deanClearance"
             value={formData.deanClearance}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
           />
         </div>
       </div>

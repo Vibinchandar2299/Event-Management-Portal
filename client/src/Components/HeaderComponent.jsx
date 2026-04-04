@@ -286,7 +286,7 @@ const HeaderComponent = ({ showSidebar, children }) => {
 
   return (
     <div className="min-h-screen">
-      <aside className="glass-surface fixed left-0 top-0 z-30 h-full w-56">
+      <aside className="fixed left-0 top-0 z-30 h-full w-56 bg-white shadow-sm border-r border-emerald-900/10">
         <div className="flex h-full flex-col">
           <div className="border-b border-emerald-900/10 px-3 py-5">
             <button
@@ -331,7 +331,7 @@ const HeaderComponent = ({ showSidebar, children }) => {
                   }`}
                 >
                   <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white/80 transition-colors ${
+                    className={`flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white transition-colors ${
                       active ? "text-emerald-700" : "text-slate-500 group-hover:text-emerald-700"
                     }`}
                   >
@@ -348,7 +348,7 @@ const HeaderComponent = ({ showSidebar, children }) => {
               onClick={handleLogout}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-rose-50/70 hover:text-rose-700"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white/80 text-slate-500">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white text-slate-500">
                 <FiLogOut className="text-[18px]" />
               </span>
               <span>Logout</span>

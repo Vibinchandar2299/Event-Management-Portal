@@ -45,7 +45,7 @@ const RoomSelection = ({ selectedRooms = [], onRoomChange, disabled = false }) =
               checked={safeSelectedRooms.includes(room.id)}
               onChange={() => handleRoomToggle(room.id)}
               disabled={disabled}
-              className="absolute h-4 w-4 top-2 right-2 text-indigo-600 focus:ring-indigo-500"
+              className="absolute h-4 w-4 top-2 right-2 text-emerald-600 focus:ring-emerald-500"
             />
             <span
               className={`text-sm ${

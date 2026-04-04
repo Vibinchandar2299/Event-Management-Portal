@@ -45,7 +45,7 @@ const EventTypePopup = ({ data, HandelChange, onclose, ClosingProperty }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search Event Type"
-            className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -63,7 +63,7 @@ const EventTypePopup = ({ data, HandelChange, onclose, ClosingProperty }) => {
 
         <div className="flex justify-between mt-4">
           <button
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
             onClick={(e) => {
               e.preventDefault();
               handleOkButtonClick();
@@ -90,7 +90,7 @@ const EventTypePopup = ({ data, HandelChange, onclose, ClosingProperty }) => {
               value={manualEventType}
               onChange={(e) => setManualEventType(e.target.value)}
               placeholder="Enter Event Type"
-              className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         )}

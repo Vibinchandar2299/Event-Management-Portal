@@ -1083,13 +1083,13 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
     <div className="min-h-screen px-2 py-4 sm:px-4 lg:px-6">
       {isLoading && (
         <div className="flex h-screen items-center justify-center">
-          <div className="h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-indigo-500"></div>
+          <div className="h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-emerald-500"></div>
         </div>
       )}
 
       <div className="max-w-full mx-auto">
         <div className="overflow-hidden">
-          <div className="mb-6 rounded-xl bg-indigo-100/70 px-4 py-3 text-sm font-medium text-indigo-800">
+          <div className="mb-6 rounded-xl bg-emerald-100/70 px-4 py-3 text-sm font-medium text-emerald-800">
             Form 5: Guest Room Booking
           </div>
 
@@ -1237,7 +1237,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                 <button
                   type="button"
                   onClick={handleEditToggle}
-                  className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
                   disabled={!canEdit}
                 >
                   Edit Form
@@ -1254,7 +1254,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                   </button>
                   <button
                     type="submit"
-                    className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
                   >
                     Save and Go Next
                   </button>
@@ -1263,7 +1263,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               {!isEditMode && !isFormEditable && (
                 <button
                   type="submit"
-                  className="h-10 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
                   disabled={!canEdit}
                 >
                   Save and Go Next

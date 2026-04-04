@@ -26,7 +26,7 @@ const ResourcePersonsForm = ({ resourcePersons, setResourcePersons }) => {
       <button
         type="button"
         onClick={() => setIsPopupOpen(true)}
-        className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"
+        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
       >
         Add Resource Person
       </button>
@@ -71,7 +71,7 @@ const ResourcePersonsForm = ({ resourcePersons, setResourcePersons }) => {
                         name="name"
                         value={resourcePerson.name}
                         onChange={(e) => handleInputChange(index, e)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                     <div>
@@ -83,7 +83,7 @@ const ResourcePersonsForm = ({ resourcePersons, setResourcePersons }) => {
                         name="affiliation"
                         value={resourcePerson.affiliation}
                         onChange={(e) => handleInputChange(index, e)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                   </div>
@@ -94,7 +94,7 @@ const ResourcePersonsForm = ({ resourcePersons, setResourcePersons }) => {
             <button
               type="button"
               onClick={addResourcePerson}
-              className="mt-4 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"
+              className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
             >
               Add Another Resource Person
             </button>
@@ -104,7 +104,7 @@ const ResourcePersonsForm = ({ resourcePersons, setResourcePersons }) => {
                 onClick={(e) => {
                   e.preventDefault();
                 }}
-                className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
               >
                 Save
               </button>
