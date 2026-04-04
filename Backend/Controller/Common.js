@@ -76,6 +76,20 @@ const normalizeDeptKey = (raw) => {
   if (d === "guest deparment" || d === "guest department" || d === "guestroom" || d === "guest room") {
     return "guestroom";
   }
+
+  // Academic department aliases (match BasicEvent `academicdepartment` values)
+  const alnum = d.replace(/[^a-z0-9]/g, "");
+  if (alnum === "aids" || alnum === "aiandds") return "ai & ds";
+  if (alnum === "aiml" || alnum === "aiandml") return "ai & ml";
+  if (alnum === "cybersecurity" || alnum === "cyber") return "cyber";
+  if (alnum === "csbs") return "csbs";
+  if (alnum === "cse" || alnum === "computerscienceengineering") return "cse";
+  if (alnum === "it" || alnum === "informationtechnology") return "it";
+  if (alnum === "ece" || alnum === "electronicsandcommunicationengineering") return "ece";
+  if (alnum === "eee" || alnum === "electricalandelectronicsengineering") return "eee";
+  if (alnum === "mech" || alnum === "mechanicalengineering") return "mech";
+  if (alnum === "cce") return "cce";
+
   return d;
 };
 
@@ -138,6 +152,7 @@ export const getDepartmentDashboardData = async (req, res) => {
     };
 
     const approvalRequired = ["transport", "food", "guestroom", "communication"].includes(deptKey);
+    const role = approvalRequired ? "approver" : "requester";
 
     const queue = [];
     const recentActions = [];
@@ -148,6 +163,8 @@ export const getDepartmentDashboardData = async (req, res) => {
     let completedCount = 0;
     let dueSoonCount = 0;
     let overdueCount = 0;
+
+    const statusSummary = {};
 
     let transportRequests = 0;
     let foodRequests = 0;
@@ -164,6 +181,9 @@ export const getDepartmentDashboardData = async (req, res) => {
       if (spanStatus === "upcoming") upcomingCount++;
       else if (spanStatus === "ongoing") ongoingCount++;
       else if (spanStatus === "completed") completedCount++;
+
+      const overallStatus = String(ef.status || "").trim() || "Unknown";
+      statusSummary[overallStatus] = (statusSummary[overallStatus] || 0) + 1;
 
       // dept-specific request counters (cheap, based on refs)
       transportRequests += Array.isArray(ef.transportform) ? ef.transportform.length : 0;
@@ -206,23 +226,153 @@ export const getDepartmentDashboardData = async (req, res) => {
             approvedBy: approval.approvedBy || "",
           });
         }
+      } else {
+        // For requester dashboards, dueSoon/overdue still matters as upcoming urgency.
+        if (isDueSoon) dueSoonCount++;
+        if (isOverdue) overdueCount++;
       }
     }
 
     queue.sort((a, b) => (a.startInDays ?? 9999) - (b.startInDays ?? 9999));
     recentActions.sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
 
+    const formatDateOnly = (d) => {
+      if (!d || Number.isNaN(d.getTime())) return "";
+      return d.toISOString().slice(0, 10);
+    };
+
+    const getDeptScopedStatus = (ef) => {
+      if (!approvalRequired) return ef?.status || "";
+      const approval = getApprovalForDept(ef);
+      return approval?.approved ? "Approved" : "Pending";
+    };
+
+    const pendingRequestsCount = approvalRequired
+      ? 0
+      : relevantEndforms.filter((ef) => {
+          const s = String(ef?.status || "").trim();
+          return s === "Pending" || s === "Corrections";
+        }).length;
+
+    const myRequests = approvalRequired
+      ? []
+      : relevantEndforms
+          .map((ef) => {
+            const ev = eventsMap.get(String(ef.eventdata)) || {};
+            const startInDays = daysUntil(ev.startDate);
+            const spanStatus = getEventSpanStatus(ev);
+            const departments = Array.isArray(ev.departments)
+              ? ev.departments.join(", ")
+              : (ev.departments || "");
+
+            return {
+              endformId: String(ef._id),
+              eventId: String(ev._id || ""),
+              eventName: ev.eventName || "Untitled Event",
+              eventType: ev.eventType || "Other",
+              department: departments,
+              startDate: ev.startDate || "",
+              endDate: ev.endDate || "",
+              venue: ev.eventVenue || "",
+              status: String(ef.status || "").trim() || "Pending",
+              spanStatus,
+              startInDays,
+            };
+          })
+          .filter((row) => row.spanStatus !== "completed")
+          .sort((a, b) => (a.startInDays ?? 9999) - (b.startInDays ?? 9999))
+          .slice(0, 10);
+
+    const activitySeries = (() => {
+      const days = 7;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const buckets = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        buckets.push({
+          key,
+          name: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
+          value: 0,
+        });
+      }
+
+      const bucketMap = new Map(buckets.map((b) => [b.key, b]));
+
+      if (approvalRequired) {
+        for (const item of recentActions) {
+          const raw = item?.approvedAt;
+          const dt = raw ? new Date(raw) : null;
+          if (!dt || Number.isNaN(dt.getTime())) continue;
+          dt.setHours(0, 0, 0, 0);
+          const key = dt.toISOString().slice(0, 10);
+          const bucket = bucketMap.get(key);
+          if (bucket) bucket.value += 1;
+        }
+      } else {
+        for (const ef of relevantEndforms) {
+          const ev = eventsMap.get(String(ef.eventdata));
+          const created = getBookingDate(ef, ev);
+          if (!created || Number.isNaN(created.getTime())) continue;
+          created.setHours(0, 0, 0, 0);
+          const key = created.toISOString().slice(0, 10);
+          const bucket = bucketMap.get(key);
+          if (bucket) bucket.value += 1;
+        }
+      }
+
+      return buckets.map(({ key: _k, ...rest }) => rest);
+    })();
+
+    // Recent requests for this department (most recent booking first)
+    const recentRequests = relevantEndforms
+      .slice()
+      .sort((a, b) => {
+        const aEv = eventsMap.get(String(a.eventdata));
+        const bEv = eventsMap.get(String(b.eventdata));
+        const aDate = getBookingDate(a, aEv) || new Date(0);
+        const bDate = getBookingDate(b, bEv) || new Date(0);
+        return bDate - aDate;
+      })
+      .map((ef) => {
+        const ev = eventsMap.get(String(ef.eventdata)) || {};
+        const requestedOn = getBookingDate(ef, ev);
+        const departments = Array.isArray(ev.departments) ? ev.departments : [];
+
+        return {
+          endformId: String(ef._id),
+          eventId: String(ev._id || ""),
+          iqacNumber: ev.iqacNumber || "",
+          requestedOn: formatDateOnly(requestedOn),
+          eventName: ev.eventName || "Untitled Event",
+          eventType: ev.eventType || "Other",
+          startDate: ev.startDate || "",
+          endDate: ev.endDate || "",
+          venue: ev.eventVenue || "",
+          departments,
+          status: getDeptScopedStatus(ef),
+        };
+      })
+      .slice(0, 12);
+
     const response = {
       deptKey,
+      role,
       totals: {
         totalRelevantEvents,
         pendingApprovals: approvalRequired ? queue.length : 0,
-        dueSoon: approvalRequired ? dueSoonCount : 0,
-        overdue: approvalRequired ? overdueCount : 0,
+        pendingRequests: pendingRequestsCount,
+        dueSoon: dueSoonCount,
+        overdue: overdueCount,
         upcoming: upcomingCount,
         ongoing: ongoingCount,
         completed: completedCount,
       },
+      statusSummary,
+      activitySeries,
       kpis: {
         transportRequests,
         foodRequests,
@@ -230,12 +380,33 @@ export const getDepartmentDashboardData = async (req, res) => {
         communicationRequests,
       },
       myQueue: queue.slice(0, 10),
+      myRequests,
       recentActions: recentActions.slice(0, 10),
+      recentRequests,
     };
 
     return res.status(200).json(response);
   } catch (error) {
     console.error("Error generating department dashboard data:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const getUnifiedDashboardData = async (req, res) => {
+  try {
+    const deptKey = normalizeDeptKey(req.user?.dept);
+    if (!deptKey) {
+      return res.status(403).json({ message: "User department missing in token" });
+    }
+
+    const isIqac = deptKey === "iqac";
+    if (isIqac) {
+      return await getComprehensiveDashboardData(req, res);
+    }
+
+    return await getDepartmentDashboardData(req, res);
+  } catch (error) {
+    console.error("Error generating unified dashboard data:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };

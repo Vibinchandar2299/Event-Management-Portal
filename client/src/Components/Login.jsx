@@ -9,11 +9,25 @@ import "react-toastify/dist/ReactToastify.css";
 // Map backend department to formType
 function mapDeptToFormType(dept) {
   if (!dept) return '';
-  const d = dept.toLowerCase();
+  const d = String(dept).toLowerCase().trim();
   if (d === 'media' || d === 'communication') return 'communication';
   if (d === 'food') return 'food';
   if (d === 'transport') return 'transport';
   if (d === 'guestroom' || d === 'guest room' || d === 'guest department') return 'guestroom';
+
+  // Academic department aliases (match BasicEvent `academicdepartment` values)
+  const alnum = d.replace(/[^a-z0-9]/g, '');
+  if (alnum === 'aids' || alnum === 'aiandds') return 'ai & ds';
+  if (alnum === 'aiml' || alnum === 'aiandml') return 'ai & ml';
+  if (alnum === 'cybersecurity' || alnum === 'cyber') return 'cyber';
+  if (alnum === 'csbs') return 'csbs';
+  if (alnum === 'cse' || alnum === 'computerscienceengineering') return 'cse';
+  if (alnum === 'it' || alnum === 'informationtechnology') return 'it';
+  if (alnum === 'ece' || alnum === 'electronicsandcommunicationengineering') return 'ece';
+  if (alnum === 'eee' || alnum === 'electricalandelectronicsengineering') return 'eee';
+  if (alnum === 'mech' || alnum === 'mechanicalengineering') return 'mech';
+  if (alnum === 'cce') return 'cce';
+
   return d; // fallback
 }
 

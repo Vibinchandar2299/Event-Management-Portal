@@ -180,10 +180,7 @@ const Dashboard = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         
         // Single endpoint for the entire IQAC dashboard
-        const dashboardResponse = await axios.get(
-          `/api/common/comprehensive-dashboard-data`,
-          { headers }
-        );
+        const dashboardResponse = await axios.get(`/api/common/dashboard-data`, { headers });
 
         if (dashboardResponse.status === 200) {
           const comprehensiveData = dashboardResponse.data || {};
