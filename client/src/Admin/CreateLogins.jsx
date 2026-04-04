@@ -1,171 +1,442 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const DEFAULT_PASSWORD = "sece@123";
+
 function CreateLogins() {
-  const [formData, setFormData] = useState({
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const apiBase = useMemo(() => {
+    const raw = import.meta.env.VITE_API_URL || "/api";
+    return String(raw).replace(/\/+$/, "");
+  }, []);
+
+  const authHeaders = useMemo(() => {
+    return token ? { Authorization: `Bearer ${token}` } : undefined;
+  }, [token]);
+
+  const departmentOptions = useMemo(
+    () => [
+      { value: "iqac", label: "IQAC" },
+      { value: "system admin", label: "System Admin" },
+      { value: "communication", label: "Communication" },
+      { value: "food", label: "Food" },
+      { value: "transport", label: "Transport" },
+      { value: "guestroom", label: "Guest Room" },
+      { value: "cse", label: "CSE" },
+      { value: "it", label: "IT" },
+      { value: "ece", label: "ECE" },
+      { value: "eee", label: "EEE" },
+      { value: "mech", label: "MECH" },
+      { value: "csbs", label: "CSBS" },
+      { value: "cce", label: "CCE" },
+      { value: "ai & ds", label: "AI & DS" },
+      { value: "ai & ml", label: "AI & ML" },
+      { value: "cyber", label: "Cyber Security" },
+    ],
+    []
+  );
+
+  const designationOptions = useMemo(
+    () => [
+      { value: "", label: "Select designation (optional)" },
+      { value: "Shared Account", label: "Shared Account" },
+      { value: "HOD", label: "HOD" },
+      { value: "Professor", label: "Professor" },
+      { value: "Coordinator", label: "Coordinator" },
+      { value: "System Admin", label: "System Admin" },
+      { value: "IQAC", label: "IQAC" },
+      { value: "Food", label: "Food" },
+      { value: "Transport", label: "Transport" },
+      { value: "Communication", label: "Communication" },
+      { value: "Guest Room", label: "Guest Room" },
+      { value: "Media", label: "Media" },
+    ],
+    []
+  );
+
+  const [createForm, setCreateForm] = useState({
     name: "",
     emailId: "",
-    password: "sece@123",
+    password: DEFAULT_PASSWORD,
     phoneNumber: "",
     designation: "",
     dept: "",
+    empid: "",
   });
-  const [file, setFile] = useState(null);
-  const navigate = useNavigate();
-  const designations = [
-    "Media",
-    "Food",
-    "Transport",
-    "Guest Deparment",
-    "System Admin",
-    "IQAC",
-    "Professor",
-    "HOD",
-  ];
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-  const getallstaffs = async () => {
+  const [creating, setCreating] = useState(false);
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState("");
+  const [search, setSearch] = useState("");
+
+  const inputBaseClass =
+    "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600";
+
+  const surfaceClass = "bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/80";
+
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    setUsersError("");
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/sece/getallstaffs`
-      );
-      console.log("response on fetched the  Staffs : ", response.data);
+      const response = await axios.get(`${apiBase}/sece/admin/users`, {
+        headers: authHeaders,
+      });
+
+      const list = Array.isArray(response.data?.users) ? response.data.users : [];
+      setUsers(list);
     } catch (error) {
-      console.error("Error", error);
-      toast.error(error.response?.data?.message || "Signup failed!");
+      console.error("Error fetching users", error);
+      setUsers([]);
+      setUsersError(error.response?.data?.message || "Failed to load logins");
+    } finally {
+      setUsersLoading(false);
     }
   };
+
   useEffect(() => {
-    getallstaffs();
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const handleSubmit = async () => {
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/sece/signup`, formData);
-      toast.success("Created the Login!");
-    } catch (error) {
-      console.error("Error", error);
-      toast.error(error.response?.data?.message || "Signup failed!");
-    }
+
+  const filteredUsers = useMemo(() => {
+    const q = String(search || "").trim().toLowerCase();
+    if (!q) return users;
+
+    return users.filter((u) => {
+      const hay = [u.name, u.emailId, u.phoneNumber, u.dept, u.designation, u.empid]
+        .map((v) => String(v || "").toLowerCase())
+        .join(" | ");
+      return hay.includes(q);
+    });
+  }, [users, search]);
+
+  const handleCreateChange = (e) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-  const handleUpload = async () => {
-    if (!file) {
-      toast.error("Please select an Excel file.");
+
+  const handleSubmit = async (e) => {
+    e?.preventDefault?.();
+    const payload = {
+      name: String(createForm.name || "").trim(),
+      emailId: String(createForm.emailId || "").trim(),
+      phoneNumber: String(createForm.phoneNumber || "").trim(),
+      dept: String(createForm.dept || "").trim(),
+      password: String(createForm.password || DEFAULT_PASSWORD),
+      designation: String(createForm.designation || "").trim(),
+      empid: String(createForm.empid || "").trim(),
+    };
+
+    if (!payload.name || !payload.emailId || !payload.phoneNumber || !payload.dept) {
+      toast.error("Please fill Name, Email, Phone, and Department");
       return;
     }
-    const formData = new FormData();
-    formData.append("file", file);
+    if (!authHeaders) {
+      toast.error("Missing login token. Please login again.");
+      return;
+    }
+
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/sece/upload-excel`,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+      setCreating(true);
+      await axios.post(`${apiBase}/sece/admin/create-login`, payload, {
+        headers: authHeaders,
+      });
+      toast.success("Login created successfully");
+      setCreateForm({
+        name: "",
+        emailId: "",
+        password: DEFAULT_PASSWORD,
+        phoneNumber: "",
+        designation: "",
+        dept: "",
+        empid: "",
+      });
+      await fetchUsers();
+    } catch (error) {
+      console.error("Error creating login", error);
+      toast.error(error.response?.data?.message || "Failed to create login");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      toast.error("Please select an Excel file");
+      return;
+    }
+    if (!authHeaders) {
+      toast.error("Missing login token. Please login again.");
+      return;
+    }
+
+    const body = new FormData();
+    body.append("file", file);
+
+    try {
+      setUploading(true);
+      const response = await axios.post(`${apiBase}/sece/admin/upload-excel`, body, {
+        headers: {
+          ...authHeaders,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const created = response.data?.created;
+      const processed = response.data?.processedRows;
+      toast.success(
+        typeof created === "number" && typeof processed === "number"
+          ? `Excel uploaded: ${created} created (${processed} processed)`
+          : "Excel uploaded successfully"
       );
-      console.log("response : ", response.data);
-      toast.success("Excel file uploaded successfully!");
+      setFile(null);
+      await fetchUsers();
     } catch (error) {
       console.error("Error uploading file", error);
-      toast.error(error.response?.data?.message || "Upload failed!");
+      toast.error(error.response?.data?.message || "Upload failed");
+    } finally {
+      setUploading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center p-4 ml-20">
+    <main className="mx-auto w-full max-w-[1500px] px-3 py-4 md:px-6 md:py-7 fade-in-up">
       <ToastContainer />
-      <div className="w-full  bg-white rounded-2xl p-8 shadow-lg">
-        <h1 className="text-3xl mb-6 text-center">Create Account</h1>
 
-        <input
-          type="text"
-          name="name"
-          placeholder="Your Name"
-          className="w-full px-4 py-3 mb-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
-          value={formData.name}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="dept"
-          placeholder="Enter Department"
-          className="w-full px-4 py-3 mb-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
-          value={formData.dept}
-          onChange={handleChange}
-        />
+      <div className="space-y-5">
+        <section className={`${surfaceClass} p-5 md:p-6`}>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Create Login</h1>
+              <p className="text-sm text-slate-600">
+                IQAC can create shared logins for departments and service teams.
+              </p>
+            </div>
+          </div>
+        </section>
 
-        <input
-          type="email"
-          name="emailId"
-          placeholder="Your Email"
-          className="w-full px-4 py-3 mb-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
-          value={formData.emailId}
-          onChange={handleChange}
-        />
+        <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className={`${surfaceClass} p-5 md:p-6`}>
+            <h2 className="text-base font-semibold text-slate-900">Create a single login</h2>
+            <p className="mt-1 text-sm text-slate-600">Default password is set to {DEFAULT_PASSWORD} (you can change it).</p>
 
-        <input
-          type="text"
-          name="phoneNumber"
-          placeholder="Phone Number"
-          className="w-full px-4 py-3 mb-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
-          value={formData.phoneNumber}
-          onChange={handleChange}
-        />
+            <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700">Department</label>
+                  <select
+                    name="dept"
+                    value={createForm.dept}
+                    onChange={handleCreateChange}
+                    className={inputBaseClass}
+                  >
+                    <option value="">Select department</option>
+                    {departmentOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-        <select
-          name="designation"
-          className="w-full px-4 py-3 mb-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
-          value={formData.designation}
-          onChange={handleChange}
-        >
-          {designations.map((designation) => (
-            <option key={designation} value={designation}>
-              {designation}
-            </option>
-          ))}
-        </select>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700">Designation (optional)</label>
+                  <select
+                    name="designation"
+                    value={createForm.designation}
+                    onChange={handleCreateChange}
+                    className={inputBaseClass}
+                  >
+                    {designationOptions.map((opt) => (
+                      <option key={opt.value || opt.label} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-        <button
-          onClick={handleSubmit}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300"
-        >
-          Sign Up
-        </button>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-700">Account name</label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Eg: CSE Shared Login"
+                  className={inputBaseClass}
+                  value={createForm.name}
+                  onChange={handleCreateChange}
+                />
+              </div>
 
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="w-full bg-gray-600 text-white py-3 mt-4 rounded-lg font-semibold hover:bg-gray-700 transition duration-300"
-        >
-          Go to Dashboard
-        </button>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700">Email</label>
+                  <input
+                    type="email"
+                    name="emailId"
+                    placeholder="Eg: cse.events@sece.ac.in"
+                    className={inputBaseClass}
+                    value={createForm.emailId}
+                    onChange={handleCreateChange}
+                  />
+                </div>
 
-        <div className="mt-6">
-          <h2 className="text-xl mb-2 text-center">Upload Excel Sheet</h2>
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            onChange={handleFileChange}
-            className="w-full px-4 py-3 mb-4 rounded-lg border border-gray-300"
-          />
-          <button
-            onClick={handleUpload}
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-300"
-          >
-            Upload Excel
-          </button>
-        </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700">Phone</label>
+                  <input
+                    type="text"
+                    name="phoneNumber"
+                    placeholder="10-digit number"
+                    className={inputBaseClass}
+                    value={createForm.phoneNumber}
+                    onChange={handleCreateChange}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700">Employee ID (optional)</label>
+                  <input
+                    type="text"
+                    name="empid"
+                    placeholder="Eg: SECE123"
+                    className={inputBaseClass}
+                    value={createForm.empid}
+                    onChange={handleCreateChange}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700">Password</label>
+                  <input
+                    type="text"
+                    name="password"
+                    className={inputBaseClass}
+                    value={createForm.password}
+                    onChange={handleCreateChange}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={creating}
+                className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {creating ? "Creating…" : "Create login"}
+              </button>
+            </form>
+          </div>
+
+          <div className={`${surfaceClass} p-5 md:p-6`}>
+            <h2 className="text-base font-semibold text-slate-900">Bulk upload (Excel)</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Columns supported: <span className="font-semibold">name, emailId, dept, phoneNumber, designation, empid</span>.
+              Existing emails are skipped.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className={inputBaseClass}
+              />
+
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={uploading}
+                className="inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {uploading ? "Uploading…" : "Upload Excel"}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${surfaceClass} overflow-hidden`}>
+          <div className="flex flex-col gap-3 border-b border-slate-200/80 bg-slate-50/70 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Existing logins</h2>
+              <p className="text-sm text-slate-600">
+                {usersLoading ? "Loading…" : `Showing ${filteredUsers.length} of ${users.length}`}
+              </p>
+            </div>
+
+            <div className="w-full md:max-w-sm">
+              <label className="sr-only">Search</label>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name, email, dept…"
+                className={inputBaseClass}
+              />
+            </div>
+          </div>
+
+          <div className="px-5 py-4 md:px-6">
+            {usersError ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                {usersError}
+              </div>
+            ) : null}
+
+            <div className="mt-3 overflow-x-auto rounded-xl ring-1 ring-slate-200/80">
+              <table className="min-w-full divide-y divide-slate-200/80 bg-white text-sm">
+                <thead className="bg-slate-50">
+                  <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    <th className="px-4 py-3">Department</th>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Phone</th>
+                    <th className="px-4 py-3">Designation</th>
+                    <th className="px-4 py-3">Emp ID</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-200/70">
+                  {usersLoading ? (
+                    <tr>
+                      <td className="px-4 py-4 text-slate-600" colSpan={6}>
+                        Loading logins…
+                      </td>
+                    </tr>
+                  ) : filteredUsers.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-4 text-slate-600" colSpan={6}>
+                        No logins found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((u) => (
+                      <tr key={u._id || u.emailId} className="hover:bg-slate-50/70">
+                        <td className="px-4 py-3 font-semibold text-slate-900">{u.dept || "—"}</td>
+                        <td className="px-4 py-3 text-slate-800">{u.name || "—"}</td>
+                        <td className="px-4 py-3 text-slate-800">{u.emailId || "—"}</td>
+                        <td className="px-4 py-3 text-slate-700">{u.phoneNumber || "—"}</td>
+                        <td className="px-4 py-3 text-slate-700">{u.designation || "—"}</td>
+                        <td className="px-4 py-3 text-slate-700">{u.empid || "—"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
 

@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { uploadUsersFromExcel, uploadMiddleware, getallstaffs } from "../Controller/Signups.js";
 import checkDepartment from '../Middleware/checkDepartment.js';
 import { auth as authenticate } from '../Middleware/Authentication.js';
+import departmentAuthorize from "../Middleware/DepartmentAuth.js";
 import MediaRequirements from "../Schema/MedaiRequirements.js";
 
 const router = express.Router();
@@ -17,6 +18,8 @@ router.post("/signup", async (req, res) => {
       password,
       phoneNumber,
       dept,
+      designation,
+      empid,
     } = req.body;
 
     // Add this validation
@@ -35,9 +38,18 @@ router.post("/signup", async (req, res) => {
       password: hashedPassword,
       phoneNumber,
       dept,
+      designation: typeof designation === "string" ? designation.trim() : designation,
+      empid: typeof empid === "string" ? empid.trim() : empid,
     });
     await user.save();
-    res.status(201).json({ message: "User registered successfully" });
+
+    const token = jwt.sign(
+      { userId: user._id, dept: user.dept },
+      process.env.JWT_SECRET_TOKEN,
+      { expiresIn: "1d" }
+    );
+
+    res.status(201).json({ message: "User registered successfully", token, dept: user.dept });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
@@ -62,6 +74,63 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
+// IQAC/System Admin tooling
+const adminOnly = [authenticate, departmentAuthorize(["iqac", "system admin"])]
+
+router.post("/admin/create-login", ...adminOnly, async (req, res) => {
+  try {
+    const {
+      name,
+      emailId,
+      password,
+      phoneNumber,
+      dept,
+      designation,
+      empid,
+    } = req.body || {};
+
+    if (!name || !emailId || !phoneNumber || !dept) {
+      return res.status(400).json({ message: "Name, Email, Phone, and Department are required" });
+    }
+
+    const existingUser = await User.findOne({ emailId: String(emailId).trim() });
+    if (existingUser) return res.status(400).json({ message: "User already exists" });
+
+    const rawPassword = String(password || "sece@123");
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+    const user = new User({
+      name: String(name).trim(),
+      emailId: String(emailId).trim(),
+      password: hashedPassword,
+      phoneNumber: String(phoneNumber).trim(),
+      dept: String(dept).trim(),
+      designation: typeof designation === "string" ? designation.trim() : "",
+      empid: typeof empid === "string" ? empid.trim() : "",
+    });
+    await user.save();
+
+    return res.status(201).json({
+      message: "Login created successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        emailId: user.emailId,
+        phoneNumber: user.phoneNumber,
+        dept: user.dept,
+        designation: user.designation,
+        empid: user.empid,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+router.get("/admin/users", ...adminOnly, getallstaffs);
+router.post("/admin/upload-excel", ...adminOnly, uploadMiddleware, uploadUsersFromExcel);
 
 router.get("/me", authenticate, async (req, res) => {
   try {
@@ -192,8 +261,8 @@ router.post("/change-password", authenticate, async (req, res) => {
   }
 });
 
-router.get("/getallstaffs", getallstaffs);
-router.post("/upload-excel", uploadMiddleware, uploadUsersFromExcel);
+router.get("/getallstaffs", ...adminOnly, getallstaffs);
+router.post("/upload-excel", ...adminOnly, uploadMiddleware, uploadUsersFromExcel);
 
 // Approval endpoint for Communication form
 router.post('/approve/:id', authenticate, checkDepartment('communication'), async (req, res) => {

@@ -4,7 +4,6 @@ import xlsx from "xlsx";
 import multer from "multer";
 import User from "../Schema/user.js";
 import dotenv from "dotenv";
-import mongoose from "mongoose";
 dotenv.config();
 const secretKey = process.env.JWT_SECRET_TOKEN || "yourDefaultSecretKey";
 console.log("Initializing ordered  Bulk operation Erorr");
@@ -107,8 +106,6 @@ export const Login = async (req, res) => {
 };
 
 export const uploadUsersFromExcel = async (req, res) => {
-  const dbUri =
-    "mongodb+srv://botonicalgarden:TN30e4230!@cluster0.ostdu.mongodb.net/";
   console.log("Reached the Excel Endpoint");
 
   try {
@@ -116,54 +113,89 @@ export const uploadUsersFromExcel = async (req, res) => {
       return res.status(400).json({ message: "Please upload an Excel file" });
     }
 
-    await mongoose.connect(dbUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
     const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-    console.log("data : ", data);
+    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
 
-    const usersToInsert = data.map((row) => ({
-      name: row.name,
-      emailId: row.emailId,
-      dept: row.dept,
-      phoneNumber: row.phoneNumber.toString(),
-      designation: row.designation,
-      password: bcrypt.hashSync("sece@123", 10),
-      empid: row.empid,
-    }));
+    const normalize = (value) => String(value ?? "").trim();
+    const normalizePhone = (value) => {
+      if (value === null || value === undefined) return "";
+      const raw = String(value).trim();
+      return raw;
+    };
 
-    console.log("user data to be inserting : ", usersToInsert);
-    const collection = mongoose.connection.db.collection("users");
+    const ops = [];
+    for (const row of data) {
+      const emailId = normalize(row.emailId || row.email || row.Email || row["Email Id"]);
+      if (!emailId) continue;
 
-    const bulk = collection.initializeUnorderedBulkOp();
+      const name = normalize(row.name || row.Name);
+      const dept = normalize(row.dept || row.department || row.Department);
+      const phoneNumber = normalizePhone(row.phoneNumber || row.phone || row.Phone || row["Phone Number"]);
+      const designation = normalize(row.designation || row.Designation);
+      const empid = normalize(row.empid || row.empId || row.EmpId || row["Emp Id"]);
 
-    usersToInsert.forEach((user) => {
-      bulk.insert(user);
+      if (!dept || !phoneNumber) continue;
+
+      ops.push({
+        updateOne: {
+          filter: { emailId },
+          update: {
+            $setOnInsert: {
+              name: name || emailId,
+              emailId,
+              dept,
+              phoneNumber,
+              designation,
+              empid,
+              password: bcrypt.hashSync("sece@123", 10),
+            },
+          },
+          upsert: true,
+        },
+      });
+    }
+
+    if (ops.length === 0) {
+      return res.status(400).json({ message: "No valid rows found in the uploaded sheet" });
+    }
+
+    const result = await User.bulkWrite(ops, { ordered: false });
+
+    return res.status(201).json({
+      message: "Users uploaded successfully",
+      processedRows: ops.length,
+      created: result.upsertedCount || 0,
+      skippedExisting: ops.length - (result.upsertedCount || 0),
     });
-    await bulk.execute();
-
-    res
-      .status(201)
-      .json({ message: "Users uploaded successfully", users: usersToInsert });
   } catch (error) {
     console.error("Error:", error);
     res
       .status(500)
       .json({ message: "Error processing Excel file", error: error.message });
-  } finally {
-    await mongoose.connection.close();
   }
 };
 
 export const getallstaffs = async (req, res) => {
   try {
-    const user = await User.findOne();
+    const q = String(req.query?.q || "").trim();
 
-    res.status(200).json({ message: "Data fetched Sucessfully", user });
+    const filter = {};
+    if (q) {
+      filter.$or = [
+        { name: { $regex: q, $options: "i" } },
+        { emailId: { $regex: q, $options: "i" } },
+        { dept: { $regex: q, $options: "i" } },
+        { designation: { $regex: q, $options: "i" } },
+      ];
+    }
+
+    const users = await User.find(filter)
+      .select("name emailId phoneNumber dept designation empid createdAt updatedAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({ message: "Data fetched successfully", users });
   } catch (err) {
     res
       .status(500)
