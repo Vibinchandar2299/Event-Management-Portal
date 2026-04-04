@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiGrid, FiLayers, FiLogIn, FiLogOut, FiPlus, FiUsers } from "react-icons/fi";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ClipboardList } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -47,6 +47,10 @@ const HeaderComponent = ({ showSidebar, children }) => {
     const token = localStorage.getItem("token");
     const storedDept = localStorage.getItem("user_dept");
 
+    // No-sidebar routes (e.g., login/create-profile) should not be forced back to login here.
+    // Auth gating for app pages is handled by `ProtectedRoute`.
+    if (!showSidebar) return;
+
     if (!token) {
       if (location.pathname !== "/") navigate("/");
       return;
@@ -67,7 +71,7 @@ const HeaderComponent = ({ showSidebar, children }) => {
       localStorage.removeItem("user_dept");
       navigate("/");
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, showSidebar]);
 
   function initializeLocalStorage() {
     if (!localStorage.getItem("basicEvent")) localStorage.setItem("basicEvent", JSON.stringify({}));
@@ -163,6 +167,39 @@ const HeaderComponent = ({ showSidebar, children }) => {
     return d === "iqac";
   }, [deptKey]);
 
+  const deptLabel = useMemo(() => {
+    const d = String(mapDeptToFormType(deptKey) || "").trim().toLowerCase();
+    if (!d) return "USER";
+
+    const labelMap = {
+      "ai & ds": "AIDS",
+      "ai & ml": "AIML",
+      cyber: "CYBER SECURITY",
+      guestroom: "GUEST ROOM",
+      iqac: "IQAC",
+      cse: "CSE",
+      it: "IT",
+      ece: "ECE",
+      eee: "EEE",
+      mech: "MECH",
+      csbs: "CSBS",
+      cce: "CCE",
+      food: "FOOD",
+      transport: "TRANSPORT",
+      communication: "COMMUNICATION",
+      media: "COMMUNICATION",
+    };
+
+    if (labelMap[d]) return labelMap[d];
+    if (d.length <= 5) return d.toUpperCase();
+
+    return d
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0].toUpperCase() + w.slice(1))
+      .join(" ");
+  }, [deptKey]);
+
   const navItems = useMemo(() => {
     const base = [
       {
@@ -241,12 +278,12 @@ const HeaderComponent = ({ showSidebar, children }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <aside className="fixed left-0 top-0 z-30 h-full w-64 border-r border-emerald-900/10 bg-white/90 backdrop-blur-xl">
+    <div className="min-h-screen">
+      <aside className="glass-surface fixed left-0 top-0 z-30 h-full w-64">
         <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center gap-3 border-b border-emerald-900/10 px-4">
+          <div className="flex h-20 items-center gap-3 border-b border-emerald-900/10 px-4">
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-500"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-500"
               title="Dashboard"
               onClick={() => navigate("/dashboard")}
               role="button"
@@ -255,8 +292,8 @@ const HeaderComponent = ({ showSidebar, children }) => {
               <FiGrid className="text-xl text-white" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-800">Event Management</p>
-              <p className="truncate text-xs text-slate-500">Portal</p>
+              <p className="truncate text-base font-bold text-slate-800">Sri Eshwar</p>
+              <p className="truncate text-xs font-semibold text-slate-500">Event Management</p>
             </div>
           </div>
 
@@ -268,17 +305,15 @@ const HeaderComponent = ({ showSidebar, children }) => {
                 <button
                   key={item.key}
                   onClick={item.action}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${
                     active
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
+                      ? "bg-emerald-600/10 text-emerald-900 ring-1 ring-emerald-600/20"
+                      : "text-slate-700 hover:bg-white/60 hover:text-emerald-900"
                   }`}
                 >
                   <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-xl border ${
-                      active
-                        ? "border-emerald-900/10 bg-white text-emerald-700"
-                        : "border-emerald-900/10 bg-white text-slate-500"
+                    className={`flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white/80 ${
+                      active ? "text-emerald-700" : "text-slate-500"
                     }`}
                   >
                     <Icon className="text-[18px]" />
@@ -292,15 +327,15 @@ const HeaderComponent = ({ showSidebar, children }) => {
           <div className="border-t border-emerald-900/10 p-3">
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-rose-50/70 hover:text-rose-700"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white text-slate-500">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/10 bg-white/80 text-slate-500">
                 <FiLogOut className="text-[18px]" />
               </span>
               <span>Logout</span>
             </button>
 
-            <div className="mt-3 flex items-center justify-center rounded-xl bg-emerald-50/70 p-2">
+            <div className="mt-3 flex items-center justify-center rounded-xl bg-white/55 p-2 ring-1 ring-emerald-900/10">
               <img
                 src="https://sece.ac.in/wp-content/uploads/2024/05/clg-logo2-scaled.webp"
                 alt="College Logo"
@@ -313,22 +348,29 @@ const HeaderComponent = ({ showSidebar, children }) => {
       </aside>
 
       <div className="ml-64 flex min-h-screen flex-col">
-        <header className="sticky top-0 z-20 h-16 border-b border-emerald-900/10 bg-white/85 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-[1500px] items-center justify-between px-4 md:px-6">
+        <header className="glass-surface fixed left-64 right-0 top-0 z-20 h-20">
+          <div className="mx-auto flex h-20 w-full max-w-[1500px] items-center justify-between px-4 md:px-6">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-800">Event Management Portal</p>
-              <p className="truncate text-xs text-slate-500">
-                {isAcademicUser ? "Request & track your department events" : "Manage requests, approvals and events"}
-              </p>
+              <div className="flex min-w-0 items-center gap-4">
+                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-emerald-600/10 text-emerald-800 ring-1 ring-emerald-600/20">
+                  <ClipboardList className="h-6 w-6" strokeWidth={2.2} />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-base font-bold text-slate-800 md:text-lg">Sri Eshwar Event Management Portal</p>
+                  <p className="truncate text-sm text-slate-500">
+                    {isAcademicUser ? "Request & track your department events" : "Manage requests, approvals and events"}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-emerald-900/10 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
-              {userName || "User"}
+            <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/70 px-4 py-2.5 text-sm font-bold text-emerald-900">
+              <span title={userName || deptLabel}>{deptLabel}</span>
             </div>
           </div>
         </header>
 
-        <main className="relative w-full flex-1 fade-in-up">
+        <main className="relative w-full flex-1 pt-20 fade-in-up">
           <div className="mx-auto w-full max-w-[1500px] px-3 py-4 md:px-6 md:py-7">
             <div className="glass-surface rounded-[26px] p-2 md:p-4">{children}</div>
           </div>
