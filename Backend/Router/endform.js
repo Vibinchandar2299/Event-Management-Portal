@@ -9,10 +9,10 @@ const router = express.Router();
 
 router.post("/create", createEndform);
 router.get("/getallforms", getAllEndforms);
-router.get("/allpending", auth, getOverallPendingEndforms);
+router.get("/event-requests", auth, getOverallPendingEndforms);
 router.get("/event/:id", getEventById);
-router.put("/:id", updateEndform);
-router.delete("/:id", auth, deleteEndform);
+router.put("/:id([0-9a-fA-F]{24})", updateEndform);
+router.delete("/:id([0-9a-fA-F]{24})", auth, deleteEndform);
 
 // Approval endpoints for each department
 router.post("/approve/communication/:id", auth, checkDepartment('Media'), async (req, res) => {
@@ -181,7 +181,7 @@ router.put("/edit/:id", auth, departmentAuthorize(["System Admin", "IQAC"]), asy
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id([0-9a-fA-F]{24})", async (req, res) => {
   try {
     const endform = await Endform.findById(req.params.id)
       .populate("foodform")
@@ -195,7 +195,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Edit endpoint (example: PATCH)
-router.patch("/:id", async (req, res) => {
+router.patch("/:id([0-9a-fA-F]{24})", async (req, res) => {
   try {
     const updated = await Endform.findByIdAndUpdate(
       req.params.id,

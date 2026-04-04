@@ -66,21 +66,20 @@ function PendingDashboard() {
   })();
 
   const fetchPendingEndforms = async (retryCount = 0) => {
-    console.log("Fetching events from:", `/api/endform/allpending`);
+    console.log("Fetching events from:", `/api/endform/event-requests`);
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `/api/endform/allpending`,
-        {
-          timeout: 30000, // 30 second timeout
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            'Cache-Control': 'no-cache', // Prevent caching
-            'Pragma': 'no-cache'
-          }
-        }
-      );
+      const requestConfig = {
+        timeout: 30000, // 30 second timeout
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "Cache-Control": "no-cache", // Prevent caching
+          Pragma: "no-cache",
+        },
+      };
+
+      const response = await axios.get(`/api/endform/event-requests`, requestConfig);
 
       const data = response.data;
       console.log("Raw pending endforms:", data);
@@ -169,7 +168,7 @@ function PendingDashboard() {
 
     console.log("Location changed:", location.pathname);
     // Refetch when navigating back to pending route
-    if (location.pathname === '/pending') {
+    if (location.pathname === '/event-requests') {
       console.log("Navigated to dashboard, refetching events...");
       fetchPendingEndforms();
     }
@@ -242,7 +241,7 @@ function PendingDashboard() {
         <div className="p-5 sm:p-6 border-b border-slate-200/80">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 leading-tight">Pending Requests</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 leading-tight">Event Requests</h2>
               <p className="mt-1 text-sm text-slate-500">Review and manage event requests</p>
             </div>
 

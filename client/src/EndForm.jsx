@@ -356,7 +356,7 @@ const EndForm = () => {
         clearLocalStorage();
         
         toast.success("EndForm submitted successfully!");
-        navigate('/pending');
+        navigate('/event-requests');
       } else {
         toast.error("Failed to create endform. Please try again.");
       }

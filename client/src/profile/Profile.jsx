@@ -96,7 +96,7 @@ function Profile() {
   };
 
   const handleManageEvents = () => {
-    navigate('/pending');
+    navigate('/event-requests');
   };
 
   const handleCreateProfile = () => {

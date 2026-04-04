@@ -57,13 +57,14 @@ const InitialRouter = () => {
           }
         />
         <Route
-          path="/pending"
+          path="/event-requests"
           element={
             <ProtectedRoute>
               <PendingDashboard />
             </ProtectedRoute>
           }
         />
+        <Route path="/pending" element={<Navigate to="/event-requests" replace />} />
         <Route 
           path="/create-login" 
           element={

@@ -209,6 +209,18 @@ const HeaderComponent = ({ showSidebar, children }) => {
         icon: FiGrid,
         action: () => navigate("/dashboard"),
       },
+    ];
+
+    if (!isAcademicUser) {
+      base.push({
+        key: "calendar",
+        label: "Calendar",
+        icon: CalendarDays,
+        action: () => navigate("/calender"),
+      });
+    }
+
+    base.push(
       {
         key: "new",
         label: "New Event",
@@ -221,27 +233,19 @@ const HeaderComponent = ({ showSidebar, children }) => {
       },
       {
         key: "pending",
-        label: isAcademicUser ? "Event Management" : "Pending",
+        label: "Event Requests",
         icon: FiLayers,
-        action: () => navigate("/pending"),
-      },
-    ];
+        action: () => navigate("/event-requests"),
+      }
+    );
 
     if (!isAcademicUser) {
-      base.push(
-        {
-          key: "calendar",
-          label: "Calendar",
-          icon: CalendarDays,
-          action: () => navigate("/calender"),
-        },
-        {
-          key: "profile",
-          label: "Profile",
-          icon: FiUsers,
-          action: () => navigate("/profile"),
-        }
-      );
+      base.push({
+        key: "profile",
+        label: "Profile",
+        icon: FiUsers,
+        action: () => navigate("/profile"),
+      });
     }
 
     if (isIqacUser) {
@@ -260,7 +264,7 @@ const HeaderComponent = ({ showSidebar, children }) => {
     const path = location.pathname;
     if (path.startsWith("/dashboard")) return "dashboard";
     if (path.startsWith("/forms")) return "new";
-    if (path.startsWith("/pending")) return "pending";
+    if (path.startsWith("/event-requests")) return "pending";
     if (path.startsWith("/calender")) return "calendar";
     if (path.startsWith("/profile")) return "profile";
     if (path.startsWith("/create-login")) return "logins";

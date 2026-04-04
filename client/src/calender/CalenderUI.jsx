@@ -94,7 +94,7 @@ const CalenderUI = () => {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
 
-        const res = await axios.get("/api/endform/allpending", {
+        const res = await axios.get("/api/endform/event-requests", {
           headers,
           signal: controller.signal,
         });

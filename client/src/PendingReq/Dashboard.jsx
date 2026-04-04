@@ -72,7 +72,7 @@ const Dashboard = ({ refreshKey = 0, scopedEndforms = null }) => {
         console.log("Fetching pending page data...");
 
         const token = localStorage.getItem('token');
-        const response = await axios.get('/api/common/pending-page-data', {
+        const response = await axios.get('/api/common/event-requests-page-data', {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
         
@@ -147,7 +147,7 @@ const Dashboard = ({ refreshKey = 0, scopedEndforms = null }) => {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="text-base font-semibold text-slate-900">Overview</h3>
-          <p className="mt-1 text-sm text-slate-500">Quick stats for pending requests</p>
+          <p className="mt-1 text-sm text-slate-500">Quick stats for event requests</p>
         </div>
       </div>
 

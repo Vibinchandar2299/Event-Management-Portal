@@ -863,7 +863,7 @@ const getPendingPageData = async (req, res) => {
     today.setHours(0, 0, 0, 0);
     const { endforms, eventsMap } = await getTrackedEndformsAndEvents();
 
-    // Pending page list (/api/endform/allpending) shows Pending + Approved endforms.
+    // Event Requests list (/api/endform/event-requests) shows Pending + Approved endforms.
     // Keep KPI stats aligned with that same scope.
     const visibleEndforms = endforms.filter((ef) => ["Pending", "Approved"].includes(String(ef?.status || "")));
 
