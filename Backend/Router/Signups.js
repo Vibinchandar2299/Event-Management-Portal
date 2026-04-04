@@ -63,6 +63,135 @@ router.post("/login", async (req, res) => {
   }
 });
 
+router.get("/me", authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: "Invalid token" });
+
+    const user = await User.findById(userId)
+      .select(
+        "name emailId phoneNumber dept accountOwnerName accountOwnerEmail accountOwnerPhone notificationEmails notificationWhatsappNumbers createdAt updatedAt"
+      )
+      .lean();
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    return res.status(200).json({
+      userId: String(userId),
+      name: user.name || "",
+      emailId: user.emailId || "",
+      phoneNumber: user.phoneNumber || "",
+      dept: user.dept || "",
+      accountOwner: {
+        name: user.accountOwnerName || "",
+        email: user.accountOwnerEmail || "",
+        phone: user.accountOwnerPhone || "",
+      },
+      notifications: {
+        emails: Array.isArray(user.notificationEmails) ? user.notificationEmails : [],
+        whatsapps: Array.isArray(user.notificationWhatsappNumbers) ? user.notificationWhatsappNumbers : [],
+      },
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+router.put("/account-settings", authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: "Invalid token" });
+
+    const {
+      accountOwnerName,
+      accountOwnerEmail,
+      accountOwnerPhone,
+      notificationEmails,
+      notificationWhatsappNumbers,
+    } = req.body || {};
+
+    const normalizeList = (value) => {
+      if (!value) return [];
+      if (Array.isArray(value)) {
+        return value
+          .map((v) => String(v || "").trim())
+          .filter(Boolean)
+          .slice(0, 50);
+      }
+      // Allow newline/comma separated strings from UI
+      return String(value)
+        .split(/\r?\n|,/g)
+        .map((v) => String(v || "").trim())
+        .filter(Boolean)
+        .slice(0, 50);
+    };
+
+    const update = {
+      accountOwnerName: typeof accountOwnerName === "string" ? accountOwnerName.trim() : "",
+      accountOwnerEmail: typeof accountOwnerEmail === "string" ? accountOwnerEmail.trim() : "",
+      accountOwnerPhone: typeof accountOwnerPhone === "string" ? accountOwnerPhone.trim() : "",
+      notificationEmails: normalizeList(notificationEmails),
+      notificationWhatsappNumbers: normalizeList(notificationWhatsappNumbers),
+    };
+
+    const user = await User.findByIdAndUpdate(userId, update, {
+      new: true,
+      runValidators: false,
+    }).select(
+      "name emailId phoneNumber dept accountOwnerName accountOwnerEmail accountOwnerPhone notificationEmails notificationWhatsappNumbers createdAt updatedAt"
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    return res.status(200).json({
+      message: "Account settings updated",
+      accountOwner: {
+        name: user.accountOwnerName || "",
+        email: user.accountOwnerEmail || "",
+        phone: user.accountOwnerPhone || "",
+      },
+      notifications: {
+        emails: Array.isArray(user.notificationEmails) ? user.notificationEmails : [],
+        whatsapps: Array.isArray(user.notificationWhatsappNumbers) ? user.notificationWhatsappNumbers : [],
+      },
+      updatedAt: user.updatedAt,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+router.post("/change-password", authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: "Invalid token" });
+
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current password and new password are required" });
+    }
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(String(currentPassword), String(user.password));
+    if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+
+    const hashedPassword = await bcrypt.hash(String(newPassword), 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
 router.get("/getallstaffs", getallstaffs);
 router.post("/upload-excel", uploadMiddleware, uploadUsersFromExcel);
 

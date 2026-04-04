@@ -239,14 +239,12 @@ const HeaderComponent = ({ showSidebar, children }) => {
       }
     );
 
-    if (!isAcademicUser) {
-      base.push({
-        key: "profile",
-        label: "Profile",
-        icon: FiUsers,
-        action: () => navigate("/profile"),
-      });
-    }
+    base.push({
+      key: "profile",
+      label: "Profile",
+      icon: FiUsers,
+      action: () => navigate("/profile"),
+    });
 
     if (isIqacUser) {
       base.push({

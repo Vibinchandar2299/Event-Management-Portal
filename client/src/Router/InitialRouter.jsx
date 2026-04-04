@@ -51,7 +51,7 @@ const InitialRouter = () => {
         <Route
           path="/profile"
           element={
-            <ProtectedRoute blockAcademic>
+            <ProtectedRoute>
               <Profile />
             </ProtectedRoute>
           }
