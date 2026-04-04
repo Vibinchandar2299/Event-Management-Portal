@@ -37,19 +37,11 @@ function AppLayout() {
     }
   }, [dispatch]);
 
-  return (
-    <div className={`min-h-screen ${showSidebar ? 'pl-[88px]' : ''}`}>
-      {showSidebar && <HeaderComponent showSidebar={showSidebar} />}
-
-      <main className="relative w-full fade-in-up">
-        <div className="mx-auto w-full max-w-[1500px] px-3 py-4 md:px-6 md:py-7">
-          <div className="glass-surface rounded-[26px] p-2 md:p-4">
-          <InitialRouter />
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+    return (
+      <HeaderComponent showSidebar={showSidebar}>
+        <InitialRouter />
+      </HeaderComponent>
+    );
 }
 
 export default App;
