@@ -1,22 +1,14 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ClockIcon,
   CheckCircleIcon,
-  UsersIcon,
-  TicketIcon,
   CalendarIcon,
-  ChartBarIcon,
-  MapPinIcon,
+  TicketIcon,
 } from "@heroicons/react/24/outline";
 
 const Dashboard = ({ refreshKey = 0 }) => {
-  const navigate = useNavigate();
-  
   const [pendingPageData, setPendingPageData] = useState({
     totalEvents: 0,
     upcomingEvents: 0,
@@ -73,136 +65,77 @@ const Dashboard = ({ refreshKey = 0 }) => {
       title: "Total Events",
       count: pendingPageData.totalEvents.toString(),
       icon: CalendarIcon,
-      color: "bg-purple-100",
-      textColor: "text-purple-600",
+      iconBg: "bg-emerald-600/10",
+      iconText: "text-emerald-800",
+      iconRing: "ring-1 ring-emerald-600/20",
     },
     {
       title: "Upcoming Events",
       count: pendingPageData.upcomingEvents.toString(),
       icon: ClockIcon,
-      color: "bg-blue-100",
-      textColor: "text-blue-600",
+      iconBg: "bg-emerald-600/10",
+      iconText: "text-emerald-800",
+      iconRing: "ring-1 ring-emerald-600/20",
     },
     {
       title: "Ongoing Events",
       count: pendingPageData.ongoingEvents.toString(),
       icon: CheckCircleIcon,
-      color: "bg-green-100",
-      textColor: "text-green-600",
+      iconBg: "bg-emerald-600/10",
+      iconText: "text-emerald-800",
+      iconRing: "ring-1 ring-emerald-600/20",
     },
     {
-      title: "Participants",
-      count: pendingPageData.totalParticipants >= 1000 
-        ? `${(pendingPageData.totalParticipants / 1000).toFixed(1)}K`
-        : pendingPageData.totalParticipants.toString(),
-      icon: UsersIcon,
-      color: "bg-orange-100",
-      textColor: "text-orange-600",
+      title: "Pending Requests",
+      count: (pendingPageData.pendingEvents ?? 0).toString(),
+      icon: TicketIcon,
+      iconBg: "bg-emerald-600/10",
+      iconText: "text-emerald-800",
+      iconRing: "ring-1 ring-emerald-600/20",
     },
   ];
 
   if (loading) {
-    return <div className="m bg-gray-50 p-8">Loading...</div>;
+    return <div className="text-sm text-slate-500">Loading overview…</div>;
   }
 
   if (error) {
-    return <div className="m bg-gray-50 p-8">Error: {error}</div>;
+    return <div className="text-sm text-rose-700">Error: {error}</div>;
   }
 
   return (
-    <div className="m bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Event Management Dashboard
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Manage and track all your events in one place
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 shadow-sm border border-gray-200">
-              <span className="text-gray-700">{pendingPageData.quarter}</span>
-              <ChevronLeftIcon className="h-4 w-4 text-gray-600 cursor-pointer" />
-              <ChevronRightIcon className="h-4 w-4 text-gray-600 cursor-pointer" />
-            </div>
-            <button 
-              onClick={() => {
-                localStorage.setItem('startNewFlow', 'true');
-                navigate('/forms/basic');
-              }}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <PlusIcon className="h-5 w-5" />
-              <span>Create New Event</span>
-            </button>
-          </div>
+    <div>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">Overview</h3>
+          <p className="mt-1 text-sm text-slate-500">Quick stats for pending requests</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stat.count}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-lg ${stat.color}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.textColor}`} />
-                </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, index) => (
+          <div
+            key={index}
+            className="rounded-2xl bg-slate-50/70 p-5 ring-1 ring-slate-200/80"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm text-slate-600">{stat.title}</p>
+                <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {stat.count}
+                </p>
               </div>
-              <div className="mt-4 flex items-center text-sm">
-                <span className="text-green-500 flex items-center">
-                  <ArrowUpIcon className="h-4 w-4 mr-1" />
-                  +{pendingPageData.growthPercentage}%
-                </span>
-                <span className="text-gray-500 ml-2">vs previous quarter</span>
+              <div
+                className={`flex h-11 w-11 flex-none items-center justify-center rounded-2xl ${stat.iconBg} ${stat.iconRing}`}
+              >
+                <stat.icon className={`h-6 w-6 ${stat.iconText}`} />
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );
-  
-  function PlusIcon(props) {
-    return (
-      <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth="2"
-        stroke="currentColor"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-      </svg>
-    );
-  }
-
-  function ArrowUpIcon(props) {
-    return (
-      <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth="2"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75"
-        />
-      </svg>
-    );
-  }
 };
 
 export default Dashboard;
