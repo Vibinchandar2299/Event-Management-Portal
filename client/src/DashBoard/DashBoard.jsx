@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { FiMoreHorizontal } from "react-icons/fi";
-import DonutChart from "./DonutChart";
-import MonthlyChart from "./MonthlyChart";
 import { toast } from "react-toastify";
 import DepartmentDashboard from "./DepartmentDashboard";
 import {
@@ -13,6 +10,24 @@ import {
   Sparkles,
   Building2,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+} from "recharts";
 
 const KpiCard = ({ title, value, icon, tone = "slate", subtitle }) => {
   const tones = {
@@ -46,6 +61,20 @@ const KpiCard = ({ title, value, icon, tone = "slate", subtitle }) => {
   );
 };
 
+const ChartCard = ({ title, subtitle, children }) => {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-6">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+          {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const userDept = localStorage.getItem("user_dept");
   const deptKey = String(userDept || "").trim().toLowerCase();
@@ -69,6 +98,14 @@ const Dashboard = () => {
     departmentBookings: [],
     eventTypes: [],
     monthlyData: [],
+    monthlyStatusTrend: [],
+    servicePendingApprovals: {
+      transport: 0,
+      food: 0,
+      guestroom: 0,
+      communication: 0,
+    },
+    pendingQueue: [],
     recentBookings: [],
     eventSatisfaction: []
   });
@@ -135,51 +172,34 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [isIqac]);
 
-  const StatusBadge = ({ status }) => {
-    const colors = {
-      Pending: "bg-blue-100 text-blue-600",
-      Rejected: "bg-red-100 text-red-600",
-      Corrections: "bg-yellow-100 text-yellow-600",
-      Accepted: "bg-green-100 text-green-600",
-      Completed: "bg-green-100 text-green-600",
-    };
+  const serviceApprovalsSeries = [
+    { name: "Transport", value: dashboardData.servicePendingApprovals?.transport ?? 0 },
+    { name: "Food", value: dashboardData.servicePendingApprovals?.food ?? 0 },
+    { name: "Guest Room", value: dashboardData.servicePendingApprovals?.guestroom ?? 0 },
+    { name: "Media/Comm", value: dashboardData.servicePendingApprovals?.communication ?? 0 },
+  ];
 
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded text-xs ${colors[status] || colors.Pending}`}
-      >
-        {status}
-      </span>
-    );
-  };
+  const topDepartments = Array.isArray(dashboardData.departmentBookings)
+    ? dashboardData.departmentBookings.slice(0, 8).map((d) => ({
+        name: d.name,
+        value: Number(d.value || 0),
+      }))
+    : [];
 
-  // Render events in table
-  const renderEventsTable = () => {
-    return currentEvents.map((event) => (
-      <tr key={event.iqacNumber} className="border-b last:border-b-0">
-        <td className="px-6 py-4">{event.iqacNumber}</td>
-        <td className="px-6 py-4">{event.departments.join(", ")}</td>
-        <td className="px-6 py-4">
-          {event.startDate} to {event.endDate}
-        </td>
-        <td className="px-6 py-4">{event.eventName}</td>
-        <td className="px-6 py-4">
-          <StatusBadge status={event.status} />
-        </td>
-        <td className="px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span>→</span>
-            {event.categories.join(", ")}
-          </div>
-        </td>
-        <td className="px-6 py-4">
-          <button className="text-gray-400 hover:text-gray-600">
-            <FiMoreHorizontal />
-          </button>
-        </td>
-      </tr>
-    ));
-  };
+  const trend = Array.isArray(dashboardData.monthlyStatusTrend)
+    ? dashboardData.monthlyStatusTrend
+    : [];
+
+  const PIE_COLORS = [
+    "#3b82f6", // blue
+    "#10b981", // emerald
+    "#f97316", // orange
+    "#f43f5e", // rose
+    "#8b5cf6", // violet
+    "#06b6d4", // cyan
+    "#eab308", // yellow
+    "#64748b", // slate
+  ];
 
   if (!isIqac) {
     return <DepartmentDashboard />;
@@ -252,75 +272,154 @@ const Dashboard = () => {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="dashboard-card rounded-2xl bg-white p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-sm font-semibold text-slate-700">Today's Events</h2>
-            <button className="text-xs font-medium text-emerald-700">Show All</button>
-          </div>
-          <div className="rounded-xl border border-emerald-900/10 bg-white/60">
-            <div className="custom-scrollbar h-72 overflow-x-auto text-sm">
-              <div className="custom-scrollbar">
-                <table className="w-full table-auto text-xs custom-scrollbar">
-                  <thead>
-                    <tr className="border-b text-left text-gray-500">
-                      <th className="px-6 py-4">Venue</th>
-                      <th className="px-6 py-4">Event Name</th>
-                      <th className="px-6 py-4">End Date</th>
-                      <th className="px-6 py-4">End Time</th>
-                      <th className="px-6 py-4">Organizer</th>
-                      <th className="px-6 py-4">Phone</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentEvents.length > 0 ? (
-                      currentEvents.map((event) => (
-                        <tr
-                          key={event.iqacNumber}
-                          className="border-b last:border-b-0"
-                        >
-                          <td className="px-6 text-wrap py-4">
-                            {event.eventVenue}
-                          </td>
-                          <td className="px-6 py-4">{event.eventName}</td>
-                          <td className="px-6 py-4">{event.endDate}</td>
-                          <td className="px-6 py-4">{event.endTime}</td>
-                          <td className="px-6 py-4">
-                            {event.organizers.map((organizer, index) => (
-                              <div key={index}>
-                                <p>{organizer.name}</p>
-                              </div>
-                            ))}
-                          </td>
-                          <td className="px-6 py-4">
-                            {event.organizers.map((organizer, index) => (
-                              <div key={index}>{organizer.phone}</div>
-                            ))}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan="7"
-                          className="px-6 py-4 text-center text-gray-500"
-                        >
-                          No results.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+        <ChartCard
+          title="Requests Trend (This Year)"
+          subtitle="Monthly request volume split by status"
+        >
+          <div className="h-[300px] w-full">
+            {trend.length === 0 ? (
+              <div className="flex h-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600">
+                No trend data available.
               </div>
-            </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trend} margin={{ top: 10, right: 16, left: -8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="iqacPending" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#fb7185" stopOpacity={0.55} />
+                      <stop offset="95%" stopColor="#fb7185" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="iqacApproved" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#34d399" stopOpacity={0.55} />
+                      <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="pending" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#iqacPending)" />
+                  <Area type="monotone" dataKey="approved" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#iqacApproved)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        </div>
-        <MonthlyChart monthlyData={dashboardData.monthlyData} />
+        </ChartCard>
+
+        <ChartCard title="Today's Schedule" subtitle="Events happening today">
+          <div className="space-y-3">
+            {currentEvents.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                No events running today.
+              </div>
+            ) : (
+              currentEvents.slice(0, 6).map((event) => (
+                <div key={event.iqacNumber} className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">{event.eventName}</div>
+                      <div className="mt-1 text-xs text-slate-600">
+                        {event.eventVenue} • {event.startTime} – {event.endTime}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {Array.isArray(event.departments) ? event.departments.join(", ") : ""}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-slate-500">
+                      {event.startDate} → {event.endDate}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </ChartCard>
       </div>
 
-      <DonutChart 
-        departmentBookings={dashboardData.departmentBookings}
-        eventTypes={dashboardData.eventTypes}
-      />
+      <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <ChartCard title="Top Departments" subtitle="By number of events">
+          <div className="h-[300px] w-full">
+            {topDepartments.length === 0 ? (
+              <div className="flex h-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600">
+                No department data available.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={topDepartments}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={110}
+                    paddingAngle={2}
+                  >
+                    {topDepartments.map((_, idx) => (
+                      <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={40} wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </ChartCard>
+
+        <ChartCard title="Pending Approvals (Service Teams)" subtitle="Items awaiting department action">
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadialBarChart
+                cx="50%"
+                cy="50%"
+                innerRadius="25%"
+                outerRadius="90%"
+                barSize={14}
+                data={serviceApprovalsSeries.map((d, idx) => ({
+                  ...d,
+                  fill: PIE_COLORS[idx % PIE_COLORS.length],
+                }))}
+              >
+                <PolarAngleAxis type="number" domain={[0, "dataMax"]} tick={false} />
+                <RadialBar background dataKey="value" cornerRadius={8} />
+                <Legend
+                  iconSize={10}
+                  layout="vertical"
+                  verticalAlign="middle"
+                  align="right"
+                  wrapperStyle={{ fontSize: 11 }}
+                />
+                <Tooltip />
+              </RadialBarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold text-slate-700">Next Pending Requests</div>
+            <div className="mt-3 space-y-2">
+              {(Array.isArray(dashboardData.pendingQueue) ? dashboardData.pendingQueue : []).length === 0 ? (
+                <div className="text-sm text-slate-600">No pending requests.</div>
+              ) : (
+                (dashboardData.pendingQueue || []).slice(0, 4).map((item) => (
+                  <div key={item.endformId} className="flex items-start justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold text-slate-900">{item.eventName}</div>
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        {item.startDate} • {item.venue}
+                      </div>
+                    </div>
+                    <div className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">
+                      {typeof item.startInDays === "number" ? `${item.startInDays} days` : ""}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </ChartCard>
+      </div>
 
       <div className="dashboard-card rounded-2xl bg-white">
         <div className="flex justify-between items-center p-6">

@@ -410,6 +410,7 @@ const getComprehensiveDashboardData = async (req, res) => {
     // Monthly data for area chart - FIXED to be truly dynamic
     const currentYear = new Date().getFullYear();
     const monthlyData = [];
+    const monthlyStatusTrend = [];
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     
@@ -422,25 +423,99 @@ const getComprehensiveDashboardData = async (req, res) => {
         const created = getBookingDate(ef, event);
         return created && !Number.isNaN(created.getTime()) && created >= startOfMonth && created <= endOfMonth;
       }).length;
+
+      const statusCounts = {
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        corrections: 0,
+        completed: 0,
+        other: 0,
+      };
+
+      endforms.forEach((ef) => {
+        const event = eventsMap.get(String(ef.eventdata));
+        const created = getBookingDate(ef, event);
+        if (!created || Number.isNaN(created.getTime())) return;
+        if (created < startOfMonth || created > endOfMonth) return;
+
+        const status = String(ef.status || "").trim();
+        if (status === "Pending") statusCounts.pending += 1;
+        else if (status === "Approved") statusCounts.approved += 1;
+        else if (status === "Rejected") statusCounts.rejected += 1;
+        else if (status === "Corrections") statusCounts.corrections += 1;
+        else if (status === "Completed") statusCounts.completed += 1;
+        else statusCounts.other += 1;
+      });
       
       monthlyData.push({
         name: monthNames[month],
         uv: monthCount
       });
+
+      monthlyStatusTrend.push({
+        name: monthNames[month],
+        pending: statusCounts.pending,
+        approved: statusCounts.approved,
+        rejected: statusCounts.rejected,
+      });
     }
 
-    // Event satisfaction data - FIXED to be dynamic
-    const totalEventsForSatisfaction = endforms.length;
-    const completedEventsForSatisfaction = endforms.filter((ef) => ef.status === "Approved").length;
-    const pendingEventsForSatisfaction = endforms.filter((ef) => ef.status === "Pending").length;
-    const rejectedEventsForSatisfaction = endforms.filter((ef) => ef.status === "Rejected").length;
-    
-    const eventSatisfaction = [
-      { name: "Very Satisfied", value: completedEventsForSatisfaction },
-      { name: "Satisfied", value: Math.floor(totalEventsForSatisfaction * 0.3) },
-      { name: "Neutral", value: Math.floor(totalEventsForSatisfaction * 0.2) },
-      { name: "Dissatisfied", value: rejectedEventsForSatisfaction },
-    ];
+    // Status breakdown (real)
+    const statusBreakdown = endforms.reduce(
+      (acc, ef) => {
+        const status = String(ef.status || "").trim();
+        if (!status) return acc;
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
+
+    // Request mix (real)
+    const requestTypeCounts = {
+      transport: 0,
+      food: 0,
+      guestroom: 0,
+      communication: 0,
+    };
+
+    // Pending service approvals (real, per latest endform per event)
+    const servicePendingApprovals = {
+      transport: 0,
+      food: 0,
+      guestroom: 0,
+      communication: 0,
+    };
+
+    const isApproved = (ef, key) => {
+      const a = ef?.approvals?.[key];
+      return Boolean(a && a.approved);
+    };
+
+    endforms.forEach((ef) => {
+      const hasTransport = Array.isArray(ef.transportform) && ef.transportform.length > 0;
+      const hasFood = Boolean(ef.foodform);
+      const hasGuest = Boolean(ef.guestform);
+      const hasComm = Boolean(ef.communicationform);
+
+      if (hasTransport) {
+        requestTypeCounts.transport += 1;
+        if (!isApproved(ef, "transport")) servicePendingApprovals.transport += 1;
+      }
+      if (hasFood) {
+        requestTypeCounts.food += 1;
+        if (!isApproved(ef, "food")) servicePendingApprovals.food += 1;
+      }
+      if (hasGuest) {
+        requestTypeCounts.guestroom += 1;
+        if (!isApproved(ef, "guestroom")) servicePendingApprovals.guestroom += 1;
+      }
+      if (hasComm) {
+        requestTypeCounts.communication += 1;
+        if (!isApproved(ef, "communication")) servicePendingApprovals.communication += 1;
+      }
+    });
 
     // Recent bookings (last 10 events)
     const recentBookings = endforms
@@ -463,8 +538,26 @@ const getComprehensiveDashboardData = async (req, res) => {
       })
       .slice(0, 10);
 
-    // Calculate user satisfaction rating (simulated based on event status)
-    const satisfactionRating = totalEventsForSatisfaction > 0 ? (completedEventsForSatisfaction / totalEventsForSatisfaction * 5).toFixed(1) : "3.5";
+    // Pending queue for IQAC (real): nearest upcoming first
+    const pendingQueue = endforms
+      .filter((ef) => String(ef.status || "") === "Pending")
+      .map((ef) => {
+        const ev = eventsMap.get(String(ef.eventdata)) || {};
+        return {
+          endformId: String(ef._id),
+          eventId: String(ev._id || ""),
+          iqacNumber: ev.iqacNumber || "",
+          eventName: ev.eventName || "Untitled Event",
+          startDate: ev.startDate || "",
+          endDate: ev.endDate || "",
+          venue: ev.eventVenue || "",
+          departments: Array.isArray(ev.departments) ? ev.departments : [],
+          eventType: ev.eventType || "Other",
+          startInDays: daysUntil(ev.startDate),
+        };
+      })
+      .sort((a, b) => (a.startInDays ?? 9999) - (b.startInDays ?? 9999))
+      .slice(0, 8);
 
     // Get most active department
     const mostEventBookingDepartment = departmentBookings.length > 0
@@ -492,46 +585,31 @@ const getComprehensiveDashboardData = async (req, res) => {
         mostEventBookingDepartment.length > 0
           ? mostEventBookingDepartment[0]._id
           : "N/A",
-      userSatisfactionRating: satisfactionRating,
+      // Kept for backward compatibility; no real satisfaction metric exists.
+      userSatisfactionRating: "N/A",
 
       // Chart data
-      departmentBookings: departmentBookings.length > 0 ? departmentBookings : [
-        { name: "CSE", value: 4 },
-        { name: "ECE", value: 3 },
-        { name: "MECH", value: 2 },
-        { name: "CIVIL", value: 2 },
-      ],
+      departmentBookings,
       activeDepartments: departmentBookings.length,
-      eventTypes: eventTypes.length > 0 ? eventTypes : [
-        { name: "Workshops", value: 25 },
-        { name: "Seminars", value: 15 },
-        { name: "Conferences", value: 13 },
-        { name: "Others", value: 10 },
-      ],
+      eventTypes,
       monthlyData,
+      monthlyStatusTrend,
 
-      // Event satisfaction data
-      eventSatisfaction,
+      // New college-relevant metrics
+      statusBreakdown,
+      requestTypeCounts,
+      servicePendingApprovals,
+      pendingQueue,
 
       // Recent bookings
-      recentBookings: recentBookings.length > 0 ? recentBookings.map((booking, index) => ({
+      recentBookings: recentBookings.map((booking, index) => ({
         id: index + 1,
         dept: booking.departments && booking.departments.length > 0 ? booking.departments[0] : "N/A",
         date: booking.startDate || "N/A",
         title: booking.eventName || "Untitled Event",
         status: booking.status || "Pending",
-        priority: "Medium", // Default priority
         eventType: booking.eventType || "Other"
-      })) : [
-        {
-          id: 1,
-          dept: "CSE",
-          date: "01 Jul 2024",
-          title: "Sample Event",
-          status: "Pending",
-          priority: "Medium"
-        }
-      ]
+      }))
     };
 
     console.log("Dashboard data generated successfully:", dashboardData);
