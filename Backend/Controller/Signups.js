@@ -5,7 +5,6 @@ import dotenv from "dotenv";
 import prisma from "../db/prisma.js";
 import { withMongoId } from "../db/mongoLike.js";
 dotenv.config();
-console.log("Initializing ordered  Bulk operation Erorr");
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 

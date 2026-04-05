@@ -44,7 +44,7 @@ app.get("/", (req, res) => {
   res.json({ message: "Event Management Backend Server is running", timestamp: new Date().toISOString() });
 });
 
-const PORT = 8000;
+const PORT = Number(process.env.PORT) || 8000;
 
 const startServer = async () => {
   try {
