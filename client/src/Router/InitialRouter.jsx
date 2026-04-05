@@ -13,7 +13,6 @@ import GuestRoom from "../guestroom/index";
 import EndForm from "../EndForm";
 import FoodForm from "../FoodForm/FoodForm";
 import CreateLogins from "../Admin/CreateLogins";
-import CreateProfile from "../Components/CreateProfile";
 import AdminController from "../Admin/Index";
 import TermsandCondition from "../Components/Terms&Conditons";
 import ProtectedRoute from "../Components/ProtectedRoute";
@@ -73,7 +72,6 @@ const InitialRouter = () => {
             </ProtectedRoute>
           } 
         />
-        <Route path="/create-profile" element={<CreateProfile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

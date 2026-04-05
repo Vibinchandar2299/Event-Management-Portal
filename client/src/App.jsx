@@ -23,7 +23,7 @@ function App() {
 function AppLayout() {
   const location = useLocation();
   const dispatch = useDispatch();
-  const noSidebarRoutes = ['/', '/create-profile'];
+  const noSidebarRoutes = ['/'];
   const showSidebar = !noSidebarRoutes.includes(location.pathname);
 
   // Global effect to clear Redux state if no active event

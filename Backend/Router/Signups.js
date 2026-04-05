@@ -10,50 +10,8 @@ import MediaRequirements from "../Schema/MedaiRequirements.js";
 
 const router = express.Router();
 
-router.post("/signup", async (req, res) => {
-  try {
-    const {
-      name,
-      emailId,
-      password,
-      phoneNumber,
-      dept,
-      designation,
-      empid,
-    } = req.body;
-
-    // Add this validation
-    if (!name || !emailId || !password || !phoneNumber || !dept) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const existingUser = await User.findOne({ emailId });
-    if (existingUser)
-      return res.status(400).json({ message: "User already exists" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({
-      name,
-      emailId,
-      password: hashedPassword,
-      phoneNumber,
-      dept,
-      designation: typeof designation === "string" ? designation.trim() : designation,
-      empid: typeof empid === "string" ? empid.trim() : empid,
-    });
-    await user.save();
-
-    const token = jwt.sign(
-      { userId: user._id, dept: user.dept },
-      process.env.JWT_SECRET_TOKEN,
-      { expiresIn: "1d" }
-    );
-
-    res.status(201).json({ message: "User registered successfully", token, dept: user.dept });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
+// IQAC/System Admin tooling
+const adminOnly = [authenticate, departmentAuthorize(["iqac", "system admin"])];
 
 router.post("/login", async (req, res) => {
   try {
@@ -78,9 +36,6 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
-// IQAC/System Admin tooling
-const adminOnly = [authenticate, departmentAuthorize(["iqac", "system admin"])]
 
 router.post("/admin/create-login", ...adminOnly, async (req, res) => {
   try {

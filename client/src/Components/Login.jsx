@@ -33,15 +33,10 @@ function mapDeptToFormType(dept) {
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignup, setIsSignup] = useState(true);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
-    confirmPassword: "",
-    dept: "",
-    phoneNumber: "",
   });
 
   const handleChange = (e) => {
@@ -54,41 +49,19 @@ function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
     try {
-      if (isSignup) {
-        // Frontend validation for password match
-        if (formData.password !== formData.confirmPassword) {
-          toast.error("Passwords do not match!");
-          return;
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/sece/login`,
+        {
+          emailId: formData.email,
+          password: formData.password
         }
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/sece/signup`,
-          {
-            name: formData.name,
-            emailId: formData.email, // map email to emailId
-            password: formData.password,
-            dept: formData.dept,
-            phoneNumber: formData.phoneNumber,
-          }
-        );
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user_dept", mapDeptToFormType(response.data.dept));
-        navigate("/dashboard");
-        toast.success("Signup successful!");
-      } else {
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/sece/login`,
-          {
-            emailId: formData.email,
-            password: formData.password
-          }
-        );
-        console.log("Login response:", response.data);
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user_dept", mapDeptToFormType(response.data.dept));
-        console.log("Stored department:", mapDeptToFormType(response.data.dept));
-        toast.success("Login successful!");
-        navigate("/dashboard");
-      }
+      );
+      console.log("Login response:", response.data);
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user_dept", mapDeptToFormType(response.data.dept));
+      console.log("Stored department:", mapDeptToFormType(response.data.dept));
+      toast.success("Login successful!");
+      navigate("/dashboard");
     } catch (error) {
       console.error("Error", error);
       if (error.response) {
@@ -118,21 +91,10 @@ function Signup() {
 
           <div className="mt-24">
             <div className="mt-36 mb-4">
-              <h1 className="text-3xl">{isSignup ? "Sign Up" : "Login"}</h1>
+              <h1 className="text-3xl">Login</h1>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignup && (
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Your Name"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={formData.name}
-                  onChange={handleChange}
-                />
-              )}
-
               <input
                 type="email"
                 name="email"
@@ -164,54 +126,13 @@ function Signup() {
                 </button>
               </div>
 
-              {isSignup && (
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  placeholder="Re-Type Password"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                />
-              )}
-
-              {isSignup && (
-                <>
-                  <input
-                    type="text"
-                    name="dept"
-                    placeholder="Department"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.dept}
-                    onChange={handleChange}
-                  />
-
-                  <input
-                    type="text"
-                    name="phoneNumber"
-                    placeholder="Phone Number"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                  />
-                </>
-              )}
-
               <div className="mt-10">
                 <button
                   type="submit"
                   className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300"
                 >
-                  {isSignup ? "Sign Up" : "Login"}
+                  Login
                 </button>
-                <p
-                  className="text-center text-gray-600 mt-4 cursor-pointer"
-                  onClick={() => setIsSignup(!isSignup)}
-                >
-                  {isSignup
-                    ? "Already have an account? Login here"
-                    : "Don't have an account? Sign up here"}
-                </p>
               </div>
             </form>
           </div>
