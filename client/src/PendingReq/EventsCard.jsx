@@ -568,19 +568,42 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
 
   // Check if user can approve for a specific department
   const canApproveDepartment = (department) => {
-    const departmentMap = {
-      'communication': 'Media',
-      'food': 'Food',
-      'transport': 'Transport',
-      'guestroom': 'Guest Deparment',
-      'iqac': 'IQAC'
+    const normalizeDepartmentKey = (value) => {
+      if (!value) return "";
+
+      const normalized = String(value)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+
+      // Canonicalize common labels/aliases to stable keys used by approvals API
+      if (normalized === "media" || normalized === "communication") return "communication";
+      if (normalized === "food") return "food";
+      if (normalized === "transport") return "transport";
+      if (
+        normalized === "guestroom" ||
+        normalized === "guest room" ||
+        normalized === "guest department" ||
+        normalized === "guest deparment"
+      ) {
+        return "guestroom";
+      }
+      if (normalized === "iqac") return "iqac";
+
+      return normalized;
     };
-    const canApprove = userDepartment === departmentMap[department];
+
+    const userKey = normalizeDepartmentKey(userDepartment);
+    const requiredKey = normalizeDepartmentKey(department);
+    const canApprove = userKey !== "" && userKey === requiredKey;
+
     console.log(`Checking approval for ${department}:`, {
       userDepartment,
-      requiredDepartment: departmentMap[department],
-      canApprove
+      userKey,
+      requiredKey,
+      canApprove,
     });
+
     return canApprove;
   };
 
@@ -953,7 +976,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
                     </div>
                   </div>
                   {/* Guest Department approval button - hover visible */}
-                  {!isRequesterView && userDepartment === 'Guest Deparment' && !status?.guestroom?.approved && (
+                  {!isRequesterView && canApproveDepartment('guestroom') && !status?.guestroom?.approved && (
                     <button
                       onClick={() => handleApproval(eventId, 'guestroom')}
                       className="rounded-lg bg-purple-500 px-3 py-1 text-xs text-white hover:bg-purple-600"
