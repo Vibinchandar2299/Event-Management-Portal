@@ -1,10 +1,5 @@
-import Endform from "../Schema/EndForm.js";
-import BasicEvent from "../Schema/EventSchema.js";
-import transport from "../Schema/transportform/main.js";
-import foodformModel from "../Schema/foodform/main.js";
-import communicationform from "../Schema/MedaiRequirements.js";
-import guestroomform from "../Schema/guestroom/main.js";
-import User from "../Schema/user.js";
+import prisma from "../db/prisma.js";
+import { withMongoId, withMongoIdsDeep, ensureApprovalsShape } from "../db/mongoLike.js";
 
 const normalizeDeptKey = (dept) => {
   if (!dept) return "";
@@ -36,6 +31,19 @@ const normalizeDeptKey = (dept) => {
   return d;
 };
 
+const mapBasicEvent = (event) => {
+  if (!event) return null;
+  return withMongoIdsDeep(withMongoId(event));
+};
+
+const mapEndform = (ef) => {
+  if (!ef) return null;
+  // keep legacy field name used by some older parts of the codebase
+  return withMongoIdsDeep(withMongoId({ ...ef, createdat: ef.createdAt }));
+};
+
+const mapForm = (doc) => (doc ? withMongoIdsDeep(withMongoId(doc)) : null);
+
 export const createEndform = async (req, res) => {
   try {
     const {
@@ -57,26 +65,23 @@ export const createEndform = async (req, res) => {
       communicationform,
       foodform
     );
-    const newEndform = new Endform({
-      iqacno,
-      eventdata,
-      transportform,
-      amenityform,
-      communicationform,
-      guestform,
-      foodform,
-      status: "Pending"
+    const savedEndform = await prisma.endform.create({
+      data: {
+        iqacno: iqacno ? String(iqacno) : null,
+        eventdata: eventdata ? String(eventdata) : null,
+        transportformIds: Array.isArray(transportform) ? transportform.map(String) : [],
+        amenityform: amenityform ? String(amenityform) : null,
+        communicationformId: communicationform ? String(communicationform) : null,
+        guestformId: guestform ? String(guestform) : null,
+        foodformId: foodform ? String(foodform) : null,
+        status: "Pending",
+        approvals: ensureApprovalsShape(null),
+      },
     });
-    const savedEndform = await newEndform.save();
-    console.log("Saved Endform:", savedEndform);
-
-    if (!savedEndform || !savedEndform._id) {
-      return res.status(500).json({ message: "Failed to save Endform" });
-    }
 
     res.status(201).json({
       message: "Endform created successfully!",
-      data: savedEndform,
+      data: mapEndform(savedEndform),
     });
   } catch (error) {
     console.error("Error in createEndform:", error);
@@ -86,8 +91,8 @@ export const createEndform = async (req, res) => {
 
 export const getAllEndforms = async (req, res) => {
   try {
-    const endforms = await Endform.find();
-    res.status(200).json(endforms);
+    const endforms = await prisma.endform.findMany({ orderBy: { createdAt: "desc" } });
+    res.status(200).json(endforms.map(mapEndform));
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch Endforms" });
@@ -107,9 +112,9 @@ export const getOverallPendingEndforms = async (req, res) => {
         const tokenEmail = req.user?.emailId;
 
         const user = tokenUserId
-          ? await User.findById(tokenUserId).select("dept").lean()
+          ? await prisma.user.findUnique({ where: { id: String(tokenUserId) }, select: { dept: true } })
           : tokenEmail
-            ? await User.findOne({ emailId: tokenEmail }).select("dept").lean()
+            ? await prisma.user.findUnique({ where: { emailId: String(tokenEmail) }, select: { dept: true } })
             : null;
 
         deptKey = normalizeDeptKey(user?.dept);
@@ -124,8 +129,9 @@ export const getOverallPendingEndforms = async (req, res) => {
     const roleKey = normalizeDeptKey(deptKey);
     
     // Get both pending and approved endforms so approved events don't disappear
-    let endforms = await Endform.find({ 
-      status: { $in: ["Pending", "Approved"] } 
+    let endforms = await prisma.endform.findMany({
+      where: { status: { in: ["Pending", "Approved"] } },
+      orderBy: { createdAt: "desc" },
     });
     console.log(`Found ${endforms.length} endforms (pending + approved)`);
     
@@ -137,20 +143,22 @@ export const getOverallPendingEndforms = async (req, res) => {
     // IQAC sees all. Department roles see only their relevant endforms.
     if (roleKey && roleKey !== "iqac") {
       if (roleKey === "transport") {
-        endforms = endforms.filter((e) => Array.isArray(e.transportform) && e.transportform.length > 0);
+        endforms = endforms.filter((e) => Array.isArray(e.transportformIds) && e.transportformIds.length > 0);
       } else if (roleKey === "food") {
-        endforms = endforms.filter((e) => !!e.foodform);
+        endforms = endforms.filter((e) => !!e.foodformId);
       } else if (roleKey === "guestroom") {
-        endforms = endforms.filter((e) => !!e.guestform);
+        endforms = endforms.filter((e) => !!e.guestformId);
       } else if (roleKey === "communication") {
-        endforms = endforms.filter((e) => !!e.communicationform);
+        endforms = endforms.filter((e) => !!e.communicationformId);
       }
     }
 
     // Fetch basic event data first (also used for academic department scoping).
-    const eventIds = endforms.map((e) => e.eventdata).filter(Boolean);
-    const basicEvents = await BasicEvent.find({ _id: { $in: eventIds } });
-    const basicEventsMap = new Map(basicEvents.map((e) => [e._id.toString(), e]));
+    const eventIds = endforms.map((e) => e.eventdata).filter(Boolean).map(String);
+    const basicEvents = eventIds.length
+      ? await prisma.basicEvent.findMany({ where: { id: { in: eventIds } } })
+      : [];
+    const basicEventsMap = new Map(basicEvents.map((e) => [String(e.id), e]));
 
     // If this is an academic department login (not a known role), scope by BasicEvent departments.
     const isKnownRole = ["", "iqac", "transport", "food", "guestroom", "communication"].includes(roleKey);
@@ -160,30 +168,38 @@ export const getOverallPendingEndforms = async (req, res) => {
         arr.some((v) => normalizeDeptKey(v) === roleKey);
 
       endforms = endforms.filter((endform) => {
-        const basic = endform?.eventdata ? basicEventsMap.get(endform.eventdata.toString()) : null;
+          const basic = endform?.eventdata ? basicEventsMap.get(String(endform.eventdata)) : null;
         return matchesDept(basic?.academicdepartment) || matchesDept(basic?.departments);
       });
     }
 
     // Collect IDs only for scoped endforms
-    const scopedTransportIds = endforms.flatMap((e) => e.transportform || []).filter(Boolean);
-    const scopedFoodIds = endforms.map((e) => e.foodform).filter(Boolean);
-    const scopedGuestIds = endforms.map((e) => e.guestform).filter(Boolean);
-    const scopedCommunicationIds = endforms.map((e) => e.communicationform).filter(Boolean);
+    const scopedTransportIds = endforms.flatMap((e) => e.transportformIds || []).filter(Boolean).map(String);
+    const scopedFoodIds = endforms.map((e) => e.foodformId).filter(Boolean).map(String);
+    const scopedGuestIds = endforms.map((e) => e.guestformId).filter(Boolean).map(String);
+    const scopedCommunicationIds = endforms.map((e) => e.communicationformId).filter(Boolean).map(String);
 
     // Batch fetch the remaining related data
     const [transportForms, foodForms, guestForms, communicationForms] = await Promise.all([
-      transport.find({ _id: { $in: scopedTransportIds } }),
-      foodformModel.find({ _id: { $in: scopedFoodIds } }),
-      guestroomform.find({ _id: { $in: scopedGuestIds } }),
-      communicationform.find({ _id: { $in: scopedCommunicationIds } })
+      scopedTransportIds.length
+        ? prisma.transportRequest.findMany({ where: { id: { in: scopedTransportIds } } })
+        : Promise.resolve([]),
+      scopedFoodIds.length
+        ? prisma.foodForm.findMany({ where: { id: { in: scopedFoodIds } } })
+        : Promise.resolve([]),
+      scopedGuestIds.length
+        ? prisma.guestBooking.findMany({ where: { id: { in: scopedGuestIds } } })
+        : Promise.resolve([]),
+      scopedCommunicationIds.length
+        ? prisma.mediaRequirement.findMany({ where: { id: { in: scopedCommunicationIds } } })
+        : Promise.resolve([]),
     ]);
 
     // Create lookup maps for efficient access
-    const transportMap = new Map(transportForms.map(t => [t._id.toString(), t]));
-    const foodMap = new Map(foodForms.map(f => [f._id.toString(), f]));
-    const guestMap = new Map(guestForms.map(g => [g._id.toString(), g]));
-    const communicationMap = new Map(communicationForms.map(c => [c._id.toString(), c]));
+    const transportMap = new Map(transportForms.map((t) => [String(t.id), t]));
+    const foodMap = new Map(foodForms.map((f) => [String(f.id), f]));
+    const guestMap = new Map(guestForms.map((g) => [String(g.id), g]));
+    const communicationMap = new Map(communicationForms.map((c) => [String(c.id), c]));
 
     // Process each endform
     const populatedEndforms = endforms.map((endform) => {
@@ -191,48 +207,55 @@ export const getOverallPendingEndforms = async (req, res) => {
         const populatedData = {};
 
         // Get basic event data
-        if (endform.eventdata) {
-          populatedData.basicEvent = basicEventsMap.get(endform.eventdata.toString()) || {};
-        } else {
-          populatedData.basicEvent = {};
-        }
+        populatedData.basicEvent = endform.eventdata
+          ? mapBasicEvent(basicEventsMap.get(String(endform.eventdata))) || {}
+          : {};
 
         // Get transport data
-        if (endform.transportform && endform.transportform.length > 0) {
-          populatedData.transport = endform.transportform
-            .map(id => transportMap.get(id.toString()))
-            .filter(Boolean);
+        if (Array.isArray(endform.transportformIds) && endform.transportformIds.length > 0) {
+          populatedData.transport = endform.transportformIds
+            .map((id) => transportMap.get(String(id)))
+            .filter(Boolean)
+            .map(mapForm);
         } else {
           populatedData.transport = [];
         }
 
         // Get food form data
-        if (endform.foodform) {
-          populatedData.foodform = foodMap.get(endform.foodform.toString()) || {};
+        if (endform.foodformId) {
+          populatedData.foodform = mapForm(foodMap.get(String(endform.foodformId))) || {};
         } else {
           populatedData.foodform = {};
         }
 
         // Get guest form data
-        if (endform.guestform) {
-          populatedData.guestform = guestMap.get(endform.guestform.toString()) || {};
+        if (endform.guestformId) {
+          populatedData.guestform = mapForm(guestMap.get(String(endform.guestformId))) || {};
         } else {
           populatedData.guestform = {};
         }
 
         // Get communication form data
-        if (endform.communicationform) {
-          populatedData.communicationform = communicationMap.get(endform.communicationform.toString()) || {};
+        if (endform.communicationformId) {
+          populatedData.communicationform = mapForm(communicationMap.get(String(endform.communicationformId))) || {};
         } else {
           populatedData.communicationform = {};
         }
 
+        const approvals = ensureApprovalsShape(endform.approvals);
+
         return {
-          ...endform.toObject(),
+          ...mapEndform(endform),
+          // legacy aliases expected by parts of the frontend
+          transportform: Array.isArray(endform.transportformIds) ? endform.transportformIds.map(String) : [],
+          foodformId: endform.foodformId ? String(endform.foodformId) : null,
+          guestformId: endform.guestformId ? String(endform.guestformId) : null,
+          communicationformId: endform.communicationformId ? String(endform.communicationformId) : null,
+          approvals,
           ...populatedData,
         };
       } catch (error) {
-        console.error("Error processing endform:", endform._id, error);
+        console.error("Error processing endform:", endform?.id, error);
         return null;
       }
     });
@@ -252,11 +275,31 @@ export const getOverallPendingEndforms = async (req, res) => {
 
 export const updateEndform = async (req, res) => {
   try {
-    const updatedEndform = await Endform.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
+    const body = req.body || {};
+    const data = {
+      ...(body.iqacno != null ? { iqacno: body.iqacno ? String(body.iqacno) : null } : {}),
+      ...(body.eventdata != null ? { eventdata: body.eventdata ? String(body.eventdata) : null } : {}),
+      ...(body.amenityform != null ? { amenityform: body.amenityform ? String(body.amenityform) : null } : {}),
+      ...(body.status != null ? { status: body.status ? String(body.status) : null } : {}),
+      ...(body.approvals != null ? { approvals: body.approvals } : {}),
+      ...(body.transportform || body.transportformIds
+        ? { transportformIds: Array.isArray(body.transportform || body.transportformIds) ? (body.transportform || body.transportformIds).map(String) : [] }
+        : {}),
+      ...(body.foodform != null || body.foodformId != null
+        ? { foodformId: body.foodformId || body.foodform ? String(body.foodformId || body.foodform) : null }
+        : {}),
+      ...(body.guestform != null || body.guestformId != null
+        ? { guestformId: body.guestformId || body.guestform ? String(body.guestformId || body.guestform) : null }
+        : {}),
+      ...(body.communicationform != null || body.communicationformId != null
+        ? { communicationformId: body.communicationformId || body.communicationform ? String(body.communicationformId || body.communicationform) : null }
+        : {}),
+    };
+
+    const updatedEndform = await prisma.endform.update({
+      where: { id: String(req.params.id) },
+      data,
+    }).catch(() => null);
 
     if (!updatedEndform) {
       return res.status(404).json({ message: "Endform not found" });
@@ -264,7 +307,7 @@ export const updateEndform = async (req, res) => {
 
     res.status(200).json({
       message: "Endform updated successfully",
-      data: updatedEndform,
+      data: mapEndform(updatedEndform),
     });
   } catch (error) {
     console.error(error);
@@ -284,14 +327,19 @@ export const deleteEndform = async (req, res) => {
       return res.status(403).json({ message: "User department missing in token" });
     }
 
-    const endform = await Endform.findById(req.params.id);
+    const endform = await prisma.endform.findUnique({ where: { id: String(req.params.id) } });
     if (!endform) {
       console.log("Endform not found for ID:", req.params.id);
       return res.status(404).json({ message: "Endform not found" });
     }
 
     if (userDeptKey !== 'iqac') {
-      const basicEvent = endform.eventdata ? await BasicEvent.findById(endform.eventdata).select('academicdepartment departments').lean() : null;
+      const basicEvent = endform.eventdata
+        ? await prisma.basicEvent.findUnique({
+            where: { id: String(endform.eventdata) },
+            select: { academicdepartment: true, departments: true },
+          })
+        : null;
       if (!basicEvent) {
         return res.status(404).json({ message: "Event not found" });
       }
@@ -306,7 +354,7 @@ export const deleteEndform = async (req, res) => {
       }
     }
 
-    await Endform.findByIdAndDelete(req.params.id);
+    await prisma.endform.delete({ where: { id: String(req.params.id) } });
     res.status(200).json({ message: "Endform deleted successfully" });
   } catch (error) {
     console.error("Error in deleteEndform:", error);
@@ -324,10 +372,8 @@ export const getEventById = async (req, res) => {
     // NOTE: This endpoint is intended to resolve an EndForm by the BasicEvent id stored in
     // EndForm.eventdata. Historically this incorrectly used findById(id) (EndForm _id).
     // To remain backward compatible, try by eventdata first, then fallback to _id.
-    let endform = await Endform.findOne({ eventdata: id });
-    if (!endform) {
-      endform = await Endform.findById(id);
-    }
+    let endform = await prisma.endform.findFirst({ where: { eventdata: String(id) } });
+    if (!endform) endform = await prisma.endform.findUnique({ where: { id: String(id) } });
     
     if (!endform) {
       console.log("Endform not found for id:", id);
@@ -339,43 +385,49 @@ export const getEventById = async (req, res) => {
     const populatedData = {};
 
     if (endform.eventdata) {
-      populatedData.basicEvent = await BasicEvent.findById(endform.eventdata);
+      populatedData.basicEvent = await prisma.basicEvent.findUnique({ where: { id: String(endform.eventdata) } });
       console.log("Populated basicEvent:", populatedData.basicEvent);
     }
-    if (endform.transportform && endform.transportform.length > 0) {
-      populatedData.transport = await transport.find({
-        _id: { $in: endform.transportform },
+    if (Array.isArray(endform.transportformIds) && endform.transportformIds.length > 0) {
+      populatedData.transport = await prisma.transportRequest.findMany({
+        where: { id: { in: endform.transportformIds.map(String) } },
       });
       console.log("Populated transport:", populatedData.transport);
     }
-    if (endform.foodform) {
-      populatedData.foodform = await foodformModel.findById(endform.foodform);
+    if (endform.foodformId) {
+      populatedData.foodform = await prisma.foodForm.findUnique({ where: { id: String(endform.foodformId) } });
       console.log("Populated foodform:", populatedData.foodform);
-      console.log("Foodform ID from endform:", endform.foodform);
+      console.log("Foodform ID from endform:", endform.foodformId);
       console.log("Foodform data type:", typeof populatedData.foodform);
       console.log("Foodform data keys:", populatedData.foodform ? Object.keys(populatedData.foodform) : "No data");
     } else {
       // For existing events that might not have foodform in EndForm, check if basicEvent has foodform
       if (endform.eventdata) {
-        const basicEvent = await BasicEvent.findById(endform.eventdata);
-        if (basicEvent && basicEvent.foodform) {
-          populatedData.foodform = await foodformModel.findById(basicEvent.foodform);
+        const basicEvent = await prisma.basicEvent.findUnique({ where: { id: String(endform.eventdata) } });
+        if (basicEvent && basicEvent.foodformId) {
+          populatedData.foodform = await prisma.foodForm.findUnique({ where: { id: String(basicEvent.foodformId) } });
           console.log("Found foodform from basicEvent:", populatedData.foodform);
         }
       }
     }
-    if (endform.guestform) {
-      populatedData.guestform = await guestroomform.findById(endform.guestform);
+    if (endform.guestformId) {
+      populatedData.guestform = await prisma.guestBooking.findUnique({ where: { id: String(endform.guestformId) } });
       console.log("Populated guestform:", populatedData.guestform);
     }
-    if (endform.communicationform) {
-      populatedData.communicationform = await communicationform.findById(endform.communicationform);
+    if (endform.communicationformId) {
+      populatedData.communicationform = await prisma.mediaRequirement.findUnique({ where: { id: String(endform.communicationformId) } });
       console.log("Populated communicationform:", populatedData.communicationform);
     }
 
     const populatedEvent = {
-      ...endform.toObject(),
-      ...populatedData,
+      ...mapEndform(endform),
+      transportform: Array.isArray(endform.transportformIds) ? endform.transportformIds.map(String) : [],
+      approvals: ensureApprovalsShape(endform.approvals),
+      basicEvent: mapBasicEvent(populatedData.basicEvent) || {},
+      transport: Array.isArray(populatedData.transport) ? populatedData.transport.map(mapForm) : [],
+      foodform: mapForm(populatedData.foodform) || {},
+      guestform: mapForm(populatedData.guestform) || {},
+      communicationform: mapForm(populatedData.communicationform) || {},
     };
 
     console.log("Final populated event for id", id, ":", populatedEvent);

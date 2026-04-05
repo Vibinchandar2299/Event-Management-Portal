@@ -894,19 +894,13 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             // Keep event/endform links correct (especially important if we had to POST as fallback)
             const eventId = localStorage.getItem("currentEventId");
             if (eventId) {
-              const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
-              if (!isValidObjectId) {
-                console.error('Invalid event ID format:', eventId);
-                toast.warning('Guest room saved, but skipped event linking because event ID is invalid.');
-              } else {
-                try {
-                  await axios.put(
-                    `${import.meta.env.VITE_API_URL}/event/${eventId}`,
-                    { guestform: resolvedBookingId }
-                  );
-                } catch (err) {
-                  console.error('Failed to link updated guest room form to main event:', err);
-                }
+              try {
+                await axios.put(
+                  `${import.meta.env.VITE_API_URL}/event/${eventId}`,
+                  { guestform: resolvedBookingId }
+                );
+              } catch (err) {
+                console.error('Failed to link updated guest room form to main event:', err);
               }
             }
             
@@ -976,21 +970,14 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             // Always try to update the main event with the new guestform ID
             const eventId = localStorage.getItem("currentEventId");
             if (subFormId && eventId) {
-              // Check if eventId is a valid MongoDB ObjectId (24 hex characters)
-              const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
-              if (!isValidObjectId) {
-                console.error('Invalid event ID format:', eventId);
-                toast.warning('Guest room saved, but skipped event linking because event ID is invalid.');
-              } else {
-                try {
-                  await axios.put(
-                    `${import.meta.env.VITE_API_URL}/event/${eventId}`,
-                    { guestform: subFormId }
-                  );
-                } catch (err) {
-                  console.error('Failed to link guest room form to main event:', err);
-                  toast.error('Failed to link guest room form to main event. Please contact support if this persists.');
-                }
+              try {
+                await axios.put(
+                  `${import.meta.env.VITE_API_URL}/event/${eventId}`,
+                  { guestform: subFormId }
+                );
+              } catch (err) {
+                console.error('Failed to link guest room form to main event:', err);
+                toast.error('Failed to link guest room form to main event. Please contact support if this persists.');
               }
             } else if (subFormId && !eventId) {
                console.error('No event ID found in basicEvent');

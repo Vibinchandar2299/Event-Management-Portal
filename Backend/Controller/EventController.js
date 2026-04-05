@@ -1,7 +1,7 @@
-import Event from "../Schema/EventSchema.js";
-import Endform from "../Schema/EndForm.js";
 import multer from "multer";
 import path from "path";
+import prisma from "../db/prisma.js";
+import { withMongoId, withMongoIdsDeep } from "../db/mongoLike.js";
 
 const normalizeDeptKey = (dept) => {
   if (!dept) return "";
@@ -82,34 +82,39 @@ const createEvent = async (req, res) => {
         })()
       : safeAcademic;
 
-    const newEvent = new Event({
-      iqacNumber,
-      departments: safeDepartments,
-      academicdepartment: patchedAcademic,
-      professional,
-      eventName,
-      eventType,
-      eventVenue,
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-      year,
-      categories,
-      logos,
-      description,
-      organizers,
-      resourcePersons,
-      communicationform: communicationform || undefined,
-      foodform: foodform || undefined,
-      guestroom: guestroom || undefined,
-      transport: transport || undefined
+    const created = await prisma.basicEvent.create({
+      data: {
+        iqacNumber: String(iqacNumber),
+        departments: safeDepartments.map((v) => String(v)),
+        academicdepartment: patchedAcademic.map((v) => String(v)),
+        professional: Array.isArray(professional) ? professional.map((v) => String(v)) : [],
+        eventName: String(eventName),
+        eventType: String(eventType),
+        eventVenue: String(eventVenue),
+        startDate: String(startDate),
+        endDate: String(endDate),
+        startTime: String(startTime),
+        endTime: String(endTime),
+        year: typeof year === "string" ? year : null,
+        categories: typeof categories === "string" ? categories : null,
+        logos: Array.isArray(logos) ? logos.map((v) => String(v)) : [],
+        description: typeof description === "string" ? description : null,
+        organizers: Array.isArray(organizers) ? organizers : organizers || null,
+        resourcePersons: Array.isArray(resourcePersons) ? resourcePersons : resourcePersons || null,
+        status: typeof req.body?.status === "string" ? req.body.status : null,
+        poster: typeof req.body?.poster === "string" ? req.body.poster : null,
+
+        communicationformId: communicationform ? String(communicationform) : null,
+        foodformId: foodform ? String(foodform) : null,
+        guestroomId: guestroom ? String(guestroom) : null,
+        transportIds: Array.isArray(transport) ? transport.map((v) => String(v)) : [],
+      },
     });
 
-    await newEvent.save();
-    res
-      .status(200)
-      .json({ message: "Event created successfully", event: newEvent });
+    res.status(200).json({
+      message: "Event created successfully",
+      event: withMongoIdsDeep(withMongoId(created)),
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error", error: error.message, stack: error.stack });
@@ -119,8 +124,8 @@ const createEvent = async (req, res) => {
 // ✅ Get All Events
 const getAllEvents = async (req, res) => {
   try {
-    const events = await Event.find();
-    res.status(200).json(events);
+    const events = await prisma.basicEvent.findMany({ orderBy: { createdAt: "desc" } });
+    res.status(200).json(events.map((e) => withMongoIdsDeep(withMongoId(e))));
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -130,17 +135,34 @@ const getAllEvents = async (req, res) => {
 const getEventById = async (req, res) => {
   try {
     const { id } = req.params;
-    const event = await Event.findById(id)
-      .populate("communicationform")
-      .populate("foodform")
-      .populate("guestroom")
-      .populate("transport");
 
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+    const event = await prisma.basicEvent.findUnique({ where: { id: String(id) } });
+    if (!event) return res.status(404).json({ message: "Event not found" });
 
-    res.status(200).json(event);
+    const [communicationform, foodform, guestroom, transport] = await Promise.all([
+      event.communicationformId
+        ? prisma.mediaRequirement.findUnique({ where: { id: event.communicationformId } }).catch(() => null)
+        : Promise.resolve(null),
+      event.foodformId
+        ? prisma.foodForm.findUnique({ where: { id: event.foodformId } }).catch(() => null)
+        : Promise.resolve(null),
+      event.guestroomId
+        ? prisma.guestBooking.findUnique({ where: { id: event.guestroomId } }).catch(() => null)
+        : Promise.resolve(null),
+      Array.isArray(event.transportIds) && event.transportIds.length
+        ? prisma.transportRequest.findMany({ where: { id: { in: event.transportIds } } }).catch(() => [])
+        : Promise.resolve([]),
+    ]);
+
+    const populated = {
+      ...event,
+      communicationform: communicationform ? withMongoId(communicationform) : null,
+      foodform: foodform ? withMongoId(foodform) : null,
+      guestroom: guestroom ? withMongoId(guestroom) : null,
+      transport: Array.isArray(transport) ? transport.map(withMongoId) : [],
+    };
+
+    res.status(200).json(withMongoIdsDeep(withMongoId(populated)));
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -158,8 +180,38 @@ const updateEvent = async (req, res) => {
     if (req.body.guestroom) updateData.guestroom = req.body.guestroom;
     if (req.body.transport) updateData.transport = req.body.transport;
 
-    const updatedEvent = await Event.findByIdAndUpdate(id, updateData, {
-      new: true,
+    const updatedEvent = await prisma.basicEvent.update({
+      where: { id: String(id) },
+      data: {
+        ...("iqacNumber" in updateData ? { iqacNumber: String(updateData.iqacNumber) } : {}),
+        ...("departments" in updateData && Array.isArray(updateData.departments)
+          ? { departments: updateData.departments.map((v) => String(v)) }
+          : {}),
+        ...("academicdepartment" in updateData && Array.isArray(updateData.academicdepartment)
+          ? { academicdepartment: updateData.academicdepartment.map((v) => String(v)) }
+          : {}),
+        ...("professional" in updateData && Array.isArray(updateData.professional)
+          ? { professional: updateData.professional.map((v) => String(v)) }
+          : {}),
+        ...("eventName" in updateData ? { eventName: String(updateData.eventName) } : {}),
+        ...("eventType" in updateData ? { eventType: String(updateData.eventType) } : {}),
+        ...("eventVenue" in updateData ? { eventVenue: String(updateData.eventVenue) } : {}),
+        ...("startDate" in updateData ? { startDate: String(updateData.startDate) } : {}),
+        ...("endDate" in updateData ? { endDate: String(updateData.endDate) } : {}),
+        ...("startTime" in updateData ? { startTime: String(updateData.startTime) } : {}),
+        ...("endTime" in updateData ? { endTime: String(updateData.endTime) } : {}),
+        ...("year" in updateData ? { year: updateData.year ? String(updateData.year) : null } : {}),
+        ...("categories" in updateData ? { categories: updateData.categories ? String(updateData.categories) : null } : {}),
+        ...("logos" in updateData && Array.isArray(updateData.logos) ? { logos: updateData.logos.map((v) => String(v)) } : {}),
+        ...("description" in updateData ? { description: typeof updateData.description === "string" ? updateData.description : null } : {}),
+        ...("organizers" in updateData ? { organizers: updateData.organizers ?? null } : {}),
+        ...("resourcePersons" in updateData ? { resourcePersons: updateData.resourcePersons ?? null } : {}),
+        ...(updateData.communicationform ? { communicationformId: String(updateData.communicationform) } : {}),
+        ...(updateData.foodform ? { foodformId: String(updateData.foodform) } : {}),
+        ...(updateData.guestroom ? { guestroomId: String(updateData.guestroom) } : {}),
+        ...(updateData.transport ? { transportIds: Array.isArray(updateData.transport) ? updateData.transport.map(String) : [] } : {}),
+        status: "Approved",
+      },
     });
 
     if (!updatedEvent) {
@@ -170,7 +222,7 @@ const updateEvent = async (req, res) => {
       message: req.body.approve
         ? "Event approved successfully"
         : "Event updated successfully",
-      event: updatedEvent,
+      event: withMongoIdsDeep(withMongoId(updatedEvent)),
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -205,7 +257,10 @@ const uploadPoster = async (req, res) => {
       return res.status(403).json({ message: "User department missing in token" });
     }
 
-    const existingEvent = await Event.findById(eventId).select('academicdepartment departments').lean();
+    const existingEvent = await prisma.basicEvent.findUnique({
+      where: { id: String(eventId) },
+      select: { id: true, academicdepartment: true, departments: true },
+    });
     if (!existingEvent) {
       return res.status(404).json({ message: "Event not found" });
     }
@@ -223,15 +278,14 @@ const uploadPoster = async (req, res) => {
 
     const posterUrl = `/uploads/${req.file.filename}`;
 
-    const event = await Event.findByIdAndUpdate(
-      eventId,
-      { poster: posterUrl },
-      { new: true }
-    );
+    const event = await prisma.basicEvent.update({
+      where: { id: String(eventId) },
+      data: { poster: posterUrl },
+    });
 
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    res.status(200).json({ message: "Poster uploaded", event });
+    res.status(200).json({ message: "Poster uploaded", event: withMongoIdsDeep(withMongoId(event)) });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
@@ -241,15 +295,14 @@ const approveEvent = async (req, res) => {
   try {
     const { eventId } = req.body;
 
-    const event = await Event.findByIdAndUpdate(
-      eventId,
-      { status: "approved" },
-      { new: true }
-    );
+    const event = await prisma.basicEvent.update({
+      where: { id: String(eventId) },
+      data: { status: "approved" },
+    });
 
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    res.status(200).json({ message: "Event approved", event });
+    res.status(200).json({ message: "Event approved", event: withMongoIdsDeep(withMongoId(event)) });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }

@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                           String   @id @default(uuid()) @db.Uuid
+  name                         String
+  emailId                      String   @unique
+  password                     String
+  phoneNumber                  String
+  designation                  String   @default("")
+  dept                         String
+  empid                        String   @default("")
+  isActive                     Boolean  @default(true)
+  accountOwnerName             String   @default("")
+  accountOwnerEmail            String   @default("")
+  accountOwnerPhone            String   @default("")
+  notificationEmails           String[] @default([])
+  notificationWhatsappNumbers  String[] @default([])
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+}
+
+model BasicEvent {
+  id                String   @id @default(uuid()) @db.Uuid
+  iqacNumber         String
+  departments        String[] @default([])
+  academicdepartment String[] @default([])
+  professional       String[] @default([])
+  eventName          String
+  eventType          String
+  eventVenue         String
+  startDate          String
+  endDate            String
+  startTime          String
+  endTime            String
+  year               String?
+  categories         String?
+  logos              String[] @default([])
+  description        String?
+  organizers         Json?
+  resourcePersons    Json?
+  status             String?
+  poster             String?
+
+  communicationformId String? @db.Uuid
+  foodformId          String? @db.Uuid
+  guestroomId         String? @db.Uuid
+  transportIds        String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([iqacNumber])
+}
+
+model Endform {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Historically stored as the BasicEvent _id in Mongo.
+  eventdata String? @db.Uuid
+  iqacno    String?
+
+  transportformIds String[] @default([])
+  amenityform      String?
+  guestformId      String? @db.Uuid
+  communicationformId String? @db.Uuid
+  foodformId       String? @db.Uuid
+
+  status    String?
+  approvals Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventdata])
+  @@index([status])
+}
+
+model MediaRequirement {
+  id String @id @default(uuid()) @db.Uuid
+
+  eventPoster                    String[] @default([])
+  videos                         String[] @default([])
+  onStageRequirements            String[] @default([])
+  receptionTVStreamingRequirements String[] @default([])
+  communication                  String[] @default([])
+  flexBanners                    String[] @default([])
+  cameraAction                   Json?
+  status                         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FoodForm {
+  id String @id @default(uuid()) @db.Uuid
+
+  eventName             String?
+  eventType             String?
+  otherEventType        String? @default("")
+  iqacNumber            String?
+  empId                 String?
+  requestorName         String?
+  requisitionDate       DateTime?
+  mobileNumber          String?
+  department            String?
+  designationDepartment String?
+  amenitiesIncharge     String?
+  deanClearance         String? @default("")
+  recommendedBy         String? @default("")
+  facultySignature      String? @default("")
+
+  dates Json?
+  status String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([iqacNumber])
+}
+
+model TransportRequest {
+  id String @id @default(uuid()) @db.Uuid
+
+  basicDetails  Json
+  eventDetails  Json
+  travelDetails Json
+  driverDetails Json
+  iqacNumber    String?
+  status        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([iqacNumber])
+}
+
+model GuestBooking {
+  id String @id @default(uuid()) @db.Uuid
+
+  date         DateTime
+  iqacNumber   String?
+  eventName    String?
+  department   String
+  designation  String
+  empId        String
+  eventType    String
+  guestCount   Int
+  stayDays     Int?
+  mobile       String
+  purpose      String
+  requestorName String
+  selectedRooms String[] @default([])
+  status       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([iqacNumber])
+}
+
+model TotalCount {
+  id String @id @default(uuid()) @db.Uuid
+
+  totalCounts Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

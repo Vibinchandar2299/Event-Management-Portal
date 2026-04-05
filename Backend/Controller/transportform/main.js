@@ -1,4 +1,5 @@
-import TransportRequest from "../../Schema/transportform/main.js";
+import prisma from "../../db/prisma.js";
+import { withMongoId, withMongoIdsDeep } from "../../db/mongoLike.js";
 
 export const createTransportRequest = async (req, res) => {
   try {
@@ -52,9 +53,22 @@ export const createTransportRequest = async (req, res) => {
     });
 
     console.log("formattedRequests : ", formattedRequests);
-    const savedRequests = await TransportRequest.insertMany(formattedRequests);
-    console.log("savedRequests: ,", savedRequests);
-    res.status(201).json(savedRequests);
+    const created = await prisma.$transaction(
+      formattedRequests.map((r) =>
+        prisma.transportRequest.create({
+          data: {
+            basicDetails: r.basicDetails,
+            driverDetails: r.driverDetails,
+            travelDetails: r.travelDetails,
+            eventDetails: r.eventDetails,
+            iqacNumber: r?.basicDetails?.iqacNumber ? String(r.basicDetails.iqacNumber) : null,
+            status: typeof r.status === "string" ? r.status : null,
+          },
+        })
+      )
+    );
+
+    res.status(201).json(created.map((x) => withMongoIdsDeep(withMongoId(x))));
   } catch (error) {
     console.log("error : ", error);
 
@@ -64,8 +78,8 @@ export const createTransportRequest = async (req, res) => {
 
 export const getAllTransportRequests = async (req, res) => {
   try {
-    const requests = await TransportRequest.find();
-    res.status(200).json(requests);
+    const requests = await prisma.transportRequest.findMany({ orderBy: { createdAt: "desc" } });
+    res.status(200).json(requests.map((x) => withMongoIdsDeep(withMongoId(x))));
   } catch (error) {
     console.log("error : ", error);
     res.status(500).json({
@@ -78,11 +92,11 @@ export const getAllTransportRequests = async (req, res) => {
 export const getTransportRequestById = async (req, res) => {
   try {
     const { id } = req.params;
-    const request = await TransportRequest.findById(id);
+    const request = await prisma.transportRequest.findUnique({ where: { id: String(id) } });
     if (!request) {
       return res.status(404).json({ message: "Transport request not found" });
     }
-    res.status(200).json(request);
+    res.status(200).json(withMongoIdsDeep(withMongoId(request)));
   } catch (error) {
     res.status(500).json({
       message: "Error fetching transport request",
@@ -100,32 +114,46 @@ export const updateTransportRequest = async (req, res) => {
 
     if (Array.isArray(events) && events.length > 0) {
       // Multiple Updates
-      const updatePromises = events.map(async (event) => {
-        return await TransportRequest.findByIdAndUpdate(event._id, event, {
-          new: true,
-        });
-      });
-
-      const updatedRequests = await Promise.all(updatePromises);
+      const updatedRequests = await prisma.$transaction(
+        events.map((event) =>
+          prisma.transportRequest.update({
+            where: { id: String(event._id || event.id) },
+            data: {
+              basicDetails: event.basicDetails,
+              driverDetails: event.driverDetails,
+              travelDetails: event.travelDetails,
+              eventDetails: event.eventDetails,
+              iqacNumber: event?.basicDetails?.iqacNumber ? String(event.basicDetails.iqacNumber) : null,
+              status: typeof event.status === "string" ? event.status : null,
+            },
+          })
+        )
+      );
       return res.status(200).json({
         message: "Transport requests updated successfully",
-        data: updatedRequests,
+        data: updatedRequests.map((x) => withMongoIdsDeep(withMongoId(x))),
       });
     }
 
     // Single Update (Fallback)
     if (id) {
-      const updatedRequest = await TransportRequest.findByIdAndUpdate(
-        id,
-        req.body,
-        { new: true }
-      );
+      const updatedRequest = await prisma.transportRequest.update({
+        where: { id: String(id) },
+        data: {
+          basicDetails: req.body.basicDetails,
+          driverDetails: req.body.driverDetails,
+          travelDetails: req.body.travelDetails,
+          eventDetails: req.body.eventDetails,
+          iqacNumber: req.body?.basicDetails?.iqacNumber ? String(req.body.basicDetails.iqacNumber) : null,
+          status: typeof req.body.status === "string" ? req.body.status : null,
+        },
+      }).catch(() => null);
       if (!updatedRequest) {
         return res.status(404).json({ message: "Transport request not found" });
       }
       return res.status(200).json({
         message: "Transport request updated successfully",
-        data: updatedRequest,
+        data: withMongoIdsDeep(withMongoId(updatedRequest)),
       });
     }
 
@@ -143,7 +171,7 @@ export const updateTransportRequest = async (req, res) => {
 export const deleteTransportRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedRequest = await TransportRequest.findByIdAndDelete(id);
+    const deletedRequest = await prisma.transportRequest.delete({ where: { id: String(id) } }).catch(() => null);
     if (!deletedRequest) {
       return res.status(404).json({ message: "Transport request not found" });
     }

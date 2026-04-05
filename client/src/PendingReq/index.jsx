@@ -10,9 +10,15 @@ function isValidObjectId(id) {
   return typeof id === 'string' && id.length === 24 && /^[a-fA-F0-9]+$/.test(id);
 }
 
+function isUuid(id) {
+  return typeof id === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(id);
+}
+
 function normalizeMongoId(id) {
   if (!id) return '';
   if (typeof id === 'string') {
+    // If it's already a UUID (Postgres/Prisma), keep it as-is.
+    if (isUuid(id)) return id;
     const m = id.match(/[a-fA-F0-9]{24}/);
     return m ? m[0] : id;
   }

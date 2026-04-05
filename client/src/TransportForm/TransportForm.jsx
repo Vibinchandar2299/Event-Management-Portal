@@ -729,15 +729,15 @@ const TransportForm = ({ eventData, nextForm }) => {
       // After successful update, fetch latest event data and update Redux
       if (response.data && localStorage.getItem('isEditMode') === 'true') {
         const eventId = localStorage.getItem("currentEventId");
-        if (eventId && /^[0-9a-fA-F]{24}$/.test(eventId)) {
-          const eventResponse = await axios.get(`${import.meta.env.VITE_API_URL}/event/${eventId}`);
-          if (eventResponse.data) {
-            dispatch(setEventData(eventResponse.data));
+        if (eventId) {
+          try {
+            const eventResponse = await axios.get(`${import.meta.env.VITE_API_URL}/event/${eventId}`);
+            if (eventResponse.data) {
+              dispatch(setEventData(eventResponse.data));
+            }
+          } catch (err) {
+            console.warn("TransportForm - Failed to refresh event:", err?.message || err);
           }
-        } else if (eventId) {
-          console.warn("TransportForm - Skipping event refresh due to invalid event ID:", eventId);
-        } else {
-          console.warn("TransportForm - Skipping event refresh because no currentEventId is set.");
         }
       }
     } catch (error) {

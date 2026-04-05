@@ -1,4 +1,5 @@
-import Event from "../../Schema/foodform/main.js";
+import prisma from "../../db/prisma.js";
+import { withMongoId, withMongoIdsDeep } from "../../db/mongoLike.js";
 
 const normalizeFoodDetails = (details = {}) => {
   if (!details || typeof details !== "object") return {};
@@ -107,13 +108,18 @@ export const createEvent = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields." });
     }
 
-    // Create and save the event
-    const newEvent = new Event(normalizedBody);
-    const savedEvent = await newEvent.save();
-    console.log("event comming into the backend : ", newEvent);
-    res
-      .status(201)
-      .json({ message: "Event created successfully", data: savedEvent });
+    const created = await prisma.foodForm.create({
+      data: {
+        ...normalizedBody,
+        // Ensure JSON is stored for dates
+        dates: Array.isArray(normalizedBody.dates) ? normalizedBody.dates : [],
+      },
+    });
+
+    res.status(201).json({
+      message: "Event created successfully",
+      data: withMongoIdsDeep(withMongoId(created)),
+    });
   } catch (error) {
     console.error("Error creating event:", error.message);
     res
@@ -124,8 +130,8 @@ export const createEvent = async (req, res) => {
 
 export const getAllEvents = async (req, res) => {
   try {
-    const events = await Event.find();
-    res.status(200).json({ data: events });
+    const events = await prisma.foodForm.findMany({ orderBy: { createdAt: "desc" } });
+    res.status(200).json({ data: events.map((e) => withMongoIdsDeep(withMongoId(e))) });
   } catch (error) {
     res
       .status(500)
@@ -136,9 +142,9 @@ export const getAllEvents = async (req, res) => {
 export const getEventById = async (req, res) => {
   try {
     const { id } = req.params;
-    const event = await Event.findById(id);
+    const event = await prisma.foodForm.findUnique({ where: { id: String(id) } });
     if (!event) return res.status(404).json({ error: "Event not found" });
-    res.status(200).json({ data: event });
+    res.status(200).json({ data: withMongoIdsDeep(withMongoId(event)) });
   } catch (error) {
     res
       .status(500)
@@ -151,14 +157,18 @@ export const updateEvent = async (req, res) => {
     const { id } = req.params;
     const normalizedBody = normalizePayload(req.body);
 
-    const updatedEvent = await Event.findByIdAndUpdate(id, normalizedBody, {
-      new: true,
+    const updatedEvent = await prisma.foodForm.update({
+      where: { id: String(id) },
+      data: {
+        ...normalizedBody,
+        dates: Array.isArray(normalizedBody.dates) ? normalizedBody.dates : [],
+      },
     });
     if (!updatedEvent)
       return res.status(404).json({ error: "Event not found" });
     res
       .status(200)
-      .json({ message: "Event updated successfully", data: updatedEvent });
+      .json({ message: "Event updated successfully", data: withMongoIdsDeep(withMongoId(updatedEvent)) });
   } catch (error) {
     res
       .status(400)
@@ -169,12 +179,12 @@ export const updateEvent = async (req, res) => {
 export const deleteEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedEvent = await Event.findByIdAndDelete(id);
+    const deletedEvent = await prisma.foodForm.delete({ where: { id: String(id) } }).catch(() => null);
     if (!deletedEvent)
       return res.status(404).json({ error: "Event not found" });
     res
       .status(200)
-      .json({ message: "Event deleted successfully", data: deletedEvent });
+      .json({ message: "Event deleted successfully", data: withMongoIdsDeep(withMongoId(deletedEvent)) });
   } catch (error) {
     res
       .status(500)

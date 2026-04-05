@@ -1,8 +1,6 @@
-import express from "express";
-import Event from "../Schema/EventSchema.js";
-import { generateSingleEventPdf } from "../other/PDF.js";
-import Endform from "../Schema/EndForm.js";
-import mongoose from "mongoose";
+import prisma from "../db/prisma.js";
+import { jsPDF } from "jspdf";
+import { ensureApprovalsShape } from "../db/mongoLike.js";
 
 const toDayDate = (value) => {
   const d = value ? new Date(value) : null;
@@ -28,20 +26,49 @@ const getBookingDate = (endform, event) => {
 };
 
 const getTrackedEndformsAndEvents = async () => {
-  const rawEndforms = await Endform.find({ eventdata: { $exists: true, $ne: null } })
-    .select(
-      "eventdata status createdAt createdat transportform foodform guestform communicationform approvals"
-    )
-    .lean();
+  const rawEndforms = await prisma.endform.findMany({
+    where: { eventdata: { not: null } },
+    select: {
+      id: true,
+      eventdata: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      transportformIds: true,
+      foodformId: true,
+      guestformId: true,
+      communicationformId: true,
+      approvals: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
-  const eventIds = [
-    ...new Set(rawEndforms.map((f) => String(f.eventdata)).filter(Boolean)),
-  ];
+  const legacyEndforms = rawEndforms.map((ef) => ({
+    ...ef,
+    _id: String(ef.id),
+    createdat: ef.createdAt,
+    transportform: Array.isArray(ef.transportformIds) ? ef.transportformIds.map(String) : [],
+    foodform: ef.foodformId ? String(ef.foodformId) : null,
+    guestform: ef.guestformId ? String(ef.guestformId) : null,
+    communicationform: ef.communicationformId ? String(ef.communicationformId) : null,
+    approvals: ensureApprovalsShape(ef.approvals),
+  }));
 
-  const events = await Event.find({ _id: { $in: eventIds } }).lean();
-  const eventsMap = new Map(events.map((e) => [String(e._id), e]));
+  const eventIds = [...new Set(legacyEndforms.map((f) => String(f.eventdata)).filter(Boolean))];
 
-  const sortedEndforms = rawEndforms
+  const events = eventIds.length
+    ? await prisma.basicEvent.findMany({ where: { id: { in: eventIds } } })
+    : [];
+
+  const legacyEvents = events.map((ev) => ({
+    ...ev,
+    _id: String(ev.id),
+    createdat: ev.createdAt,
+  }));
+
+  const eventsMap = new Map(legacyEvents.map((e) => [String(e._id), e]));
+
+  const sortedEndforms = legacyEndforms
     .slice()
     .sort((a, b) => {
       const aDate = getBookingDate(a, eventsMap.get(String(a.eventdata))) || new Date(0);
@@ -61,7 +88,7 @@ const getTrackedEndformsAndEvents = async () => {
 
   const endforms = Array.from(uniqueEndformsMap.values());
 
-  return { endforms, events, eventsMap };
+  return { endforms, events: legacyEvents, eventsMap };
 };
 
 const normalizeDeptKey = (raw) => {
@@ -992,23 +1019,38 @@ const getProfilePageData = async (req, res) => {
     };
     
     // Event Statistics
-    const totalEvents = await Event.countDocuments({});
-    const upcomingEvents = await Event.countDocuments({
-      startDate: { $gte: currentDate.toISOString().split("T")[0] }
-    });
-    const completedEvents = await Event.countDocuments({ status: "Completed" });
-    
-    // Event Status Overview
-    const pendingEvents = await Event.countDocuments({ status: "Pending" });
-    const rejectedEvents = await Event.countDocuments({ status: "Rejected" });
-    const approvedEvents = await Event.countDocuments({ status: "Approved" });
-    
-    // Recent Events (last 10 events with details)
-    const recentEvents = await Event.find({})
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .select('_id eventName startDate endDate eventVenue status departments eventType')
-      .lean();
+    const todayIso = currentDate.toISOString().split("T")[0];
+
+    const [
+      totalEvents,
+      upcomingEvents,
+      completedEvents,
+      pendingEvents,
+      rejectedEvents,
+      approvedEvents,
+      recentEvents,
+    ] = await Promise.all([
+      prisma.basicEvent.count(),
+      prisma.basicEvent.count({ where: { startDate: { gte: todayIso } } }),
+      prisma.basicEvent.count({ where: { status: "Completed" } }),
+      prisma.basicEvent.count({ where: { status: "Pending" } }),
+      prisma.basicEvent.count({ where: { status: "Rejected" } }),
+      prisma.basicEvent.count({ where: { status: "Approved" } }),
+      prisma.basicEvent.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          eventName: true,
+          startDate: true,
+          endDate: true,
+          eventVenue: true,
+          status: true,
+          departments: true,
+          eventType: true,
+        },
+      }),
+    ]);
     
     // Format recent events for display
     const formattedRecentEvents = recentEvents.map((event, index) => {
@@ -1017,7 +1059,7 @@ const getProfilePageData = async (req, res) => {
       const daysUntilEvent = Math.ceil((startDate - currentDate) / (1000 * 60 * 60 * 24));
       
       return {
-        id: event._id,
+        id: event.id,
         title: event.eventName || "Untitled Event",
         date: `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
         location: event.eventVenue || "TBD",
@@ -1071,11 +1113,97 @@ const getProfilePageData = async (req, res) => {
   }
 };
 
+export const generateSingleEventPdf = async (req, res) => {
+  try {
+    const { eventId } = req.query;
+    if (!eventId) {
+      return res.status(400).json({ error: "Missing eventId" });
+    }
+
+    const endform = await prisma.endform.findUnique({ where: { id: String(eventId) } }).catch(() => null);
+    const basicEvent = endform?.eventdata
+      ? await prisma.basicEvent.findUnique({ where: { id: String(endform.eventdata) } }).catch(() => null)
+      : await prisma.basicEvent.findUnique({ where: { id: String(eventId) } }).catch(() => null);
+
+    if (!basicEvent) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+
+    const [foodForm, guestForm, communicationForm, transportForms] = await Promise.all([
+      endform?.foodformId || basicEvent.foodformId
+        ? prisma.foodForm.findUnique({ where: { id: String(endform?.foodformId || basicEvent.foodformId) } }).catch(() => null)
+        : Promise.resolve(null),
+      endform?.guestformId || basicEvent.guestroomId
+        ? prisma.guestBooking.findUnique({ where: { id: String(endform?.guestformId || basicEvent.guestroomId) } }).catch(() => null)
+        : Promise.resolve(null),
+      endform?.communicationformId || basicEvent.communicationformId
+        ? prisma.mediaRequirement.findUnique({ where: { id: String(endform?.communicationformId || basicEvent.communicationformId) } }).catch(() => null)
+        : Promise.resolve(null),
+      (() => {
+        const ids = Array.isArray(endform?.transportformIds) && endform.transportformIds.length
+          ? endform.transportformIds
+          : Array.isArray(basicEvent.transportIds)
+            ? basicEvent.transportIds
+            : [];
+        return ids.length
+          ? prisma.transportRequest.findMany({ where: { id: { in: ids.map(String) } } }).catch(() => [])
+          : Promise.resolve([]);
+      })(),
+    ]);
+
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Sri Eshwar College of Engineering", 10, 12);
+    doc.setFontSize(12);
+    doc.text("Event Details", 10, 22);
+
+    let y = 32;
+    const addLine = (label, value) => {
+      doc.text(`${label}: ${value ?? ""}`, 10, y);
+      y += 8;
+    };
+
+    addLine("IQAC Number", basicEvent.iqacNumber);
+    addLine("Event Name", basicEvent.eventName);
+    addLine("Event Type", basicEvent.eventType);
+    addLine("Venue", basicEvent.eventVenue);
+    addLine("Start", `${basicEvent.startDate || ""} ${basicEvent.startTime || ""}`);
+    addLine("End", `${basicEvent.endDate || ""} ${basicEvent.endTime || ""}`);
+    addLine(
+      "Departments",
+      Array.isArray(basicEvent.departments) ? basicEvent.departments.join(", ") : ""
+    );
+    addLine(
+      "Academic Departments",
+      Array.isArray(basicEvent.academicdepartment) ? basicEvent.academicdepartment.join(", ") : ""
+    );
+
+    y += 4;
+    doc.setFontSize(12);
+    doc.text("Service Forms", 10, y);
+    y += 10;
+    doc.setFontSize(11);
+    addLine("Communication", communicationForm ? "Submitted" : "Not submitted");
+    addLine("Food", foodForm ? "Submitted" : "Not submitted");
+    addLine("Guest Room", guestForm ? "Submitted" : "Not submitted");
+    addLine("Transport Requests", Array.isArray(transportForms) ? transportForms.length : 0);
+
+    const pdfOutput = doc.output("arraybuffer");
+    const buffer = Buffer.from(pdfOutput);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="event-details.pdf"');
+    return res.send(buffer);
+  } catch (error) {
+    console.error("Error generating single event PDF:", error);
+    return res.status(500).json({ error: "Failed to generate event PDF", details: error.message });
+  }
+};
+
 export {
   getCurrentDateEvents,
   getDashboardData,
   getEventStats,
-  generateSingleEventPdf,
   getComprehensiveDashboardData,
   getPendingPageData,
   getProfilePageData,

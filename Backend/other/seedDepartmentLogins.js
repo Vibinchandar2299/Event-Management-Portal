@@ -1,12 +1,8 @@
-import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
-import User from "../Schema/user.js";
+import prisma from "../db/prisma.js";
 
 dotenv.config();
-
-const mongoURI =
-  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/event_management_portal";
 
 const PASSWORD = "sece@123";
 
@@ -34,11 +30,13 @@ const buildPhoneNumber = (base, offset) => String(base + offset);
 
 async function main() {
   console.log("Seeding department logins…");
-  console.log("Mongo:", mongoURI);
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is not set");
+  }
 
-  await mongoose.connect(mongoURI, { serverSelectionTimeoutMS: 10000 });
+  await prisma.$connect();
 
-  const ops = [];
+  const rows = [];
   const createdEmails = [];
 
   // Base 10-digit number (string). Increment per user.
@@ -65,31 +63,25 @@ async function main() {
         empid: `${prefix.toUpperCase()}-F${i}`,
       };
 
-      ops.push({
-        updateOne: {
-          filter: { emailId },
-          update: { $setOnInsert: doc },
-          upsert: true,
-        },
-      });
+      rows.push(doc);
       createdEmails.push(emailId);
     }
   }
 
-  const result = await User.bulkWrite(ops, { ordered: false });
+  const result = await prisma.user.createMany({ data: rows, skipDuplicates: true });
 
   console.log("Done.");
-  console.log("Processed:", ops.length);
-  console.log("Created:", result.upsertedCount || 0);
-  console.log("Skipped existing:", ops.length - (result.upsertedCount || 0));
+  console.log("Processed:", rows.length);
+  console.log("Created:", result.count || 0);
+  console.log("Skipped existing:", rows.length - (result.count || 0));
 
-  await mongoose.disconnect();
+  await prisma.$disconnect();
 }
 
 main().catch(async (err) => {
   console.error("Seed failed:", err?.message || err);
   try {
-    await mongoose.disconnect();
+    await prisma.$disconnect();
   } catch {
     // ignore
   }

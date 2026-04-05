@@ -1,4 +1,5 @@
-import Booking from "../../Schema/guestroom/main.js";
+import prisma from "../../db/prisma.js";
+import { withMongoId, withMongoIdsDeep } from "../../db/mongoLike.js";
 
 const normalizeBookingPayload = (raw) => {
   const payload = raw && typeof raw === "object" ? { ...raw } : {};
@@ -29,9 +30,17 @@ const normalizeBookingPayload = (raw) => {
 export const createBooking = async (req, res) => {
   console.log("req.body of the bookings : ",req.body)
   try {
-    const booking = new Booking(normalizeBookingPayload(req.body));
-    const savedBooking = await booking.save();
-    res.status(201).json(savedBooking);
+    const payload = normalizeBookingPayload(req.body);
+    const savedBooking = await prisma.guestBooking.create({
+      data: {
+        ...payload,
+        date: payload?.date ? new Date(payload.date) : new Date(),
+        guestCount: payload?.guestCount != null ? Number(payload.guestCount) : 0,
+        stayDays: payload?.stayDays != null ? Number(payload.stayDays) : null,
+        selectedRooms: Array.isArray(payload.selectedRooms) ? payload.selectedRooms.map(String) : [],
+      },
+    });
+    res.status(201).json(withMongoIdsDeep(withMongoId(savedBooking)));
   } catch (error) {
     console.log("error : ",error)
     res
@@ -42,8 +51,8 @@ export const createBooking = async (req, res) => {
 
 export const getAllBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find();
-    res.status(200).json(bookings);
+    const bookings = await prisma.guestBooking.findMany({ orderBy: { createdAt: "desc" } });
+    res.status(200).json(bookings.map((b) => withMongoIdsDeep(withMongoId(b))));
   } catch (error) {
     res
       .status(500)
@@ -54,11 +63,11 @@ export const getAllBookings = async (req, res) => {
 export const getBookingById = async (req, res) => {
   try {
     const { id } = req.params;
-    const booking = await Booking.findById(id);
+    const booking = await prisma.guestBooking.findUnique({ where: { id: String(id) } });
     if (!booking) {
       return res.status(404).json({ error: "Booking not found" });
     }
-    res.status(200).json(booking);
+    res.status(200).json(withMongoIdsDeep(withMongoId(booking)));
   } catch (error) {
     res
       .status(500)
@@ -69,13 +78,21 @@ export const getBookingById = async (req, res) => {
 export const updateBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedBooking = await Booking.findByIdAndUpdate(id, normalizeBookingPayload(req.body), {
-      new: true,
-    });
+    const payload = normalizeBookingPayload(req.body);
+    const updatedBooking = await prisma.guestBooking.update({
+      where: { id: String(id) },
+      data: {
+        ...payload,
+        ...(payload.date ? { date: new Date(payload.date) } : {}),
+        ...(payload.guestCount != null ? { guestCount: Number(payload.guestCount) } : {}),
+        ...(payload.stayDays != null ? { stayDays: Number(payload.stayDays) } : {}),
+        ...(payload.selectedRooms ? { selectedRooms: Array.isArray(payload.selectedRooms) ? payload.selectedRooms.map(String) : [] } : {}),
+      },
+    }).catch(() => null);
     if (!updatedBooking) {
       return res.status(404).json({ error: "Booking not found" });
     }
-    res.status(200).json(updatedBooking);
+    res.status(200).json(withMongoIdsDeep(withMongoId(updatedBooking)));
   } catch (error) {
     res
       .status(500)
@@ -86,7 +103,7 @@ export const updateBooking = async (req, res) => {
 export const deleteBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedBooking = await Booking.findByIdAndDelete(id);
+    const deletedBooking = await prisma.guestBooking.delete({ where: { id: String(id) } }).catch(() => null);
     if (!deletedBooking) {
       return res.status(404).json({ error: "Booking not found" });
     }

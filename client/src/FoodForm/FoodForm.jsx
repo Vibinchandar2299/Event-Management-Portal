@@ -982,7 +982,7 @@ function FoodForm({ eventData, nextForm }) {
 
         toast.success("Food form saved successfully!");
         // Always fetch latest event data and update Redux after update/create
-        if (eventId && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+        if (eventId) {
           try {
             const eventResponse = await axios.get(`${import.meta.env.VITE_API_URL}/event/${eventId}`);
             if (eventResponse.data) {
@@ -991,8 +991,6 @@ function FoodForm({ eventData, nextForm }) {
           } catch (err) {
             console.error("[ERROR] Failed to fetch latest event data after update:", err);
           }
-        } else if (eventId) {
-          console.warn("[WARN] Skipping event refresh due to invalid event ID:", eventId);
         }
         const postSaveRoute = !isPrivilegedUser && isServiceDeptUser
           ? "/event-requests"

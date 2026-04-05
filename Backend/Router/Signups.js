@@ -1,12 +1,12 @@
 import express from "express";
-import User from "../Schema/user.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { uploadUsersFromExcel, uploadMiddleware, getallstaffs } from "../Controller/Signups.js";
 import checkDepartment from '../Middleware/checkDepartment.js';
 import { auth as authenticate } from '../Middleware/Authentication.js';
 import departmentAuthorize from "../Middleware/DepartmentAuth.js";
-import MediaRequirements from "../Schema/MedaiRequirements.js";
+import prisma from "../db/prisma.js";
+import { withMongoId } from "../db/mongoLike.js";
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ const adminOnly = [authenticate, departmentAuthorize(["iqac", "system admin"])];
 router.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
-    const user = await User.findOne({ emailId });
+    const user = await prisma.user.findUnique({ where: { emailId: String(emailId || "").trim() } });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     if (user.isActive === false) {
@@ -27,7 +27,7 @@ router.post("/login", async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = jwt.sign(
-      { userId: user._id, dept: user.dept }, // include dept in token
+      { userId: user.id, dept: user.dept }, // include dept in token
       process.env.JWT_SECRET_TOKEN,
       { expiresIn: "1d" }
     );
@@ -53,27 +53,28 @@ router.post("/admin/create-login", ...adminOnly, async (req, res) => {
       return res.status(400).json({ message: "Name, Email, Phone, and Department are required" });
     }
 
-    const existingUser = await User.findOne({ emailId: String(emailId).trim() });
+    const existingUser = await prisma.user.findUnique({ where: { emailId: String(emailId).trim() } });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
 
     const rawPassword = String(password || "sece@123");
     const hashedPassword = await bcrypt.hash(rawPassword, 10);
 
-    const user = new User({
-      name: String(name).trim(),
-      emailId: String(emailId).trim(),
-      password: hashedPassword,
-      phoneNumber: String(phoneNumber).trim(),
-      dept: String(dept).trim(),
-      designation: typeof designation === "string" ? designation.trim() : "",
-      empid: typeof empid === "string" ? empid.trim() : "",
+    const user = await prisma.user.create({
+      data: {
+        name: String(name).trim(),
+        emailId: String(emailId).trim(),
+        password: hashedPassword,
+        phoneNumber: String(phoneNumber).trim(),
+        dept: String(dept).trim(),
+        designation: typeof designation === "string" ? designation.trim() : "",
+        empid: typeof empid === "string" ? empid.trim() : "",
+      },
     });
-    await user.save();
 
     return res.status(201).json({
       message: "Login created successfully",
       user: {
-        _id: user._id,
+        _id: user.id,
         name: user.name,
         emailId: user.emailId,
         phoneNumber: user.phoneNumber,
@@ -103,7 +104,10 @@ router.patch("/admin/users/:id/status", ...adminOnly, async (req, res) => {
       return res.status(400).json({ message: "You cannot change your own account status" });
     }
 
-    const target = await User.findById(userId).select("dept emailId isActive");
+    const target = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, dept: true, emailId: true, isActive: true },
+    });
     if (!target) return res.status(404).json({ message: "User not found" });
 
     const targetDept = String(target.dept || "").trim().toLowerCase();
@@ -111,16 +115,19 @@ router.patch("/admin/users/:id/status", ...adminOnly, async (req, res) => {
       return res.status(403).json({ message: "This account cannot be blocked/unblocked" });
     }
 
-    target.isActive = requestedActive;
-    await target.save();
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { isActive: requestedActive },
+      select: { id: true, emailId: true, dept: true, isActive: true },
+    });
 
     return res.status(200).json({
       message: requestedActive ? "Account unblocked" : "Account blocked",
       user: {
-        _id: target._id,
-        emailId: target.emailId,
-        dept: target.dept,
-        isActive: target.isActive,
+        _id: updated.id,
+        emailId: updated.emailId,
+        dept: updated.dept,
+        isActive: updated.isActive,
       },
     });
   } catch (err) {
@@ -137,7 +144,10 @@ router.delete("/admin/users/:id", ...adminOnly, async (req, res) => {
       return res.status(400).json({ message: "You cannot delete your own account" });
     }
 
-    const target = await User.findById(userId).select("dept emailId");
+    const target = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, dept: true, emailId: true },
+    });
     if (!target) return res.status(404).json({ message: "User not found" });
 
     const targetDept = String(target.dept || "").trim().toLowerCase();
@@ -150,7 +160,7 @@ router.delete("/admin/users/:id", ...adminOnly, async (req, res) => {
       return res.status(403).json({ message: "This account cannot be removed" });
     }
 
-    await User.findByIdAndDelete(userId);
+    await prisma.user.delete({ where: { id: userId } });
 
     return res.status(200).json({
       message: "Account removed permanently",
@@ -169,11 +179,23 @@ router.get("/me", authenticate, async (req, res) => {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Invalid token" });
 
-    const user = await User.findById(userId)
-      .select(
-        "name emailId phoneNumber dept accountOwnerName accountOwnerEmail accountOwnerPhone notificationEmails notificationWhatsappNumbers createdAt updatedAt"
-      )
-      .lean();
+    const user = await prisma.user.findUnique({
+      where: { id: String(userId) },
+      select: {
+        id: true,
+        name: true,
+        emailId: true,
+        phoneNumber: true,
+        dept: true,
+        accountOwnerName: true,
+        accountOwnerEmail: true,
+        accountOwnerPhone: true,
+        notificationEmails: true,
+        notificationWhatsappNumbers: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -237,12 +259,24 @@ router.put("/account-settings", authenticate, async (req, res) => {
       notificationWhatsappNumbers: normalizeList(notificationWhatsappNumbers),
     };
 
-    const user = await User.findByIdAndUpdate(userId, update, {
-      new: true,
-      runValidators: false,
-    }).select(
-      "name emailId phoneNumber dept accountOwnerName accountOwnerEmail accountOwnerPhone notificationEmails notificationWhatsappNumbers createdAt updatedAt"
-    );
+    const user = await prisma.user.update({
+      where: { id: String(userId) },
+      data: update,
+      select: {
+        id: true,
+        name: true,
+        emailId: true,
+        phoneNumber: true,
+        dept: true,
+        accountOwnerName: true,
+        accountOwnerEmail: true,
+        accountOwnerPhone: true,
+        notificationEmails: true,
+        notificationWhatsappNumbers: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -277,15 +311,17 @@ router.post("/change-password", authenticate, async (req, res) => {
       return res.status(400).json({ message: "New password must be at least 6 characters" });
     }
 
-    const user = await User.findById(userId);
+    const user = await prisma.user.findUnique({ where: { id: String(userId) } });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(String(currentPassword), String(user.password));
     if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
 
     const hashedPassword = await bcrypt.hash(String(newPassword), 10);
-    user.password = hashedPassword;
-    await user.save();
+    await prisma.user.update({
+      where: { id: String(userId) },
+      data: { password: hashedPassword },
+    });
 
     return res.status(200).json({ message: "Password updated successfully" });
   } catch (err) {
@@ -295,26 +331,6 @@ router.post("/change-password", authenticate, async (req, res) => {
 
 router.get("/getallstaffs", ...adminOnly, getallstaffs);
 router.post("/upload-excel", ...adminOnly, uploadMiddleware, uploadUsersFromExcel);
-
-// Approval endpoint for Communication form
-router.post('/approve/:id', authenticate, checkDepartment('communication'), async (req, res) => {
-  const { id } = req.params;
-  const department = req.user?.dept || req.department || 'Unknown';
-  const user = req.user?.name || req.user?.username || 'Unknown';
-  const media = await MediaRequirements.findById(id);
-  if (!media) return res.status(404).json({ message: 'Communication form not found' });
-  media.approvals.push({ department, user, date: new Date() });
-  await media.save();
-  res.json({ message: 'Communication form approved successfully', approvals: media.approvals });
-});
-
-// Endpoint to get approval details for a communication form
-router.get('/approvals/:id', authenticate, async (req, res) => {
-  const { id } = req.params;
-  const media = await MediaRequirements.findById(id, 'approvals');
-  if (!media) return res.status(404).json({ message: 'Communication form not found' });
-  res.json({ approvals: media.approvals });
-});
 
 export default router;
 

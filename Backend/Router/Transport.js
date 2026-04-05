@@ -9,7 +9,6 @@ import {
   deleteTransportRequest
 } from "../Controller/transportform/main.js";
 import checkDepartment from '../Middleware/checkDepartment.js';
-import GuestRoom from "../Schema/guestroom/main.js";
 
 const router = express.Router();
 

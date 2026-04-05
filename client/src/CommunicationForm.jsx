@@ -83,7 +83,6 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
 
     // Last-resort: fetch basic event for display only.
     if (!currentEventId) return;
-    if (!/^[0-9a-fA-F]{24}$/.test(currentEventId)) return;
     if (didFetchEventSummaryRef.current) return;
     didFetchEventSummaryRef.current = true;
 
@@ -490,22 +489,15 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
       console.log("CommunicationForm - All localStorage keys:", Object.keys(localStorage));
       
       if (commIdResp && eventId) {
-        // Check if eventId is a valid MongoDB ObjectId (24 hex characters)
-        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
-        if (!isValidObjectId) {
-          console.error('Invalid event ID format:', eventId);
-          toast.warning('Communication form saved, but skipped event linking because event ID is invalid.');
-        } else {
-          try {
-            await axios.put(
-              `${import.meta.env.VITE_API_URL}/event/${eventId}`,
-              { communicationform: commIdResp },
-              { headers: { 'Content-Type': 'application/json' } }
-            );
-          } catch (err) {
-            console.error('Error updating main event:', err);
-            toast.error('Failed to link communication form to main event. Please contact support if this persists.');
-          }
+        try {
+          await axios.put(
+            `${import.meta.env.VITE_API_URL}/event/${eventId}`,
+            { communicationform: commIdResp },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+        } catch (err) {
+          console.error('Error updating main event:', err);
+          toast.error('Failed to link communication form to main event. Please contact support if this persists.');
         }
       } else if (!eventId) {
         console.error('No event ID found in localStorage');
@@ -520,7 +512,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
       console.log("CommunicationForm - Form submission successful, about to navigate");
       
       // Always fetch latest event data and update Redux after update/create
-      if (eventId && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+      if (eventId) {
         try {
           const eventResponse = await axios.get(`${import.meta.env.VITE_API_URL}/event/${eventId}`);
           if (eventResponse.data) {
@@ -529,8 +521,6 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
         } catch (err) {
           console.error("Error fetching event data:", err);
         }
-      } else if (eventId) {
-        console.warn("CommunicationForm - Skipping event refresh due to invalid event ID:", eventId);
       }
       
       const postSaveRoute = !isPrivilegedUser && isServiceDeptUser

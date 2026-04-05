@@ -1,8 +1,9 @@
 import bcrypt from "bcrypt";
 import xlsx from "xlsx";
 import multer from "multer";
-import User from "../Schema/user.js";
 import dotenv from "dotenv";
+import prisma from "../db/prisma.js";
+import { withMongoId } from "../db/mongoLike.js";
 dotenv.config();
 console.log("Initializing ordered  Bulk operation Erorr");
 const storage = multer.memoryStorage();
@@ -33,9 +34,12 @@ export const uploadUsersFromExcel = async (req, res) => {
     };
 
     const ops = [];
+    const seen = new Set();
     for (const row of data) {
       const emailId = normalize(row.emailId || row.email || row.Email || row["Email Id"]);
       if (!emailId) continue;
+      if (seen.has(emailId.toLowerCase())) continue;
+      seen.add(emailId.toLowerCase());
 
       const name = normalize(row.name || row.Name);
       const dept = normalize(row.dept || row.department || row.Department);
@@ -46,21 +50,14 @@ export const uploadUsersFromExcel = async (req, res) => {
       if (!dept || !phoneNumber) continue;
 
       ops.push({
-        updateOne: {
-          filter: { emailId },
-          update: {
-            $setOnInsert: {
-              name: name || emailId,
-              emailId,
-              dept,
-              phoneNumber,
-              designation,
-              empid,
-              password: bcrypt.hashSync("sece@123", 10),
-            },
-          },
-          upsert: true,
-        },
+        name: name || emailId,
+        emailId,
+        dept,
+        phoneNumber,
+        designation: designation || "",
+        empid: empid || "",
+        password: bcrypt.hashSync("sece@123", 10),
+        isActive: true,
       });
     }
 
@@ -68,13 +65,16 @@ export const uploadUsersFromExcel = async (req, res) => {
       return res.status(400).json({ message: "No valid rows found in the uploaded sheet" });
     }
 
-    const result = await User.bulkWrite(ops, { ordered: false });
+    const result = await prisma.user.createMany({
+      data: ops,
+      skipDuplicates: true,
+    });
 
     return res.status(201).json({
       message: "Users uploaded successfully",
       processedRows: ops.length,
-      created: result.upsertedCount || 0,
-      skippedExisting: ops.length - (result.upsertedCount || 0),
+      created: result.count || 0,
+      skippedExisting: ops.length - (result.count || 0),
     });
   } catch (error) {
     console.error("Error:", error);
@@ -88,22 +88,33 @@ export const getallstaffs = async (req, res) => {
   try {
     const q = String(req.query?.q || "").trim();
 
-    const filter = {};
-    if (q) {
-      filter.$or = [
-        { name: { $regex: q, $options: "i" } },
-        { emailId: { $regex: q, $options: "i" } },
-        { dept: { $regex: q, $options: "i" } },
-        { designation: { $regex: q, $options: "i" } },
-      ];
-    }
+    const users = await prisma.user.findMany({
+      where: q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { emailId: { contains: q, mode: "insensitive" } },
+              { dept: { contains: q, mode: "insensitive" } },
+              { designation: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {},
+      select: {
+        id: true,
+        name: true,
+        emailId: true,
+        phoneNumber: true,
+        dept: true,
+        designation: true,
+        empid: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-    const users = await User.find(filter)
-      .select("name emailId phoneNumber dept designation empid isActive createdAt updatedAt")
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.status(200).json({ message: "Data fetched successfully", users });
+    return res.status(200).json({ message: "Data fetched successfully", users: users.map(withMongoId) });
   } catch (err) {
     res
       .status(500)

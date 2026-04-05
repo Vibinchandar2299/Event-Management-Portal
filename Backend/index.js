@@ -1,5 +1,4 @@
 import express from "express";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
 import router from "./Router/Signups.js";
 import Event from "./Router/eventHandeler.js";
@@ -8,13 +7,13 @@ import guestroom from "./Router/GuestRoom.js";
 import foodform from "./Router/Food.js";
 import transportform from "./Router/Transport.js";
 import endform from "./Router/endform.js";
-import { sendAutoSchedulingEmail } from "./Controller/email/Fetch.js";
 import path from "path";
 import { fileURLToPath } from 'url';
 import signupRouter from "./Router/Signups.js";
 import common from "./Router/Common.js";
 import cors from "cors";
 import mediaRouter from "./Router/Media.js";
+import prisma from "./db/prisma.js";
 
 dotenv.config();
 const app = express();
@@ -23,12 +22,7 @@ app.use(cors());
 app.use(express.json({ limit: "30mb" }));
 app.use(express.urlencoded({ extended: true, limit: "30mb" }));
 app.use("/api/auth", signupRouter);
-app.use("/api/sece", signupRouter); 
-
-const mongoURI =
-  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/event_management_portal";
-
-mongoose.set("bufferCommands", false);
+app.use("/api/sece", signupRouter);
 
 // ES module workaround for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -54,10 +48,12 @@ const PORT = 8000;
 
 const startServer = async () => {
   try {
-    await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 10000,
-    });
-    console.log("Connected to MongoDB");
+    if (!process.env.DATABASE_URL) {
+      console.warn("DATABASE_URL is not set. Postgres connection will fail.");
+    }
+
+    await prisma.$connect();
+    console.log("Connected to Postgres via Prisma");
 
     await import("./other/Node-Corn.js");
 
@@ -66,8 +62,8 @@ const startServer = async () => {
     });
   } catch (err) {
     console.error(
-      "Failed to connect to MongoDB. If you use local Compass, ensure local MongoDB server is running on 127.0.0.1:27017.",
-      err.message
+      "Failed to connect to Postgres (Prisma). Ensure DATABASE_URL is configured.",
+      err?.message || err
     );
     process.exit(1);
   }

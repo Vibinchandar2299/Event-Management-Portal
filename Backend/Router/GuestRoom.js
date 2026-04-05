@@ -4,7 +4,6 @@ import departmentAuthorize from "../Middleware/DepartmentAuth.js";
 import { createBooking, getAllBookings, getBookingById, updateBooking, deleteBooking } from "../Controller/guestroom/main.js";
 import checkDepartment from '../Middleware/checkDepartment.js';
 // import authenticate from '../Middleware/Authentication.js'; // Removed, not used
-import GuestRoom from "../Schema/guestroom/main.js";
 
 const router = express.Router();
 

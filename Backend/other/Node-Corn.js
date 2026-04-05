@@ -1,5 +1,4 @@
 import cron from "node-cron";
-import Event from "../Schema/EventSchema.js";
 
 cron.schedule("* * * * * ", async () => {
   try {

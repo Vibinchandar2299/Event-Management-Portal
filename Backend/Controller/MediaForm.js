@@ -1,4 +1,5 @@
-import MediaRequirements from "../Schema/MedaiRequirements.js";
+import prisma from "../db/prisma.js";
+import { withMongoId, withMongoIdsDeep } from "../db/mongoLike.js";
 
 export const createRequirement = async (req, res) => {
   console.log("req body of the Media form:", req.body);
@@ -13,18 +14,22 @@ export const createRequirement = async (req, res) => {
       cameraAction = { photography: false, videography: false }
     } = req.body;
 
-    const requirement = new MediaRequirements({
-      eventPoster,
-      videos,
-      onStageRequirements,
-      receptionTVStreamingRequirements,
-      communication,
-      flexBanners,
-      cameraAction,
+    const requirement = await prisma.mediaRequirement.create({
+      data: {
+        eventPoster: Array.isArray(eventPoster) ? eventPoster.map(String) : [],
+        videos: Array.isArray(videos) ? videos.map(String) : [],
+        onStageRequirements: Array.isArray(onStageRequirements) ? onStageRequirements.map(String) : [],
+        receptionTVStreamingRequirements: Array.isArray(receptionTVStreamingRequirements)
+          ? receptionTVStreamingRequirements.map(String)
+          : [],
+        communication: Array.isArray(communication) ? communication.map(String) : [],
+        flexBanners: Array.isArray(flexBanners) ? flexBanners.map(String) : [],
+        cameraAction: cameraAction || null,
+        status: typeof req.body?.status === "string" ? req.body.status : null,
+      },
     });
 
-    await requirement.save();
-    res.status(201).json({ message: "Requirement created successfully", requirement });
+    res.status(201).json({ message: "Requirement created successfully", requirement: withMongoIdsDeep(withMongoId(requirement)) });
   } catch (error) {
     console.error("Error creating requirement:", error);
     res.status(500).json({ message: "Error creating requirement", error: error.message });
@@ -33,8 +38,8 @@ export const createRequirement = async (req, res) => {
 
 export const getRequirements = async (req, res) => {
   try {
-    const requirements = await MediaRequirements.find();
-    res.status(200).json(requirements);
+    const requirements = await prisma.mediaRequirement.findMany({ orderBy: { createdAt: "desc" } });
+    res.status(200).json(requirements.map((r) => withMongoIdsDeep(withMongoId(r))));
   } catch (error) {
     res.status(500).json({ message: "Error fetching requirements", error });
   }
@@ -42,10 +47,10 @@ export const getRequirements = async (req, res) => {
 
 export const getRequirementById = async (req, res) => {
   try {
-    const requirement = await MediaRequirements.findById(req.params.id);
+    const requirement = await prisma.mediaRequirement.findUnique({ where: { id: String(req.params.id) } });
     if (!requirement)
       return res.status(404).json({ message: "Requirement not found" });
-    res.status(200).json(requirement);
+    res.status(200).json(withMongoIdsDeep(withMongoId(requirement)));
   } catch (error) {
     res.status(500).json({ message: "Error fetching requirement", error });
   }
@@ -64,25 +69,27 @@ export const updateRequirement = async (req, res) => {
       cameraAction,
     } = req.body;
 
-    const updatedRequirement = await MediaRequirements.findByIdAndUpdate(
-      req.params.id,
-      {
-        eventPoster,
-        videos,
-        onStageRequirements,
-        receptionTVStreamingRequirements,
-        communication,
-        flexBanners,
-        cameraAction,
+    const updatedRequirement = await prisma.mediaRequirement.update({
+      where: { id: String(req.params.id) },
+      data: {
+        ...(eventPoster ? { eventPoster: Array.isArray(eventPoster) ? eventPoster.map(String) : [] } : {}),
+        ...(videos ? { videos: Array.isArray(videos) ? videos.map(String) : [] } : {}),
+        ...(onStageRequirements ? { onStageRequirements: Array.isArray(onStageRequirements) ? onStageRequirements.map(String) : [] } : {}),
+        ...(receptionTVStreamingRequirements
+          ? { receptionTVStreamingRequirements: Array.isArray(receptionTVStreamingRequirements) ? receptionTVStreamingRequirements.map(String) : [] }
+          : {}),
+        ...(communication ? { communication: Array.isArray(communication) ? communication.map(String) : [] } : {}),
+        ...(flexBanners ? { flexBanners: Array.isArray(flexBanners) ? flexBanners.map(String) : [] } : {}),
+        ...(cameraAction ? { cameraAction: cameraAction || null } : {}),
+        ...(typeof req.body?.status === "string" ? { status: req.body.status } : {}),
       },
-      { new: true }
-    );
+    }).catch(() => null);
 
     if (!updatedRequirement)
       return res.status(404).json({ message: "Requirement not found" });
     res.status(200).json({
       message: "Requirement updated successfully",
-      updatedRequirement,
+      updatedRequirement: withMongoIdsDeep(withMongoId(updatedRequirement)),
     });
   } catch (error) {
     res.status(500).json({ message: "Error updating requirement", error });
@@ -91,9 +98,7 @@ export const updateRequirement = async (req, res) => {
 
 export const deleteRequirement = async (req, res) => {
   try {
-    const deletedRequirement = await MediaRequirements.findByIdAndDelete(
-      req.params.id
-    );
+    const deletedRequirement = await prisma.mediaRequirement.delete({ where: { id: String(req.params.id) } }).catch(() => null);
     if (!deletedRequirement)
       return res.status(404).json({ message: "Requirement not found" });
     res.status(200).json({ message: "Requirement deleted successfully" });

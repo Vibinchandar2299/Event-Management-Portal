@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
-import Event from "../Schema/EventSchema.js";
+import prisma from "../db/prisma.js";
 
 const convertTo12HourFormat = (time) => {
   let [hours, minutes] = time.split(":").map(Number);
@@ -21,14 +21,21 @@ export const sendAutoSchedulingEmail = async () => {
     ];
 
     const today = new Date();
-    const formattedToday = `${String(today.getDate()).padStart(
+    const formattedTodayLegacy = `${String(today.getDate()).padStart(2, "0")}/${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}/${String(today.getFullYear()).slice(-2)}`;
+
+    const formattedTodayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
       2,
       "0"
-    )}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(
-      today.getFullYear()
-    ).slice(-2)}`;
+    )}-${String(today.getDate()).padStart(2, "0")}`;
 
-    const eventsToday = await Event.find({ eventstartdate: formattedToday });
+    const eventsToday = await prisma.basicEvent.findMany({
+      where: {
+        OR: [{ startDate: formattedTodayIso }, { startDate: formattedTodayLegacy }],
+      },
+      orderBy: { startTime: "asc" },
+    });
     if (eventsToday.length === 0) {
       const noEventsMessage = "No events scheduled for today.";
       console.log(noEventsMessage);
@@ -40,7 +47,7 @@ export const sendAutoSchedulingEmail = async () => {
     let htmlContent = `
       <html>
         <body style="font-family: Arial, sans-serif;">
-          <h1 style="text-align: center;">Auto Scheduling Events for ${formattedToday}</h1>
+          <h1 style="text-align: center;">Auto Scheduling Events for ${formattedTodayIso}</h1>
           <table border="1" cellspacing="0" cellpadding="8" style="width: 100%; border-collapse: collapse;">
             <tr>
               <th>Event Name</th>
@@ -50,25 +57,21 @@ export const sendAutoSchedulingEmail = async () => {
               <th>Event Start</th>
               <th>Event End</th>
               <th>Status</th>
-              <th>Design Status</th>
             </tr>`;
 
     eventsToday.forEach((event) => {
-      const eventStartTimeFormatted = convertTo12HourFormat(
-        event.eventstarttime
-      );
-      const eventEndTimeFormatted = convertTo12HourFormat(event.eventendtime);
+      const eventStartTimeFormatted = convertTo12HourFormat(event.startTime || "00:00");
+      const eventEndTimeFormatted = convertTo12HourFormat(event.endTime || "00:00");
 
       htmlContent += `
         <tr>
-          <td>${event.eventname}</td>
-          <td>${event.typeofevent}</td>
-          <td>${event.departments[0]}</td>
-          <td>${event.venue}</td>
-          <td>${event.eventstartdate} at ${eventStartTimeFormatted}</td>
-          <td>${event.eventenddate} at ${eventEndTimeFormatted}</td>
-          <td>${event.status}</td>
-          <td>${event.designstatus}</td>
+          <td>${event.eventName || ""}</td>
+          <td>${event.eventType || ""}</td>
+          <td>${Array.isArray(event.departments) && event.departments.length ? event.departments[0] : ""}</td>
+          <td>${event.eventVenue || ""}</td>
+          <td>${event.startDate || ""} at ${eventStartTimeFormatted}</td>
+          <td>${event.endDate || ""} at ${eventEndTimeFormatted}</td>
+          <td>${event.status || ""}</td>
         </tr>`;
     });
 
@@ -77,11 +80,7 @@ export const sendAutoSchedulingEmail = async () => {
         </body>
       </html>`;
 
-    await sendEmail(
-      recipientEmails,
-      `Events Scheduled for ${formattedToday}`,
-      htmlContent
-    );
+    await sendEmail(recipientEmails, `Events Scheduled for ${formattedTodayIso}`, htmlContent);
     console.log("Email sent for today's events.");
   } catch (err) {
     console.error("Error:", err);
@@ -89,15 +88,20 @@ export const sendAutoSchedulingEmail = async () => {
 };
 
 const sendEmail = async (to, subject, htmlContent) => {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+
+  if (!user || !pass) {
+    console.warn("EMAIL_USER/EMAIL_PASS not set; skipping email send.");
+    return;
+  }
+
   var sender = nodemailer.createTransport({
     service: "gmail",
-    auth: {
-      user: "sabarim6369@gmail.com",
-      pass: "gsdn ofbj bvqp bwxt",
-    },
+    auth: { user, pass },
   });
   var composeMail = {
-    from: "sabarim6369@gmail.com",
+    from: user,
     to: to.join(", "),
     subject: subject,
     html: htmlContent,
