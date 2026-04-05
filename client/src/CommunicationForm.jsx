@@ -138,14 +138,21 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
   };
 
   // Define canEdit at the top to avoid temporal dead zone
-  const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
+  const canonicalizeDeptKey = (value) => {
+    const d = String(value || "").trim().toLowerCase();
+    if (!d) return "";
+    if (d === "media") return "communication";
+    if (d === "guest deparment" || d === "guest department" || d === "guest room") return "guestroom";
+    if (d === "systemadmin" || d === "admin") return "system admin";
+    return d;
+  };
+
+  const userDept = canonicalizeDeptKey(localStorage.getItem("user_dept"));
   const isCreationFlow = !!currentEventId && !endformId && !isEditMode;
-  const canEdit =
-    isCreationFlow ||
-    userDept === "communication" ||
-    userDept === "iqac" ||
-    userDept === "system admin" ||
-    !userDept;
+  const isServiceDeptUser = new Set(["communication", "food", "transport", "guestroom"]).has(userDept);
+  const isPrivilegedUser = userDept === "iqac" || userDept === "system admin" || !userDept;
+  const baseCanEdit = isCreationFlow || userDept === "communication" || isPrivilegedUser;
+  const canEdit = isPrivilegedUser ? true : isServiceDeptUser ? userDept === "communication" : baseCanEdit;
 
   useEffect(() => {
     const endformId = localStorage.getItem('endformId');
@@ -526,27 +533,17 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
         console.warn("CommunicationForm - Skipping event refresh due to invalid event ID:", eventId);
       }
       
-      if (nextForm) {
-        console.log("Navigating to next form:", nextForm);
-        setIsFormEditable(false);
-        setOriginalFormData(null);
-        try {
-          navigate(nextForm);
-          console.log("Navigate to nextForm completed");
-        } catch (navError) {
-          console.error("Navigation error:", navError);
-        }
-      } else {
-        console.log("Navigating to transport form");
-        console.log("About to call navigate('/forms/transport')");
-        setIsFormEditable(false);
-        setOriginalFormData(null);
-        try {
-          navigate("/forms/transport");
-          console.log("Navigate call completed");
-        } catch (navError) {
-          console.error("Navigation error:", navError);
-        }
+      const postSaveRoute = !isPrivilegedUser && isServiceDeptUser
+        ? "/event-requests"
+        : (nextForm || "/forms/transport");
+
+      console.log("Navigating after save:", postSaveRoute);
+      setIsFormEditable(false);
+      setOriginalFormData(null);
+      try {
+        navigate(postSaveRoute);
+      } catch (navError) {
+        console.error("Navigation error:", navError);
       }
     } catch (error) {
       toast.error("Failed to save form. Please try again.");
@@ -662,15 +659,16 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
             ))}
           </div>
           <div className="mt-8 flex justify-end gap-3">
-            {isEditMode && !isFormEditable ? (
+            {canEdit && isEditMode && !isFormEditable ? (
               <button
                 type="button"
                 onClick={handleEditToggle}
                 className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                disabled={!canEdit}
               >
                 Edit Form
               </button>
-            ) : isFormEditable ? (
+            ) : canEdit && isFormEditable ? (
               <>
                 <button
                   type="button"
@@ -687,7 +685,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
                   Save and Go Next
                 </button>
               </>
-            ) : (
+            ) : canEdit ? (
               <button
                 type="submit"
                 className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
@@ -695,7 +693,7 @@ const CommunicationForm = ({ eventData: propEventData, nextForm }) => {
               >
                 Save and Go Next
               </button>
-            )}
+            ) : null}
           </div>
         </form>
       </div>

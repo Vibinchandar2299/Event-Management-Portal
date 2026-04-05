@@ -182,7 +182,16 @@ function FoodForm({ eventData, nextForm }) {
   });
 
   // Define canEdit at the top to avoid temporal dead zone
-  const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
+  const canonicalizeDeptKey = (value) => {
+    const d = String(value || "").trim().toLowerCase();
+    if (!d) return "";
+    if (d === "media") return "communication";
+    if (d === "guest deparment" || d === "guest department" || d === "guest room") return "guestroom";
+    if (d === "systemadmin" || d === "admin") return "system admin";
+    return d;
+  };
+
+  const userDept = canonicalizeDeptKey(localStorage.getItem("user_dept"));
   const isCreationFlow = !!currentEventId && !endformId && localStorage.getItem('isEditMode') !== 'true';
   const [isFormEditable, setIsFormEditable] = useState(false);
   const [originalFormData, setOriginalFormData] = useState(null);
@@ -211,13 +220,10 @@ function FoodForm({ eventData, nextForm }) {
     });
   }, []);
 
-  const canEdit =
-    !isTrueEditContext ||
-    isCreationFlow ||
-    userDept === "food" ||
-    userDept === "iqac" ||
-    userDept === "system admin" ||
-    !userDept;
+  const isServiceDeptUser = new Set(["communication", "food", "transport", "guestroom"]).has(userDept);
+  const isPrivilegedUser = userDept === "iqac" || userDept === "system admin" || !userDept;
+  const baseCanEdit = isCreationFlow || userDept === "food" || isPrivilegedUser;
+  const canEdit = isPrivilegedUser ? true : isServiceDeptUser ? userDept === "food" : baseCanEdit;
 
   useEffect(() => {
     // New create flow marker: basicEventId matches currentEventId.
@@ -988,12 +994,10 @@ function FoodForm({ eventData, nextForm }) {
         } else if (eventId) {
           console.warn("[WARN] Skipping event refresh due to invalid event ID:", eventId);
         }
-        if (nextForm) {
-          navigate(nextForm);
-        } else {
-          console.log("Navigating to guest room form");
-          navigate("/forms/guest-room");
-        }
+        const postSaveRoute = !isPrivilegedUser && isServiceDeptUser
+          ? "/event-requests"
+          : (nextForm || "/forms/guest-room");
+        navigate(postSaveRoute);
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -1028,7 +1032,7 @@ function FoodForm({ eventData, nextForm }) {
         <div className="p-6 space-y-6">
           <BasicInfo formData={formData} setFormData={setFormDataFromUser} disabled={!canEdit || !isFormEditable} />
           <EventDetails formData={formData} setFormData={setFormDataFromUser} disabled={!canEdit || !isFormEditable} />
-          <FoodTable formData={formData} setFormData={setFormDataFromUser} disabled={isTrueEditContext && !isFormEditable} />
+          <FoodTable formData={formData} setFormData={setFormDataFromUser} disabled={!canEdit || !isFormEditable} />
           {formData.dates && Object.keys(formData.dates).length === 0 && isCreationFlow && (
             <div className="px-6 py-3 bg-emerald-50 border border-emerald-200 rounded text-sm text-emerald-800">
               ℹ️ Please add event dates in the Event Details section above to show the food table.
@@ -1036,22 +1040,22 @@ function FoodForm({ eventData, nextForm }) {
           )}
         </div>
         <div className="mt-8 flex justify-end gap-3 px-6 pb-6">
-          {isEditMode && !isFormEditable && (
+          {canEdit && isEditMode && !isFormEditable && (
             <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
               Edit Form
             </button>
           )}
-          {isFormEditable && (
+          {canEdit && isFormEditable && (
             <>
               <button type="button" onClick={handleCancel} className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
                 Cancel
               </button>
-              <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+              <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
                 Save and Go Next
               </button>
             </>
           )}
-          {!isEditMode && !isFormEditable && (
+          {canEdit && !isEditMode && !isFormEditable && (
             <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
               Save and Go Next
             </button>

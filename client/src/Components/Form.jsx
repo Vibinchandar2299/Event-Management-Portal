@@ -10,6 +10,19 @@ const Form = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const canonicalizeDeptKey = (value) => {
+    const d = String(value || "").trim().toLowerCase();
+    if (!d) return "";
+    if (d === "media") return "communication";
+    if (d === "guest deparment" || d === "guest department" || d === "guest room") return "guestroom";
+    if (d === "systemadmin" || d === "admin") return "system admin";
+    return d;
+  };
+
+  const userDept = canonicalizeDeptKey(localStorage.getItem("user_dept"));
+  const isServiceDeptUser = new Set(["communication", "food", "transport", "guestroom"]).has(userDept);
+  const isPrivilegedUser = userDept === "iqac" || userDept === "system admin" || !userDept;
+
   // If the user leaves the /forms route, treat that as the end of the in-tab flow.
   // This prevents stale session markers from making deep-links reuse old localStorage.
   useEffect(() => {
@@ -332,6 +345,20 @@ const Form = () => {
     { to: "/forms/end", icon: Flag, label: "End Form" },
   ];
 
+  const serviceDeptStepTo = (() => {
+    if (userDept === "communication") return "/forms/communication";
+    if (userDept === "transport") return "/forms/transport";
+    if (userDept === "food") return "/forms/food";
+    if (userDept === "guestroom") return "/forms/guest-room";
+    return "";
+  })();
+
+  const visibleSteps = (() => {
+    if (!isServiceDeptUser || isPrivilegedUser) return formSteps;
+    const allowed = new Set(["/forms/basic", serviceDeptStepTo].filter(Boolean));
+    return formSteps.filter((step) => allowed.has(step.to));
+  })();
+
   return (
     <div className="w-full">
       <div className="w-full bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/80 overflow-hidden">
@@ -344,7 +371,7 @@ const Form = () => {
 
             <nav className="custom-scrollbar overflow-x-auto">
               <ul className="flex min-w-max items-center gap-2">
-                {formSteps.map((step) => {
+                {visibleSteps.map((step) => {
                   const Icon = step.icon;
                   const active = location.pathname === step.to;
 

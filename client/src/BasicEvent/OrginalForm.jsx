@@ -69,6 +69,20 @@ const BasicEventForm = ({ eventData, nextForm }) => {
   const [originalFormData, setOriginalFormData] = useState(null); // Store original data for cancel
   const [originalOrganizers, setOriginalOrganizers] = useState(null);
   const [originalResourcePersons, setOriginalResourcePersons] = useState(null);
+
+  const canonicalizeDeptKey = (value) => {
+    const d = String(value || "").trim().toLowerCase();
+    if (!d) return "";
+    if (d === "media") return "communication";
+    if (d === "guest deparment" || d === "guest department" || d === "guest room") return "guestroom";
+    if (d === "systemadmin" || d === "admin") return "system admin";
+    return d;
+  };
+
+  const userDept = canonicalizeDeptKey(localStorage.getItem("user_dept"));
+  const isServiceDeptUser = new Set(["communication", "food", "transport", "guestroom"]).has(userDept);
+  const isPrivilegedUser = userDept === "iqac" || userDept === "system admin" || !userDept;
+  const canEditBasic = isPrivilegedUser ? true : !isServiceDeptUser;
   const [formData, setFormData] = useState({
     iqacNumber: "",
     departments: [],
@@ -251,9 +265,15 @@ const BasicEventForm = ({ eventData, nextForm }) => {
       }
 
       setIsEditMode(false);
-      setIsFormEditable(true);
+      setIsFormEditable(canEditBasic);
     }
-  }, [event1Basics, eventData]);
+  }, [event1Basics, eventData, canEditBasic]);
+
+  useEffect(() => {
+    if (!canEditBasic) {
+      setIsFormEditable(false);
+    }
+  }, [canEditBasic]);
 
   // Session-scoped draft persistence for new event creation.
   // Keeps the Basic form from losing user input when they click other steps.
@@ -311,6 +331,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
   }, [formData]);
 
   const handleEditToggle = () => {
+    if (!canEditBasic) return;
     if (!isFormEditable) {
       // Entering edit mode - store original data for cancel
       setOriginalFormData(JSON.parse(JSON.stringify(formData)));
@@ -332,6 +353,11 @@ const BasicEventForm = ({ eventData, nextForm }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!canEditBasic) {
+      toast.error("You don't have permission to edit this form.");
+      return;
+    }
 
     // Frontend validation for required fields
     const requiredFields = [
@@ -1056,7 +1082,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
 
             {/* Submit Button */}
             <div className="col-span-3 mt-8 flex justify-end gap-3">
-              {isEditMode && !isFormEditable && (
+              {canEditBasic && isEditMode && !isFormEditable && (
                 <button
                   type="button"
                   onClick={handleEditToggle}
@@ -1065,7 +1091,7 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   Edit Form
                 </button>
               )}
-              {isEditMode && isFormEditable && (
+              {canEditBasic && isEditMode && isFormEditable && (
                 <button
                   type="button"
                   onClick={handleCancel}
@@ -1074,9 +1100,11 @@ const BasicEventForm = ({ eventData, nextForm }) => {
                   Cancel
                 </button>
               )}
-              <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
-                Save and Go Next
-              </button>
+              {canEditBasic && (
+                <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+                  Save and Go Next
+                </button>
+              )}
             </div>
           </form>
         </div>

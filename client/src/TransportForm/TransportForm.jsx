@@ -187,14 +187,21 @@ const TransportForm = ({ eventData, nextForm }) => {
   };
 
   // Define canEdit at the top to avoid temporal dead zone
-  const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
+  const canonicalizeDeptKey = (value) => {
+    const d = String(value || "").trim().toLowerCase();
+    if (!d) return "";
+    if (d === "media") return "communication";
+    if (d === "guest deparment" || d === "guest department" || d === "guest room") return "guestroom";
+    if (d === "systemadmin" || d === "admin") return "system admin";
+    return d;
+  };
+
+  const userDept = canonicalizeDeptKey(localStorage.getItem("user_dept"));
   const isCreationFlow = !!currentEventId && !endformId && !isEditMode;
-  const canEdit =
-    isCreationFlow ||
-    userDept === "transport" ||
-    userDept === "iqac" ||
-    userDept === "system admin" ||
-    !userDept;
+  const isServiceDeptUser = new Set(["communication", "food", "transport", "guestroom"]).has(userDept);
+  const isPrivilegedUser = userDept === "iqac" || userDept === "system admin" || !userDept;
+  const baseCanEdit = isCreationFlow || userDept === "transport" || isPrivilegedUser;
+  const canEdit = isPrivilegedUser ? true : isServiceDeptUser ? userDept === "transport" : baseCanEdit;
 
   const defaultCurrentEvent = {
     basicDetails: {
@@ -707,12 +714,16 @@ const TransportForm = ({ eventData, nextForm }) => {
         }
 
         toast.success("Transport form saved successfully!");
-        const targetForm = nextForm || "/forms/food";
-        if (targetForm === "/forms/food") {
+        const postSaveRoute = !isPrivilegedUser && isServiceDeptUser
+          ? "/event-requests"
+          : (nextForm || "/forms/food");
+
+        if (postSaveRoute === "/forms/food") {
           localStorage.setItem('foodFlowAccess', 'true');
           localStorage.setItem('foodFlowAccessAt', String(Date.now()));
         }
-        navigate(targetForm);
+
+        navigate(postSaveRoute);
       }
 
       // After successful update, fetch latest event data and update Redux
@@ -761,12 +772,12 @@ const TransportForm = ({ eventData, nextForm }) => {
           <DriverDetails data={currentEvent.driverDetails || {}} setDetails={(data) => setCurrentEvent((prev) => ({ ...prev, driverDetails: data }))} disabled={!canEdit || !isFormEditable} />
         </div>
         <div className="mt-8 flex justify-end gap-3 px-6 pb-6">
-          {isEditMode && !isFormEditable && (
-            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
+          {canEdit && isEditMode && !isFormEditable && (
+            <button type="button" onClick={handleEditToggle} className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
               Edit Form
             </button>
           )}
-          {isFormEditable && (
+          {canEdit && isFormEditable && (
             <>
               <button type="button" onClick={handleCancel} className="h-10 rounded-md border border-gray-300 px-6 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
                 Cancel
@@ -776,7 +787,7 @@ const TransportForm = ({ eventData, nextForm }) => {
               </button>
             </>
           )}
-          {!isEditMode && !isFormEditable && (
+          {canEdit && !isEditMode && !isFormEditable && (
             <button type="submit" className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" disabled={!canEdit}>
               Save and Go Next
             </button>

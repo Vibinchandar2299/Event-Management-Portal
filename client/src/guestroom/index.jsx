@@ -191,16 +191,21 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   };
   
   // Define canEdit at the top to avoid temporal dead zone
-  const userDept = (localStorage.getItem("user_dept") || "").toLowerCase();
+  const canonicalizeDeptKey = (value) => {
+    const d = String(value || "").trim().toLowerCase();
+    if (!d) return "";
+    if (d === "media") return "communication";
+    if (d === "guest deparment" || d === "guest department" || d === "guest room") return "guestroom";
+    if (d === "systemadmin" || d === "admin") return "system admin";
+    return d;
+  };
+
+  const userDept = canonicalizeDeptKey(localStorage.getItem("user_dept"));
   const isCreationFlow = !!currentEventId && !endformId && !isEditMode;
-  const canEdit =
-    isCreationFlow ||
-    userDept === "guestroom" ||
-    userDept === "guest room" ||
-    userDept === "guest department" ||
-    userDept === "guest deparment" ||
-    userDept === "iqac" ||
-    userDept === "system admin";
+  const isServiceDeptUser = new Set(["communication", "food", "transport", "guestroom"]).has(userDept);
+  const isPrivilegedUser = userDept === "iqac" || userDept === "system admin" || !userDept;
+  const baseCanEdit = isCreationFlow || userDept === "guestroom" || isPrivilegedUser;
+  const canEdit = isPrivilegedUser ? true : isServiceDeptUser ? userDept === "guestroom" : baseCanEdit;
 
   // Debug: Log form data changes
   useEffect(() => {
@@ -923,7 +928,9 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
               console.error("GuestRoom - background refresh failed:", err);
             });
 
-            const postSaveRoute = nextForm || "/forms/end";
+            const postSaveRoute = !isPrivilegedUser && isServiceDeptUser
+              ? "/event-requests"
+              : (nextForm || "/forms/end");
             console.log("Navigating after guest save:", postSaveRoute);
             navigate(postSaveRoute);
           } else {
@@ -990,14 +997,18 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                toast.warning('Guest room saved, but no active event ID found to link.');
              }
             
-            const postSaveRoute = nextForm || "/forms/end";
+            const postSaveRoute = !isPrivilegedUser && isServiceDeptUser
+              ? "/event-requests"
+              : (nextForm || "/forms/end");
             console.log("Navigating after guest save:", postSaveRoute);
             navigate(postSaveRoute);
           }
         } else {
           console.warn("Guest room saved but no booking ID returned; continuing workflow.");
           toast.success("Guest room form saved successfully");
-          const postSaveRoute = nextForm || "/forms/end";
+          const postSaveRoute = !isPrivilegedUser && isServiceDeptUser
+            ? "/event-requests"
+            : (nextForm || "/forms/end");
           console.log("Navigating after guest save:", postSaveRoute);
           navigate(postSaveRoute);
         }
@@ -1015,7 +1026,9 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
 
       if (error.response?.status === 401) {
         toast.error("Unauthorized (401). Saved not completed, continuing to End Form.");
-        const postSaveRoute = nextForm || "/forms/end";
+        const postSaveRoute = !isPrivilegedUser && isServiceDeptUser
+          ? "/event-requests"
+          : (nextForm || "/forms/end");
         navigate(postSaveRoute);
         return;
       }
@@ -1234,17 +1247,16 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
             />
 
             <div className="mt-8 flex justify-end gap-3 p-6">
-              {isEditMode && !isFormEditable && (
+              {canEdit && isEditMode && !isFormEditable && (
                 <button
                   type="button"
                   onClick={handleEditToggle}
                   className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-                  disabled={!canEdit}
                 >
                   Edit Form
                 </button>
               )}
-              {isFormEditable && (
+              {canEdit && isFormEditable && (
                 <>
                   <button
                     type="button"
@@ -1256,12 +1268,13 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
                   <button
                     type="submit"
                     className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                    disabled={!canEdit}
                   >
                     Save and Go Next
                   </button>
                 </>
               )}
-              {!isEditMode && !isFormEditable && (
+              {canEdit && !isEditMode && !isFormEditable && (
                 <button
                   type="submit"
                   className="h-10 rounded-md bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"

@@ -955,7 +955,7 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
                           <XCircleIcon className="h-4 w-4 text-red-500" />
                         )}
                         <span className={status.guestroom?.approved ? "text-green-600" : "text-red-600"}>
-                          Guest Deparment
+                          Guest Room
                         </span>
                       </div>
                       <div className="flex items-center gap-1 col-span-2">
@@ -980,16 +980,6 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
                       <p className="text-xs text-gray-500">Dept: {organizerDepartment}</p>
                     </div>
                   </div>
-                  {/* Guest Department approval button - hover visible */}
-                  {!isRequesterView && canApproveDepartment('guestroom') && !status?.guestroom?.approved && (
-                    <button
-                      onClick={() => handleApproval(eventId, 'guestroom')}
-                      className="rounded-lg bg-purple-500 px-3 py-1 text-xs text-white hover:bg-purple-600"
-                    >
-                      Approve Guest Deparment
-                    </button>
-                  )}
-                  
                   <div className="flex flex-wrap items-center justify-end gap-2">
 
                     
@@ -1024,6 +1014,15 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
                         className="px-3 py-1 text-xs bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg"
                       >
                         Approve Transport
+                      </button>
+                    )}
+
+                    {!isRequesterView && canApproveDepartment('guestroom') && !status?.guestroom?.approved && (
+                      <button
+                        onClick={() => handleApproval(eventId, 'guestroom')}
+                        className="px-3 py-1 text-xs bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
+                      >
+                        Approve Guest Room
                       </button>
                     )}
 
