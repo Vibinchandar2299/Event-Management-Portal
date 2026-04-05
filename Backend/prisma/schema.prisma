@@ -112,6 +112,7 @@ model FoodForm {
   department            String?
   designationDepartment String?
   amenitiesIncharge     String?
+  signOfOS              String? @default("")
   deanClearance         String? @default("")
   recommendedBy         String? @default("")
   facultySignature      String? @default("")

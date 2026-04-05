@@ -80,6 +80,34 @@ const normalizePayload = (payload = {}) => {
   return body;
 };
 
+const toDateOrNull = (value) => {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const pickFoodFormData = (normalizedBody = {}) => {
+  return {
+    eventName: normalizedBody.eventName ?? null,
+    eventType: normalizedBody.eventType ?? null,
+    otherEventType: normalizedBody.otherEventType ?? "",
+    iqacNumber: normalizedBody.iqacNumber ?? null,
+    empId: normalizedBody.empId ?? null,
+    requestorName: normalizedBody.requestorName ?? null,
+    requisitionDate: toDateOrNull(normalizedBody.requisitionDate),
+    mobileNumber: normalizedBody.mobileNumber ?? null,
+    department: normalizedBody.department ?? null,
+    designationDepartment: normalizedBody.designationDepartment ?? null,
+    amenitiesIncharge: normalizedBody.amenitiesIncharge ?? null,
+    signOfOS: normalizedBody.signOfOS ?? "",
+    deanClearance: normalizedBody.deanClearance ?? "",
+    recommendedBy: normalizedBody.recommendedBy ?? "",
+    facultySignature: normalizedBody.facultySignature ?? "",
+    dates: Array.isArray(normalizedBody.dates) ? normalizedBody.dates : [],
+    status: normalizedBody.status ?? null,
+  };
+};
+
 export const createEvent = async (req, res) => {
   try {
     console.log("Incoming data:", JSON.stringify(req.body, null, 2));
@@ -110,9 +138,7 @@ export const createEvent = async (req, res) => {
 
     const created = await prisma.foodForm.create({
       data: {
-        ...normalizedBody,
-        // Ensure JSON is stored for dates
-        dates: Array.isArray(normalizedBody.dates) ? normalizedBody.dates : [],
+        ...pickFoodFormData(normalizedBody),
       },
     });
 
@@ -160,8 +186,7 @@ export const updateEvent = async (req, res) => {
     const updatedEvent = await prisma.foodForm.update({
       where: { id: String(id) },
       data: {
-        ...normalizedBody,
-        dates: Array.isArray(normalizedBody.dates) ? normalizedBody.dates : [],
+        ...pickFoodFormData(normalizedBody),
       },
     });
     if (!updatedEvent)

@@ -297,7 +297,7 @@ function PendingDashboard() {
             (() => {
               const filteredEvents = uniquePendingEvents.filter((event) => {
                 const id = normalizeMongoId(event?._id || event?.basicEvent?._id);
-                const isValid = isValidObjectId(id);
+                const isValid = isValidObjectId(id) || isUuid(id);
                 console.log(`Event ${event.eventName || 'Unknown'}: ID=${id}, Valid=${isValid}`);
                 if (!isValid) return false;
                 return matchesActiveTab(event);
