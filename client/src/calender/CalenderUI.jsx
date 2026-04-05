@@ -119,7 +119,7 @@ const CalenderUI = () => {
           const guestDoc = (() => {
             const raw = endform?.guestform;
             if (!raw) return null;
-            if (typeof raw === "string") return null; // can't derive date/range from an id-only payload
+            if (typeof raw === "string") return { _id: raw }; // id-only payload (still indicates Guest Room involvement)
             if (typeof raw === "object") {
               return Object.keys(raw).length > 0 ? raw : null;
             }
@@ -367,7 +367,28 @@ const CalenderUI = () => {
       if (allowedTypes.includes("guestroom") && evt?.guestroom) {
         const guestDoc = evt.guestroom;
         const hasGuestDate = !!parseAsDate(guestDoc?.date);
+        // If guest form is id-only (no date payload), fall back to the basic event date span
         if (!hasGuestDate) {
+          const span = normalizeSpan(
+            basic?.startDate || evt?.startDate,
+            basic?.endDate || evt?.endDate || basic?.startDate || evt?.startDate
+          );
+          if (!span) {
+            continue;
+          }
+
+          const id = guestDoc?._id || `${evt?._id || evt?.basicEventId || "guestroom"}:basic`;
+          const chip = {
+            key: `guestroom:${id}`,
+            typeKey: "guestroom",
+            label: "Guest Room",
+            eventName,
+            basicEvent: basic,
+            endformStatus,
+            guestDoc,
+          };
+
+          addChipForSpan(span, chip);
           continue;
         }
 

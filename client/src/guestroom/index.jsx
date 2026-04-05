@@ -196,6 +196,7 @@ const BookingForm = ({ eventData = {}, nextForm }) => {
   const canEdit =
     isCreationFlow ||
     userDept === "guestroom" ||
+    userDept === "guest room" ||
     userDept === "guest department" ||
     userDept === "guest deparment" ||
     userDept === "iqac" ||

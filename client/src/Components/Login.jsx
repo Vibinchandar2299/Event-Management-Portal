@@ -13,7 +13,7 @@ function mapDeptToFormType(dept) {
   if (d === 'media' || d === 'communication') return 'communication';
   if (d === 'food') return 'food';
   if (d === 'transport') return 'transport';
-  if (d === 'guestroom' || d === 'guest room' || d === 'guest department') return 'guestroom';
+  if (d === 'guestroom' || d === 'guest room' || d === 'guest department' || d === 'guest deparment') return 'guestroom';
 
   // Academic department aliases (match BasicEvent `academicdepartment` values)
   const alnum = d.replace(/[^a-z0-9]/g, '');

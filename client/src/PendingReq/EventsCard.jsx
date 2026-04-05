@@ -584,7 +584,12 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
         normalized === "guestroom" ||
         normalized === "guest room" ||
         normalized === "guest department" ||
-        normalized === "guest deparment"
+        normalized === "guest deparment" ||
+        normalized === "guest room department" ||
+        normalized === "guest room dept" ||
+        normalized === "guestroom department" ||
+        normalized === "guestroom dept" ||
+        (normalized.includes("guest") && (normalized.includes("room") || normalized.includes("department") || normalized.includes("dept")))
       ) {
         return "guestroom";
       }

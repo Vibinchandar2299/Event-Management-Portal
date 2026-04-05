@@ -87,7 +87,7 @@ router.post("/approve/transport/:id", auth, checkDepartment('Transport'), async 
   }
 });
 
-router.post("/approve/guestroom/:id", auth, checkDepartment('Guest Deparment'), async (req, res) => {
+router.post("/approve/guestroom/:id", auth, checkDepartment('guestroom'), async (req, res) => {
   try {
     const { id } = req.params;
     const endform = await Endform.findById(id);

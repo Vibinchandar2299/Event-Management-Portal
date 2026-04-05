@@ -11,14 +11,14 @@ const router = express.Router();
 router.post("/bookings", createBooking);
 router.get("/bookings", getAllBookings);
 router.get("/bookings/:id", getBookingById);
-router.put("/bookings/:id", auth, departmentAuthorize(["System Admin", "IQAC", "Guest Deparment"]), updateBooking);
+router.put("/bookings/:id", auth, departmentAuthorize(["System Admin", "IQAC", "guestroom"]), updateBooking);
 router.delete("/bookings/:id", deleteBooking);
 
 // Only System Admin, IQAC, and Guest Deparment can edit guest room bookings
 router.put(
   "/edit/:id",
   auth,
-  departmentAuthorize(["System Admin", "IQAC", "Guest Deparment"]),
+  departmentAuthorize(["System Admin", "IQAC", "guestroom"]),
   async (req, res) => {
     try {
       await updateBooking(req, res);
