@@ -72,20 +72,41 @@ const createEvent = async (req, res) => {
     const safeDepartments = Array.isArray(departments) ? departments : [];
     const safeAcademic = Array.isArray(academicdepartment) ? academicdepartment : [];
 
-    // Ensure academic creators always have their dept on the event.
-    // This prevents academic pending scoping from filtering out their own events
-    // when they forget to select the academic department.
-    const patchedAcademic = shouldAttachAcademicDept
+    const normalizeList = (list) => {
+      const seen = new Set();
+      const out = [];
+      for (const item of list) {
+        const s = String(item ?? "").trim();
+        if (!s) continue;
+        const key = normalizeDeptKey(s);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(s);
+      }
+      return out;
+    };
+
+    // Use `departments` as the primary department field (matches the Basic form dropdown).
+    // If an academic creator forgets to pick their dept, auto-attach it to `departments`.
+    const normalizedDepartments = normalizeList(safeDepartments);
+    const patchedDepartments = shouldAttachAcademicDept
       ? (() => {
-          const alreadyHas = safeAcademic.some((v) => normalizeDeptKey(v) === creatorDeptKey);
-          return alreadyHas ? safeAcademic : [...safeAcademic, String(creatorDeptRaw || creatorDeptKey || "").trim()].filter(Boolean);
+          const alreadyHas = normalizedDepartments.some((v) => normalizeDeptKey(v) === creatorDeptKey);
+          const creatorLabel = String(creatorDeptRaw || creatorDeptKey || "").trim();
+          return alreadyHas || !creatorLabel
+            ? normalizedDepartments
+            : normalizeList([...normalizedDepartments, creatorLabel]);
         })()
-      : safeAcademic;
+      : normalizedDepartments;
+
+    // Avoid duplicating the same dept in both arrays.
+    const deptKeySet = new Set(patchedDepartments.map((v) => normalizeDeptKey(v)));
+    const patchedAcademic = normalizeList(safeAcademic).filter((v) => !deptKeySet.has(normalizeDeptKey(v)));
 
     const created = await prisma.basicEvent.create({
       data: {
         iqacNumber: String(iqacNumber),
-        departments: safeDepartments.map((v) => String(v)),
+        departments: patchedDepartments.map((v) => String(v)),
         academicdepartment: patchedAcademic.map((v) => String(v)),
         professional: Array.isArray(professional) ? professional.map((v) => String(v)) : [],
         eventName: String(eventName),
@@ -174,6 +195,38 @@ const updateEvent = async (req, res) => {
     let updateData = { ...req.body };
     updateData.status = "Approved";
 
+    const normalizeList = (list) => {
+      const seen = new Set();
+      const out = [];
+      for (const item of list) {
+        const s = String(item ?? "").trim();
+        if (!s) continue;
+        const key = normalizeDeptKey(s);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(s);
+      }
+      return out;
+    };
+
+    // If both departments arrays are provided in an update, prevent duplication.
+    const nextDepartments =
+      "departments" in updateData && Array.isArray(updateData.departments)
+        ? normalizeList(updateData.departments)
+        : null;
+    const nextAcademic =
+      "academicdepartment" in updateData && Array.isArray(updateData.academicdepartment)
+        ? normalizeList(updateData.academicdepartment)
+        : null;
+
+    const sanitizedAcademic =
+      nextDepartments && nextAcademic
+        ? (() => {
+            const deptKeySet = new Set(nextDepartments.map((v) => normalizeDeptKey(v)));
+            return nextAcademic.filter((v) => !deptKeySet.has(normalizeDeptKey(v)));
+          })()
+        : nextAcademic;
+
     // Accept and set sub-form ObjectId references if provided
     if (req.body.communicationform) updateData.communicationform = req.body.communicationform;
     if (req.body.foodform) updateData.foodform = req.body.foodform;
@@ -184,11 +237,11 @@ const updateEvent = async (req, res) => {
       where: { id: String(id) },
       data: {
         ...("iqacNumber" in updateData ? { iqacNumber: String(updateData.iqacNumber) } : {}),
-        ...("departments" in updateData && Array.isArray(updateData.departments)
-          ? { departments: updateData.departments.map((v) => String(v)) }
+        ...(nextDepartments
+          ? { departments: nextDepartments.map((v) => String(v)) }
           : {}),
-        ...("academicdepartment" in updateData && Array.isArray(updateData.academicdepartment)
-          ? { academicdepartment: updateData.academicdepartment.map((v) => String(v)) }
+        ...(sanitizedAcademic
+          ? { academicdepartment: sanitizedAcademic.map((v) => String(v)) }
           : {}),
         ...("professional" in updateData && Array.isArray(updateData.professional)
           ? { professional: updateData.professional.map((v) => String(v)) }

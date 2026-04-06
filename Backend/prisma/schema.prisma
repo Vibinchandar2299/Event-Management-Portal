@@ -108,14 +108,9 @@ model FoodForm {
   empId                 String?
   requestorName         String?
   requisitionDate       DateTime?
-  mobileNumber          String?
+  eventRequestorMobileNumber String? @map("mobileNumber")
   department            String?
   designationDepartment String?
-  amenitiesIncharge     String?
-  signOfOS              String? @default("")
-  deanClearance         String? @default("")
-  recommendedBy         String? @default("")
-  facultySignature      String? @default("")
 
   dates Json?
   status String?

@@ -9,13 +9,23 @@ const Guestroom = ({ guestroomData }) => {
     );
   }
 
-  const date = new Date(guestroomData.date);
-  const formattedDate = date.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const rawDate =
+    guestroomData?.date ||
+    guestroomData?.requisitionDate ||
+    guestroomData?.requisitiondate ||
+    guestroomData?.requisition_date ||
+    guestroomData?.createdAt ||
+    null;
+
+  const date = rawDate ? new Date(rawDate) : null;
+  const formattedDate = date && !Number.isNaN(date.getTime())
+    ? date.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "N/A";
 
   const roomLabels = {
     suite1: "Suite Room 1",

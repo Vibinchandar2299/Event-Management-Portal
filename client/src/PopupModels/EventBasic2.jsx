@@ -122,10 +122,6 @@ const EventBasic2 = ({ eventData }) => {
           <p className="mt-1 text-sm text-slate-700">{safeJoin(eventData?.professional)}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-medium text-slate-500">Departments</p>
-          <p className="mt-1 text-sm text-slate-700">{safeJoin(eventData?.departments)}</p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-xs font-medium text-slate-500">Logo</p>
           <p className="mt-1 text-sm text-slate-700">{safeJoin(eventData?.logos)}</p>
         </div>

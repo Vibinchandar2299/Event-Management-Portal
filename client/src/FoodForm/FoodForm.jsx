@@ -92,17 +92,12 @@ function FoodForm({ eventData, nextForm }) {
       empId: organizer.employeeId || basic.empId || "",
       designationDepartment:
         organizer.designation || basic.designationDepartment || basic.designation || "",
-      mobileNumber: organizer.phone || basic.mobileNumber || basic.mobile || "",
+      eventRequestorMobileNumber: organizer.phone || basic.mobileNumber || basic.mobile || "",
       eventName: basic.eventName || "",
       eventType: basic.eventType || "",
       otherEventType: "",
       dates: {},
       foodDetails: {},
-      amenitiesIncharge: "",
-      signOfOS: "",
-      facultySignature: "",
-      recommendedBy: "",
-      deanClearance: "",
     };
   };
   
@@ -168,17 +163,12 @@ function FoodForm({ eventData, nextForm }) {
     requestorName: "",
     empId: "",
     designationDepartment: "",
-    mobileNumber: "",
+    eventRequestorMobileNumber: "",
     eventName: "",
     eventType: "",
     otherEventType: "",
     dates: {},
     foodDetails: {},
-    amenitiesIncharge: "",
-    signOfOS: "",
-    facultySignature: "",
-    recommendedBy: "",
-    deanClearance: "",
   });
 
   // Define canEdit at the top to avoid temporal dead zone
@@ -315,17 +305,12 @@ function FoodForm({ eventData, nextForm }) {
         requestorName: "",
         empId: "",
         designationDepartment: "",
-        mobileNumber: "",
+        eventRequestorMobileNumber: "",
         eventName: "",
         eventType: "",
         otherEventType: "",
         dates: {},
         foodDetails: {},
-        amenitiesIncharge: "",
-        signOfOS: "",
-        facultySignature: "",
-        recommendedBy: "",
-        deanClearance: "",
       });
     }
   }, []);
@@ -380,17 +365,12 @@ function FoodForm({ eventData, nextForm }) {
         requestorName: "",
         empId: "",
         designationDepartment: "",
-        mobileNumber: "",
+        eventRequestorMobileNumber: "",
         eventName: "",
         eventType: "",
         otherEventType: "",
         dates: {},
         foodDetails: {},
-        amenitiesIncharge: "",
-        signOfOS: "",
-        facultySignature: "",
-        recommendedBy: "",
-        deanClearance: "",
       });
       setHasInitialized(true);
       return;
@@ -410,17 +390,12 @@ function FoodForm({ eventData, nextForm }) {
           requestorName: "",
           empId: "",
           designationDepartment: "",
-          mobileNumber: "",
+          eventRequestorMobileNumber: "",
           eventName: "",
           eventType: "",
           otherEventType: "",
           dates: {},
           foodDetails: {},
-          amenitiesIncharge: "",
-          signOfOS: "",
-          facultySignature: "",
-          recommendedBy: "",
-          deanClearance: "",
         });
         setHasInitialized(true);
         return;
@@ -464,17 +439,12 @@ function FoodForm({ eventData, nextForm }) {
         requestorName: "",
         empId: "",
         designationDepartment: "",
-        mobileNumber: "",
+        eventRequestorMobileNumber: "",
         eventName: "",
         eventType: "",
         otherEventType: "",
         dates: {},
         foodDetails: {},
-        amenitiesIncharge: "",
-        signOfOS: "",
-        facultySignature: "",
-        recommendedBy: "",
-        deanClearance: "",
       });
       setHasInitialized(true);
       return;
@@ -505,17 +475,12 @@ function FoodForm({ eventData, nextForm }) {
         requestorName: "",
         empId: "",
         designationDepartment: "",
-        mobileNumber: "",
+        eventRequestorMobileNumber: "",
         eventName: "",
         eventType: "",
         otherEventType: "",
         dates: {},
         foodDetails: {},
-        amenitiesIncharge: "",
-        signOfOS: "",
-        facultySignature: "",
-        recommendedBy: "",
-        deanClearance: "",
       });
       setHasInitialized(true);
       return;
@@ -548,17 +513,16 @@ function FoodForm({ eventData, nextForm }) {
               requestorName: parsedFoodData.requestorName || "",
               empId: parsedFoodData.empId || "",
               designationDepartment: parsedFoodData.designationDepartment || "",
-              mobileNumber: parsedFoodData.mobileNumber || "",
+              eventRequestorMobileNumber:
+                parsedFoodData.eventRequestorMobileNumber ||
+                parsedFoodData.mobileNumber ||
+                parsedFoodData.mobile ||
+                "",
               eventName: parsedFoodData.eventName || "",
               eventType: parsedFoodData.eventType || "",
               otherEventType: parsedFoodData.otherEventType || "",
               dates: normalizedDates,
               foodDetails: normalizedFoodDetails,
-              amenitiesIncharge: parsedFoodData.amenitiesIncharge || "",
-              signOfOS: parsedFoodData.signOfOS || "",
-              facultySignature: parsedFoodData.facultySignature || "",
-              recommendedBy: parsedFoodData.recommendedBy || "",
-              deanClearance: parsedFoodData.deanClearance || "",
               _id: parsedFoodData._id || "",
             });
             setHasInitialized(true);
@@ -632,17 +596,16 @@ function FoodForm({ eventData, nextForm }) {
               requestorName: parsedFoodData.requestorName || "",
               empId: parsedFoodData.empId || "",
               designationDepartment: parsedFoodData.designationDepartment || "",
-              mobileNumber: parsedFoodData.mobileNumber || "",
+              eventRequestorMobileNumber:
+                parsedFoodData.eventRequestorMobileNumber ||
+                parsedFoodData.mobileNumber ||
+                parsedFoodData.mobile ||
+                "",
               eventName: parsedFoodData.eventName || "",
               eventType: parsedFoodData.eventType || "",
               otherEventType: parsedFoodData.otherEventType || "",
               dates: normalizedDates,
               foodDetails: normalizedFoodDetails,
-              amenitiesIncharge: parsedFoodData.amenitiesIncharge || "",
-              signOfOS: parsedFoodData.signOfOS || "",
-              facultySignature: parsedFoodData.facultySignature || "",
-              recommendedBy: parsedFoodData.recommendedBy || "",
-              deanClearance: parsedFoodData.deanClearance || "",
               _id: parsedFoodData._id || "",
             };
 
@@ -678,17 +641,16 @@ function FoodForm({ eventData, nextForm }) {
               requestorName: foodData.requestorName || "",
               empId: foodData.empId || "",
               designationDepartment: foodData.designationDepartment || "",
-              mobileNumber: foodData.mobileNumber || "",
+              eventRequestorMobileNumber:
+                foodData.eventRequestorMobileNumber ||
+                foodData.mobileNumber ||
+                foodData.mobile ||
+                "",
               eventName: foodData.eventName || "",
               eventType: foodData.eventType || "",
               otherEventType: foodData.otherEventType || "",
               dates: normalizedDates,
               foodDetails: normalizedFoodDetails,
-              amenitiesIncharge: foodData.amenitiesIncharge || "",
-              signOfOS: foodData.signOfOS || "",
-              facultySignature: foodData.facultySignature || "",
-              recommendedBy: foodData.recommendedBy || "",
-              deanClearance: foodData.deanClearance || "",
               _id: foodData._id || "",
             };
 
@@ -709,17 +671,12 @@ function FoodForm({ eventData, nextForm }) {
                 requestorName: "",
                 empId: "",
                 designationDepartment: "",
-                mobileNumber: "",
+                eventRequestorMobileNumber: "",
                 eventName: "",
                 eventType: "",
                 otherEventType: "",
                 dates: {},
                 foodDetails: {},
-                amenitiesIncharge: "",
-                signOfOS: "",
-                facultySignature: "",
-                recommendedBy: "",
-                deanClearance: "",
               });
             }
           }
@@ -733,17 +690,12 @@ function FoodForm({ eventData, nextForm }) {
               requestorName: "",
               empId: "",
               designationDepartment: "",
-              mobileNumber: "",
+              eventRequestorMobileNumber: "",
               eventName: "",
               eventType: "",
               otherEventType: "",
               dates: {},
               foodDetails: {},
-              amenitiesIncharge: "",
-              signOfOS: "",
-              facultySignature: "",
-              recommendedBy: "",
-              deanClearance: "",
             });
           }
         } finally {
@@ -761,17 +713,12 @@ function FoodForm({ eventData, nextForm }) {
         requestorName: "",
         empId: "",
         designationDepartment: "",
-        mobileNumber: "",
+        eventRequestorMobileNumber: "",
         eventName: "",
         eventType: "",
         otherEventType: "",
         dates: {},
         foodDetails: {},
-        amenitiesIncharge: "",
-        signOfOS: "",
-        facultySignature: "",
-        recommendedBy: "",
-        deanClearance: "",
       });
       setHasInitialized(true);
     }
@@ -849,8 +796,16 @@ function FoodForm({ eventData, nextForm }) {
       console.log("formData.dates:", formData.dates);
       console.log("formData.foodDetails:", formData.foodDetails);
       // Format data for MongoDB
+      const {
+        amenitiesIncharge,
+        signOfOS,
+        facultySignature,
+        recommendedBy,
+        deanClearance,
+        ...foodFormCore
+      } = formData || {};
       const formattedData = {
-        ...formData,
+        ...foodFormCore,
         requisitionDate: toISODateOrNull(formData.requisitionDate),
         dates: Object.entries(formData.dates || {})
           .filter(([_, dateValue]) => dateValue && dateValue.start)

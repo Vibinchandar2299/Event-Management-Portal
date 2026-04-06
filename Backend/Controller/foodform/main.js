@@ -87,6 +87,13 @@ const toDateOrNull = (value) => {
 };
 
 const pickFoodFormData = (normalizedBody = {}) => {
+  const eventRequestorMobileNumber =
+    normalizedBody.eventRequestorMobileNumber ??
+    normalizedBody.eventrequestormobilenumber ??
+    normalizedBody.mobileNumber ??
+    normalizedBody.mobile ??
+    null;
+
   return {
     eventName: normalizedBody.eventName ?? null,
     eventType: normalizedBody.eventType ?? null,
@@ -95,14 +102,9 @@ const pickFoodFormData = (normalizedBody = {}) => {
     empId: normalizedBody.empId ?? null,
     requestorName: normalizedBody.requestorName ?? null,
     requisitionDate: toDateOrNull(normalizedBody.requisitionDate),
-    mobileNumber: normalizedBody.mobileNumber ?? null,
+    eventRequestorMobileNumber,
     department: normalizedBody.department ?? null,
     designationDepartment: normalizedBody.designationDepartment ?? null,
-    amenitiesIncharge: normalizedBody.amenitiesIncharge ?? null,
-    signOfOS: normalizedBody.signOfOS ?? "",
-    deanClearance: normalizedBody.deanClearance ?? "",
-    recommendedBy: normalizedBody.recommendedBy ?? "",
-    facultySignature: normalizedBody.facultySignature ?? "",
     dates: Array.isArray(normalizedBody.dates) ? normalizedBody.dates : [],
     status: normalizedBody.status ?? null,
   };
@@ -121,7 +123,7 @@ export const createEvent = async (req, res) => {
       empId,
       requestorName,
       requisitionDate,
-      mobileNumber,
+      eventRequestorMobileNumber,
     } = normalizedBody;
     // eventname:eventName
     if (
@@ -131,7 +133,7 @@ export const createEvent = async (req, res) => {
       !empId ||
       !requestorName ||
       !requisitionDate ||
-      !mobileNumber
+      !(eventRequestorMobileNumber || normalizedBody.mobileNumber || normalizedBody.mobile)
     ) {
       return res.status(400).json({ error: "Missing required fields." });
     }

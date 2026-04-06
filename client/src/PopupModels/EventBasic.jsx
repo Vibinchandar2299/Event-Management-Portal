@@ -9,6 +9,27 @@ const EventBasic = ({ eventData }) => {
   const eventsArray = Array.isArray(eventData) ? eventData : [eventData];
   console.log("events data inside the EventBasic1 popup : ", eventsArray);
 
+  const normalizeKey = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const formatDepartment = (event) => {
+    const primary = Array.isArray(event?.departments) && event.departments.length > 0
+      ? event.departments
+      : Array.isArray(event?.academicdepartment)
+        ? event.academicdepartment
+        : [];
+
+    const seen = new Set();
+    const unique = [];
+    for (const item of primary) {
+      const s = String(item || "").trim();
+      if (!s) continue;
+      const k = normalizeKey(s);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      unique.push(s);
+    }
+    return unique.length > 0 ? unique.join(", ") : "N/A";
+  };
+
   return (
     <div className="space-y-3">
       <h1 className="text-base font-semibold text-slate-800">Event Basic</h1>
@@ -31,9 +52,7 @@ const EventBasic = ({ eventData }) => {
               eventsArray.map((event, index) => (
                 <tr key={index} className="hover:bg-slate-50">
                   <td className="px-3 py-2 align-top">
-                    {event.academicdepartment
-                      ? event.academicdepartment.join(", ")
-                      : "N/A"}
+                    {formatDepartment(event)}
                   </td>
                   <td className="px-3 py-2 align-top">{event.eventVenue || "N/A"}</td>
                   <td className="px-3 py-2 align-top">{event.startDate || "N/A"}</td>

@@ -68,10 +68,6 @@ const EventSchema = new mongoose.Schema(
     mobileNumber: { type: String },
     department: { type: String },
     designationDepartment: { type: String },
-    amenitiesIncharge: { type: String },
-    deanClearance: { type: String, default: "" },
-    recommendedBy: { type: String, default: "" },
-    facultySignature: { type: String, default: "" },
     dates: [DateDetailsSchema],
     status: {
       type: String,

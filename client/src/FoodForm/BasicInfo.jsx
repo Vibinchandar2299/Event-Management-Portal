@@ -71,12 +71,12 @@ const BasicInfo = ({ formData, setFormData, disabled = false }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Mobile Number
+            Event Requestor Mobile Number
           </label>
           <input
             type="tel"
-            name="mobileNumber"
-            value={formData.mobileNumber || ""}
+            name="eventRequestorMobileNumber"
+            value={formData.eventRequestorMobileNumber || formData.mobileNumber || ""}
             onChange={handleChange}
             placeholder="Enter mobile number"
             autoComplete="off"

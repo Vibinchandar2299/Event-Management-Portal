@@ -11,23 +11,255 @@ import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { updateEvent } from "../redux/eventsSlice";
 
+const formatDate = (dateValue) => {
+  if (!dateValue || dateValue === "N/A") return "N/A";
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return dateValue;
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+export const EventRequirementDetailsContent = ({ formattedEvent, onClose, showControls = true }) => {
+  const basic = formattedEvent?.basicEvent || {};
+  const sectionCount = [
+    !!formattedEvent?.basicEvent,
+    !!formattedEvent?.communicationdata && Object.keys(formattedEvent.communicationdata).length > 0,
+    !!formattedEvent?.transport && formattedEvent.transport.length > 0,
+    !!formattedEvent?.foodform,
+    !!formattedEvent?.guestform && Object.keys(formattedEvent.guestform).length > 0,
+  ].filter(Boolean).length;
+
+  const isPdf = !showControls;
+  const hasTransport = !!formattedEvent?.transport && formattedEvent.transport.length > 0;
+  const hasCommunication = !!formattedEvent?.communicationdata && Object.keys(formattedEvent.communicationdata).length > 0;
+  const hasFood = !!formattedEvent?.foodform;
+  const hasGuest = !!formattedEvent?.guestform && Object.keys(formattedEvent.guestform).length > 0;
+
+  const PdfPage = ({ children, breakBefore = false }) => (
+    <div className={`${breakBefore ? "sece-pdf-page-break" : ""} sece-pdf-page`}>
+      {children}
+    </div>
+  );
+
+  const SectionCard = ({ title, children }) => (
+    <div className="sece-pdf-section rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h3 className="mb-4 text-lg font-semibold text-slate-800">{title}</h3>
+      {children}
+    </div>
+  );
+
+  const containerClassName = showControls
+    ? "max-h-[92vh] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 via-white to-white shadow-2xl"
+    : "w-[1100px] rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 via-white to-white shadow-2xl";
+
+  const headerClassName = showControls
+    ? "sticky top-0 z-10 border-b border-slate-200 bg-white/95 p-6 backdrop-blur flex items-start justify-between gap-4"
+    : "border-b border-slate-200 bg-white p-6 flex items-start justify-between gap-4";
+
+  if (isPdf) {
+    return (
+      <div className="space-y-0">
+        <PdfPage breakBefore={false}>
+          <div className="w-full rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 via-white to-white shadow-2xl">
+            <div className="border-b border-slate-200 bg-white p-6 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Event Requirement Details</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Structured overview of basic event data and all submitted requirement forms.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="sece-pdf-tile rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+                  <p className="text-xs font-medium text-indigo-700">Event Name</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-indigo-900">{basic.eventName || "N/A"}</p>
+                </div>
+                <div className="sece-pdf-tile rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <p className="text-xs font-medium text-emerald-700">Type</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-emerald-900">{basic.eventType || "N/A"}</p>
+                </div>
+                <div className="sece-pdf-tile rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-xs font-medium text-amber-700">Date Range</p>
+                  <p className="mt-1 text-sm font-semibold text-amber-900">
+                    {formatDate(basic.startDate)} - {formatDate(basic.endDate)}
+                  </p>
+                </div>
+                <div className="sece-pdf-tile rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+                  <p className="text-xs font-medium text-sky-700">Sections Included</p>
+                  <p className="mt-1 text-sm font-semibold text-sky-900">{sectionCount}</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {formattedEvent?.basicEvent ? (
+                  <>
+                    <SectionCard title="Basic Event Information">
+                      <EventBasic eventData={formattedEvent.basicEvent} />
+                    </SectionCard>
+                    <SectionCard title="Additional Event Information">
+                      <EventBasic2 eventData={formattedEvent.basicEvent} />
+                    </SectionCard>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </PdfPage>
+
+        {hasCommunication ? (
+          <PdfPage breakBefore={true}>
+            <SectionCard title="Communication Details">
+              <CommunicationMedia Communicationform={formattedEvent.communicationdata} />
+            </SectionCard>
+          </PdfPage>
+        ) : null}
+
+        {hasFood ? (
+          <PdfPage breakBefore={true}>
+            <SectionCard title="Food and Amenities">
+              <AmenitiesForm foodFormData={formattedEvent.foodform} />
+            </SectionCard>
+          </PdfPage>
+        ) : null}
+
+        {hasTransport ? (
+          <PdfPage breakBefore={true}>
+            <SectionCard title="Transport Details">
+              <TransportRequisition transportData={formattedEvent.transport} />
+            </SectionCard>
+          </PdfPage>
+        ) : null}
+
+        {hasGuest ? (
+          <PdfPage breakBefore={true}>
+            <SectionCard title="Guest Room Details">
+              <Guestroom guestroomData={formattedEvent.guestform} />
+            </SectionCard>
+          </PdfPage>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className={containerClassName}>
+      {/* Header */}
+      <div className={headerClassName}>
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Event Requirement Details</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Structured overview of basic event data and all submitted requirement forms.
+          </p>
+        </div>
+        {showControls ? (
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Close details"
+              type="button"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <div>
+        <div className="p-6">
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sece-pdf-tile rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+              <p className="text-xs font-medium text-indigo-700">Event Name</p>
+              <p className="mt-1 truncate text-sm font-semibold text-indigo-900">{basic.eventName || "N/A"}</p>
+            </div>
+            <div className="sece-pdf-tile rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <p className="text-xs font-medium text-emerald-700">Type</p>
+              <p className="mt-1 truncate text-sm font-semibold text-emerald-900">{basic.eventType || "N/A"}</p>
+            </div>
+            <div className="sece-pdf-tile rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs font-medium text-amber-700">Date Range</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">
+                {formatDate(basic.startDate)} - {formatDate(basic.endDate)}
+              </p>
+            </div>
+            <div className="sece-pdf-tile rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+              <p className="text-xs font-medium text-sky-700">Sections Included</p>
+              <p className="mt-1 text-sm font-semibold text-sky-900">{sectionCount}</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {formattedEvent?.basicEvent && (
+              <div className="sece-pdf-section rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="mb-4 text-lg font-semibold text-slate-800">Basic Event Information</h3>
+                <EventBasic eventData={formattedEvent.basicEvent} />
+              </div>
+            )}
+
+            {formattedEvent?.basicEvent && (
+              <div className="sece-pdf-section rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="mb-4 text-lg font-semibold text-slate-800">Additional Event Information</h3>
+                <EventBasic2 eventData={formattedEvent.basicEvent} />
+              </div>
+            )}
+
+            {hasTransport && (
+              <div className="sece-pdf-section rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="mb-4 text-lg font-semibold text-slate-800">Transport Details</h3>
+                <TransportRequisition transportData={formattedEvent.transport} />
+              </div>
+            )}
+
+            {hasCommunication && (
+              <div className="sece-pdf-section rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="mb-4 text-lg font-semibold text-slate-800">Communication Details</h3>
+                <CommunicationMedia Communicationform={formattedEvent.communicationdata} />
+              </div>
+            )}
+
+            {hasFood && (
+              <div className="sece-pdf-section rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="mb-4 text-lg font-semibold text-slate-800">Food and Amenities</h3>
+                <AmenitiesForm foodFormData={formattedEvent.foodform} />
+              </div>
+            )}
+
+            {hasGuest && (
+              <div className="sece-pdf-section rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="mb-4 text-lg font-semibold text-slate-800">Guest Room Details</h3>
+                <Guestroom guestroomData={formattedEvent.guestform} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showControls ? (
+        <div className="flex justify-end border-t border-slate-200 bg-white px-6 py-4">
+          <button
+            onClick={onClose}
+            className="rounded-md bg-slate-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-900"
+            type="button"
+          >
+            Close Details
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 const EndPopup = ({ event, onClose, isOpen }) => {
   const [formattedEvent, setFormattedEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const dispatch = useDispatch();
   const token = useSelector((state) => state.auth.token);
-
-  const formatDate = (dateValue) => {
-    if (!dateValue || dateValue === "N/A") return "N/A";
-    const date = new Date(dateValue);
-    if (Number.isNaN(date.getTime())) return dateValue;
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
 
   useEffect(() => {
     const processEventData = async () => {
@@ -78,9 +310,9 @@ const EndPopup = ({ event, onClose, isOpen }) => {
             departments: event.departments || event.basicEvent?.departments || event.eventdata?.departments || []
           },
           transport: Array.isArray(event.transport) ? event.transport : [event.transport].filter(Boolean),
-          foodform: event.foodForm || event.foodform || null,
-          guestform: event.guestform || {},
-          communicationdata: event.communicationdata || event.communicationform || {}
+          foodform: event.foodForm || event.foodform || event.foodformId || null,
+          guestform: event.guestform || event.guestformId || event.guestroomId || {},
+          communicationdata: event.communicationdata || event.communicationform || event.communicationformId || {}
         };
         
         console.log("=== EndPopup Data Processing Debug ===");
@@ -116,7 +348,7 @@ const EndPopup = ({ event, onClose, isOpen }) => {
               const foodResponse = await axios.get(
                 `${import.meta.env.VITE_API_URL}/food/${formatted.foodform}`
               );
-              formatted.foodform = foodResponse.data;
+              formatted.foodform = foodResponse.data?.data || foodResponse.data?.requirement || foodResponse.data;
               console.log("Fetched food form data:", foodResponse.data);
             } catch (error) {
               console.error("Error fetching food form data:", error);
@@ -159,6 +391,19 @@ const EndPopup = ({ event, onClose, isOpen }) => {
           console.log("Original food form dates:", formatted.foodform.dates);
           console.log("Original food form foodDetails:", formatted.foodform.foodDetails);
           console.log("Processed food form:", newFoodForm);
+        }
+
+        // Process guest room data (supports id-only EndForm payloads)
+        if (formatted.guestform && typeof formatted.guestform === 'string') {
+          try {
+            const guestResponse = await axios.get(
+              `${import.meta.env.VITE_API_URL}/guestroom/bookings/${formatted.guestform}`
+            );
+            formatted.guestform = guestResponse.data?.data || guestResponse.data?.booking || guestResponse.data;
+          } catch (error) {
+            console.error("Error fetching guest room data:", error);
+            formatted.guestform = {};
+          }
         }
 
         console.log("Processed food form data:", formatted.foodform);
@@ -253,114 +498,13 @@ const EndPopup = ({ event, onClose, isOpen }) => {
     );
   }
 
-  const basic = formattedEvent.basicEvent || {};
-  const sectionCount = [
-    !!formattedEvent.basicEvent,
-    !!formattedEvent.communicationdata && Object.keys(formattedEvent.communicationdata).length > 0,
-    !!formattedEvent.transport && formattedEvent.transport.length > 0,
-    !!formattedEvent.foodform,
-    !!formattedEvent.guestform && Object.keys(formattedEvent.guestform).length > 0,
-  ].filter(Boolean).length;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 via-white to-white shadow-2xl">
-        <>
-          {/* Header with close button */}
-          <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 p-6 backdrop-blur flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Event Requirement Details</h2>
-              <p className="mt-1 text-sm text-slate-600">Structured overview of basic event data and all submitted requirement forms.</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={onClose}
-                className="rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Close details"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-
-          <div>
-
-            <div className="p-6">
-              <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-                  <p className="text-xs font-medium text-indigo-700">Event Name</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-indigo-900">{basic.eventName || "N/A"}</p>
-                </div>
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                  <p className="text-xs font-medium text-emerald-700">Type</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-emerald-900">{basic.eventType || "N/A"}</p>
-                </div>
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                  <p className="text-xs font-medium text-amber-700">Date Range</p>
-                  <p className="mt-1 text-sm font-semibold text-amber-900">{formatDate(basic.startDate)} - {formatDate(basic.endDate)}</p>
-                </div>
-                <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
-                  <p className="text-xs font-medium text-sky-700">Sections Included</p>
-                  <p className="mt-1 text-sm font-semibold text-sky-900">{sectionCount}</p>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-          {formattedEvent.basicEvent && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-slate-800">Basic Event Information</h3>
-              <EventBasic eventData={formattedEvent.basicEvent} />
-            </div>
-          )}
-
-          {formattedEvent.basicEvent && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-slate-800">Additional Event Information</h3>
-              <EventBasic2 eventData={formattedEvent.basicEvent} />
-            </div>
-          )}
-
-          {formattedEvent.transport && formattedEvent.transport.length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-slate-800">Transport Details</h3>
-              <TransportRequisition transportData={formattedEvent.transport} />
-            </div>
-          )}
-
-          {formattedEvent.communicationdata && Object.keys(formattedEvent.communicationdata).length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-slate-800">Communication Details</h3>
-              <CommunicationMedia Communicationform={formattedEvent.communicationdata} />
-            </div>
-          )}
-
-          {formattedEvent.foodform && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-slate-800">Food and Amenities</h3>
-              <AmenitiesForm foodFormData={formattedEvent.foodform} />
-            </div>
-          )}
-
-          {formattedEvent.guestform && Object.keys(formattedEvent.guestform).length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-slate-800">Guest Room Details</h3>
-              <Guestroom guestroomData={formattedEvent.guestform} />
-            </div>
-          )}
-              </div>
-            </div>
-          </div>
-          {/* Footer with close button */}
-          <div className="flex justify-end border-t border-slate-200 bg-white px-6 py-4">
-            <button
-              onClick={onClose}
-              className="rounded-md bg-slate-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-900"
-            >
-              Close Details
-            </button>
-          </div>
-        </>
-      </div>
+      <EventRequirementDetailsContent
+        formattedEvent={formattedEvent}
+        onClose={onClose}
+        showControls={true}
+      />
     </div>
   );
 };

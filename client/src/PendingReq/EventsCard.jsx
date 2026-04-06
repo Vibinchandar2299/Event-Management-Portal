@@ -13,8 +13,11 @@ import {
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Modal from 'react-modal';
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 
 import EndPopup from "../PopupModels/EndPopup";
+import EventPdfTemplate from "../pdf/EventPdfTemplate";
 import Forms from "../Components/Form";
 import { toast,ToastContainer } from "react-toastify";
 import { setEventData, resetEventState, clearEventData } from "../redux/EventSlice";
@@ -124,10 +127,51 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
     // - other forms: `foodform`, `guestform`, `communicationform`
     // Some pages may already provide fully-populated nested objects.
     let basicEvent = eventData.basicEvent || eventData.eventdata || eventData.eventId || null;
-    let communicationform = eventData.communicationform || eventData.communicationForm || eventData.communicationdata || null;
-    let foodform = eventData.foodform || eventData.foodForm || null;
-    let transport = eventData.transportform || eventData.transport || null;
-    let guestroom = eventData.guestform || null;
+    let communicationform =
+      eventData.communicationform ||
+      eventData.communicationForm ||
+      eventData.communicationdata ||
+      eventData.communicationformId ||
+      null;
+    let foodform = eventData.foodform || eventData.foodForm || eventData.foodformId || null;
+    let transport =
+      eventData.transportform ||
+      eventData.transport ||
+      eventData.transportformIds ||
+      eventData.transportIds ||
+      null;
+    let guestroom = eventData.guestform || eventData.guestformId || eventData.guestroomId || null;
+
+    const getDocId = (doc) => {
+      if (!doc) return null;
+      if (typeof doc === 'string') return doc;
+      if (typeof doc === 'object') {
+        const id = doc._id || doc.id || doc._doc?._id || doc._doc?.id;
+        return id ? String(id) : null;
+      }
+      return null;
+    };
+
+    const hasFoodRequisitionDate = (doc) => {
+      if (!doc || typeof doc !== 'object') return false;
+      return Boolean(
+        doc.requisitionDate ||
+        doc.requisitiondate ||
+        doc.requisition_date ||
+        doc.basicDetails?.requisitionDate
+      );
+    };
+
+    const hasGuestRequisitionDate = (doc) => {
+      if (!doc || typeof doc !== 'object') return false;
+      return Boolean(
+        doc.date ||
+        doc.requisitionDate ||
+        doc.requisitiondate ||
+        doc.requisition_date ||
+        doc.createdAt
+      );
+    };
 
     // If any are just IDs (strings), fetch the full object
     if (basicEvent && typeof basicEvent === 'string') {
@@ -154,19 +198,21 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
         communicationform = {}; 
       }
     }
-    if (foodform && typeof foodform === 'string') {
+    const foodId = getDocId(foodform);
+    if (foodId && (typeof foodform === 'string' || !hasFoodRequisitionDate(foodform))) {
       try {
         const foodResp = await axios.get(
-          `/api/food/${foodform}`
+          `/api/food/${foodId}`
         );
-        // Unwrap the data property if present
-        foodform = foodResp.data.data || foodResp.data;
+        // Unwrap common response envelopes ({data}, {requirement})
+        foodform = foodResp.data?.data || foodResp.data?.requirement || foodResp.data;
       } catch (e) { foodform = {}; }
     }
-    if (guestroom && typeof guestroom === 'string') {
+    const guestId = getDocId(guestroom);
+    if (guestId && (typeof guestroom === 'string' || !hasGuestRequisitionDate(guestroom))) {
       try {
         const guestResp = await axios.get(
-          `/api/guestroom/bookings/${guestroom}`
+          `/api/guestroom/bookings/${guestId}`
         );
         guestroom = guestResp.data;
       } catch (e) { guestroom = {}; }
@@ -230,17 +276,19 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
         communicationform = {};
       }
     }
-    if (foodform && typeof foodform === 'string') {
+    const foodId2 = getDocId(foodform);
+    if (foodId2 && (typeof foodform === 'string' || !hasFoodRequisitionDate(foodform))) {
       try {
-        const foodResp = await axios.get(`/api/food/${foodform}`);
-        foodform = foodResp.data.data || foodResp.data;
+        const foodResp = await axios.get(`/api/food/${foodId2}`);
+        foodform = foodResp.data?.data || foodResp.data?.requirement || foodResp.data;
       } catch (e) {
         foodform = {};
       }
     }
-    if (guestroom && typeof guestroom === 'string') {
+    const guestId2 = getDocId(guestroom);
+    if (guestId2 && (typeof guestroom === 'string' || !hasGuestRequisitionDate(guestroom))) {
       try {
-        const guestResp = await axios.get(`/api/guestroom/bookings/${guestroom}`);
+        const guestResp = await axios.get(`/api/guestroom/bookings/${guestId2}`);
         guestroom = guestResp.data;
       } catch (e) {
         guestroom = {};
@@ -686,46 +734,533 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
   };
 
   const handleDownloadPdf = async (eventId, customUrl = null) => {
+    let host;
+    let root;
+    let pdfStyleEl;
+    let toastId;
     try {
-      console.log('Starting PDF download for event:', eventId);
-      
-      // Show loading state
-      toast.info('Generating PDF...', { autoClose: 2000 });
-      
-      // Use custom URL if provided, otherwise use default pattern
-      const apiUrl = customUrl || `/api/common/download-event-pdf?eventId=${eventId}`;
-      
-      console.log('Full API URL:', apiUrl);
-      
-      const response = await axios.get(apiUrl, {
-        responseType: 'blob',
-        timeout: 30000, // 30 second timeout
-      });
-      
-      console.log('Response received:', response);
-      console.log('Response data size:', response.data?.size);
-      
-      // Check if response is valid
-      if (!response.data || response.data.size === 0) {
-        throw new Error('Received empty PDF data');
+      console.log('Starting PDF generation for event:', eventId);
+
+      // Use a persistent loading toast; html2canvas can block paints otherwise.
+      toastId = toast.loading('Generating PDF...');
+      // Yield so the toast actually renders before heavy work starts.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise(requestAnimationFrame);
+
+      let eventData;
+      const eventInPopup = Array.isArray(EventPopup)
+        ? EventPopup.find((event) => event._id === eventId || event.basicEvent?._id === eventId)
+        : null;
+      if (eventInPopup) {
+        eventData = eventInPopup;
+      } else {
+        const response = await axios.get(`/api/event/${eventId}`);
+        eventData = response.data;
       }
-      
-      // Create blob and download
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `event-${eventId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      }, 100);
-      
-      toast.success('PDF downloaded successfully!', { autoClose: 3000 });
+
+      const formattedEvent = await formatAndFetchEventData(eventData);
+
+      const pdfEvent = {
+        basicEvent: formattedEvent.basicEvent,
+        transport: formattedEvent.transport,
+        foodform: formattedEvent.foodform,
+        guestform: formattedEvent.guestform,
+        communicationdata: formattedEvent.communicationform,
+      };
+
+      // html2canvas (used by html2pdf.js) doesn't support Tailwind v4 OKLCH colors.
+      // Inject a scoped, PDF-safe palette using hex colors and disable gradients.
+      pdfStyleEl = document.createElement('style');
+      pdfStyleEl.setAttribute('data-sece-pdf-safe', 'true');
+
+      // Use a pixel page size to keep page slicing aligned (avoids content drifting / overlap).
+      const PDF_PAGE_WIDTH_PX = 1120; // ~A4 landscape width at 96dpi
+      const PDF_PAGE_HEIGHT_PX = Math.round(PDF_PAGE_WIDTH_PX / 1.414); // keep A-series ratio
+
+      pdfStyleEl.textContent = `
+        .sece-pdf-safe, .sece-pdf-safe * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          box-sizing: border-box !important;
+          background-image: none !important;
+          background: none !important;
+          backdrop-filter: none !important;
+          filter: none !important;
+          transform: none !important;
+          box-shadow: none !important;
+          text-shadow: none !important;
+          --tw-shadow: 0 0 #0000 !important;
+          --tw-shadow-colored: 0 0 #0000 !important;
+          --tw-ring-shadow: 0 0 #0000 !important;
+          --tw-ring-offset-shadow: 0 0 #0000 !important;
+          --tw-ring-color: rgba(0,0,0,0) !important;
+          --tw-border-opacity: 1 !important;
+          --tw-text-opacity: 1 !important;
+          --tw-bg-opacity: 1 !important;
+          --tw-gradient-from: transparent !important;
+          --tw-gradient-to: transparent !important;
+          --tw-gradient-stops: transparent !important;
+        }
+
+        /* Layout fixes for PDF rendering (prevents overlap in wide tables/cards). */
+        .sece-pdf-safe {
+          font-size: 12px !important;
+          line-height: 1.35 !important;
+        }
+        .sece-pdf-safe .sece-pdf-page {
+          width: ${PDF_PAGE_WIDTH_PX}px !important;
+          min-height: ${PDF_PAGE_HEIGHT_PX}px !important;
+          padding: 16px !important;
+          box-sizing: border-box !important;
+          background-color: #ffffff !important;
+        }
+        .sece-pdf-safe .sece-pdf-page-break {
+          break-before: page !important;
+          page-break-before: always !important;
+        }
+        .sece-pdf-safe .truncate {
+          white-space: normal !important;
+          overflow: visible !important;
+          text-overflow: clip !important;
+        }
+        .sece-pdf-safe [class*="overflow-x-auto"],
+        .sece-pdf-safe [class*="overflow-y-auto"],
+        .sece-pdf-safe [class*="overflow-auto"],
+        .sece-pdf-safe [class*="overflow-scroll"] {
+          overflow: visible !important;
+          max-height: none !important;
+        }
+        .sece-pdf-safe table {
+          width: 100% !important;
+          table-layout: fixed !important;
+          border-collapse: collapse !important;
+        }
+        .sece-pdf-safe th,
+        .sece-pdf-safe td {
+          white-space: normal !important;
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          vertical-align: top !important;
+          padding-top: 6px !important;
+          padding-bottom: 6px !important;
+        }
+        .sece-pdf-safe thead { display: table-header-group !important; }
+        .sece-pdf-safe tfoot { display: table-footer-group !important; }
+        .sece-pdf-safe tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+        .sece-pdf-safe .sece-pdf-tile,
+        .sece-pdf-safe .rounded-lg,
+        .sece-pdf-safe .rounded-md {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        .sece-pdf-safe .sece-pdf-section {
+          break-inside: auto !important;
+          page-break-inside: auto !important;
+        }
+
+        /* html2canvas can mis-render CSS grid/flex and stack columns on top of each other.
+           In PDF export, prefer a single-column flow inside section cards. */
+        .sece-pdf-safe .sece-pdf-section .grid {
+          display: block !important;
+        }
+        .sece-pdf-safe .sece-pdf-section .grid > * {
+          width: 100% !important;
+        }
+        .sece-pdf-safe .sece-pdf-section .grid > * + * {
+          margin-top: 10px !important;
+        }
+        .sece-pdf-safe .sece-pdf-section .flex {
+          display: block !important;
+        }
+        .sece-pdf-safe .sece-pdf-section .flex > * + * {
+          margin-top: 8px !important;
+        }
+        .sece-pdf-safe h2,
+        .sece-pdf-safe h3 {
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+        }
+
+        /* Default everything to safe rgb/hex (prevents any OKLCH from leaking into computed styles). */
+        .sece-pdf-safe * {
+          color: #0f172a !important;
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+          outline-color: #94a3b8 !important;
+          text-decoration-color: currentColor !important;
+          caret-color: #0f172a !important;
+        }
+
+        /* Common slate */
+        .sece-pdf-safe [class*="text-slate-900"] { color: #0f172a !important; }
+        .sece-pdf-safe [class*="text-slate-800"] { color: #1e293b !important; }
+        .sece-pdf-safe [class*="text-slate-700"] { color: #334155 !important; }
+        .sece-pdf-safe [class*="text-slate-600"] { color: #475569 !important; }
+        .sece-pdf-safe [class*="text-slate-500"] { color: #64748b !important; }
+        .sece-pdf-safe [class*="border-slate-200"] { border-color: #e2e8f0 !important; }
+        .sece-pdf-safe [class*="bg-slate-50"] { background-color: #f8fafc !important; }
+
+        /* Whites */
+        .sece-pdf-safe [class*="bg-white"] { background-color: #ffffff !important; }
+
+        /* Light slate surfaces */
+        .sece-pdf-safe [class*="bg-slate-50"] { background-color: #f8fafc !important; }
+        .sece-pdf-safe [class*="bg-slate-100"] { background-color: #f1f5f9 !important; }
+
+        /* Indigo */
+        .sece-pdf-safe [class*="bg-indigo-50"] { background-color: #eef2ff !important; }
+        .sece-pdf-safe [class*="border-indigo-200"] { border-color: #c7d2fe !important; }
+        .sece-pdf-safe [class*="text-indigo-700"] { color: #4338ca !important; }
+        .sece-pdf-safe [class*="text-indigo-900"] { color: #312e81 !important; }
+
+        /* Emerald */
+        .sece-pdf-safe [class*="bg-emerald-50"] { background-color: #ecfdf5 !important; }
+        .sece-pdf-safe [class*="border-emerald-200"] { border-color: #a7f3d0 !important; }
+        .sece-pdf-safe [class*="text-emerald-700"] { color: #047857 !important; }
+        .sece-pdf-safe [class*="text-emerald-900"] { color: #064e3b !important; }
+
+        /* Amber */
+        .sece-pdf-safe [class*="bg-amber-50"] { background-color: #fffbeb !important; }
+        .sece-pdf-safe [class*="border-amber-200"] { border-color: #fde68a !important; }
+        .sece-pdf-safe [class*="text-amber-700"] { color: #b45309 !important; }
+        .sece-pdf-safe [class*="text-amber-900"] { color: #78350f !important; }
+
+        /* Sky */
+        .sece-pdf-safe [class*="bg-sky-50"] { background-color: #f0f9ff !important; }
+        .sece-pdf-safe [class*="border-sky-200"] { border-color: #bae6fd !important; }
+        .sece-pdf-safe [class*="text-sky-700"] { color: #0369a1 !important; }
+        .sece-pdf-safe [class*="text-sky-900"] { color: #0c4a6e !important; }
+
+        /* PDF template styles (stable, no grid/flex dependence) */
+        .sece-pdf-safe .sece-pdf-header {
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 14px !important;
+          padding: 14px 16px !important;
+          margin-bottom: 12px !important;
+          background-color: #f8fafc !important;
+        }
+        .sece-pdf-safe .sece-pdf-header__titleRow {
+          display: table !important;
+          width: 100% !important;
+          table-layout: fixed !important;
+        }
+        .sece-pdf-safe .sece-pdf-header__titleCell {
+          display: table-cell !important;
+          vertical-align: top !important;
+          padding-right: 12px !important;
+        }
+        .sece-pdf-safe .sece-pdf-header__badgeCell {
+          display: table-cell !important;
+          vertical-align: top !important;
+          width: 110px !important;
+          text-align: right !important;
+        }
+        .sece-pdf-safe .sece-pdf-badge {
+          display: inline-block !important;
+          float: none !important;
+          padding: 4px 10px !important;
+          color: #0f172a !important;
+        }
+        .sece-pdf-safe .sece-pdf-subtitle {
+          margin-top: 2px !important;
+          font-size: 12px !important;
+          color: #475569 !important;
+        }
+
+        .sece-pdf-safe .sece-pdf-block {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+          margin-top: 10px !important;
+        }
+        .sece-pdf-safe .sece-pdf-blockTitle {
+          font-weight: 800 !important;
+          color: #0f172a !important;
+          margin: 0 0 6px 0 !important;
+        }
+        .sece-pdf-safe .sece-pdf-paragraph {
+          white-space: pre-wrap !important;
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          font-size: 11px !important;
+          line-height: 1.4 !important;
+          color: #0f172a !important;
+        }
+        .sece-pdf-safe .sece-pdf-bullet {
+          margin: 0 0 4px 0 !important;
+          font-size: 11px !important;
+          line-height: 1.35 !important;
+        }
+        .sece-pdf-safe .sece-pdf-muted {
+          color: #64748b !important;
+        }
+        .sece-pdf-safe .sece-pdf-badge {
+          float: right !important;
+          padding: 4px 10px !important;
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 999px !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
+          color: #334155 !important;
+          background-color: #ffffff !important;
+        }
+        .sece-pdf-safe .sece-pdf-meta {
+          margin-top: 10px !important;
+          width: 100% !important;
+          display: table !important;
+          table-layout: fixed !important;
+        }
+        .sece-pdf-safe .sece-pdf-meta__col {
+          display: table-cell !important;
+          width: 50% !important;
+          vertical-align: top !important;
+          padding-right: 10px !important;
+        }
+        .sece-pdf-safe .sece-pdf-meta__row {
+          margin-top: 6px !important;
+          font-size: 11px !important;
+        }
+        .sece-pdf-safe .sece-pdf-meta__label {
+          display: inline-block !important;
+          min-width: 90px !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
+          color: #64748b !important;
+        }
+        .sece-pdf-safe .sece-pdf-meta__value {
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          color: #0f172a !important;
+        }
+
+        .sece-pdf-safe .sece-pdf-body { display: block !important; }
+        .sece-pdf-safe .sece-pdf-card {
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 14px !important;
+          padding: 12px !important;
+          margin-bottom: 12px !important;
+          background-color: #ffffff !important;
+        }
+        .sece-pdf-safe .sece-pdf-card__title {
+          font-size: 12px !important;
+          font-weight: 800 !important;
+          color: #0f172a !important;
+          margin-bottom: 8px !important;
+          padding-bottom: 6px !important;
+          border-bottom: 1px solid #e2e8f0 !important;
+        }
+        .sece-pdf-safe .sece-pdf-note {
+          font-size: 11px !important;
+          color: #475569 !important;
+          margin-bottom: 8px !important;
+        }
+        .sece-pdf-safe .sece-pdf-emptyBlock {
+          font-size: 12px !important;
+          color: #64748b !important;
+          padding: 10px !important;
+          border: 1px dashed #cbd5e1 !important;
+          border-radius: 10px !important;
+          background-color: #f8fafc !important;
+        }
+
+        .sece-pdf-safe .sece-pdf-table,
+        .sece-pdf-safe .sece-pdf-kv {
+          width: 100% !important;
+          table-layout: fixed !important;
+          border-collapse: collapse !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 10px !important;
+          overflow: hidden !important;
+        }
+        .sece-pdf-safe .sece-pdf-table th,
+        .sece-pdf-safe .sece-pdf-table td,
+        .sece-pdf-safe .sece-pdf-kv th,
+        .sece-pdf-safe .sece-pdf-kv td {
+          border-bottom: 1px solid #e2e8f0 !important;
+          padding: 6px 8px !important;
+          vertical-align: top !important;
+          white-space: normal !important;
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          font-size: 11px !important;
+          line-height: 1.35 !important;
+        }
+        .sece-pdf-safe .sece-pdf-table thead th,
+        .sece-pdf-safe .sece-pdf-kv thead th {
+          background-color: #f1f5f9 !important;
+          font-weight: 800 !important;
+          color: #0f172a !important;
+        }
+        .sece-pdf-safe .sece-pdf-kv__key {
+          color: #334155 !important;
+          font-weight: 700 !important;
+        }
+        .sece-pdf-safe .sece-pdf-kv__val {
+          color: #0f172a !important;
+        }
+        .sece-pdf-safe .sece-pdf-empty {
+          text-align: center !important;
+          color: #64748b !important;
+          padding: 10px !important;
+        }
+      `;
+      document.head.appendChild(pdfStyleEl);
+
+      host = document.createElement('div');
+      host.style.position = 'fixed';
+      host.style.left = '0';
+      host.style.top = '0';
+      host.style.transform = 'translateX(-200vw)';
+      host.style.width = '1120px';
+      host.style.background = 'white';
+      host.style.padding = '0';
+      host.style.pointerEvents = 'none';
+      document.body.appendChild(host);
+
+      root = createRoot(host);
+      flushSync(() => {
+        root.render(
+          <div className="sece-pdf-safe">
+            <EventPdfTemplate eventData={pdfEvent} />
+          </div>
+        );
+      });
+
+      // Wait for React layout + fonts/images, so html2canvas captures real content.
+      await new Promise(requestAnimationFrame);
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+      const imgs = Array.from(host.querySelectorAll('img'));
+      await Promise.all(
+        imgs.map(
+          (img) =>
+            img.complete
+              ? Promise.resolve()
+              : new Promise((resolve) => {
+                  img.addEventListener('load', resolve, { once: true });
+                  img.addEventListener('error', resolve, { once: true });
+                })
+        )
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
+      const safeName = String(pdfEvent?.basicEvent?.eventName || '')
+        .trim()
+        .replace(/[^a-z0-9-_ ]+/gi, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      const safeIqac = String(pdfEvent?.basicEvent?.iqacNumber || '')
+        .trim()
+        .replace(/[^a-z0-9-_]+/gi, '-')
+        .replace(/-+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      const filename = safeName
+        ? `${safeName}.pdf`
+        : safeIqac
+          ? `event-${safeIqac}.pdf`
+          : `event-${eventId}.pdf`;
+
+      const exportRoot = host.querySelector('.sece-pdf-safe') || host;
+      const pageNodes = Array.from(exportRoot.querySelectorAll('.sece-pdf-page'));
+      if (pageNodes.length === 0) {
+        throw new Error('PDF export failed: no .sece-pdf-page nodes found');
+      }
+
+      const pdf = new jsPDF({
+        unit: 'px',
+        format: [PDF_PAGE_WIDTH_PX, PDF_PAGE_HEIGHT_PX],
+        orientation: 'landscape',
+        compress: true,
+      });
+
+      for (let i = 0; i < pageNodes.length; i += 1) {
+        const pageEl = pageNodes[i];
+
+        // Ensure each section is fully laid out before capture.
+        // (Prevents rare cases where tables/grids render mid-measure.)
+        await new Promise(requestAnimationFrame);
+
+        const captureHeight = Math.max(
+          pageEl.scrollHeight || 0,
+          pageEl.offsetHeight || 0,
+          pageEl.clientHeight || 0,
+          PDF_PAGE_HEIGHT_PX
+        );
+
+        const canvasOptions = {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: PDF_PAGE_WIDTH_PX,
+          windowHeight: PDF_PAGE_HEIGHT_PX,
+          width: PDF_PAGE_WIDTH_PX,
+          height: captureHeight,
+        };
+
+        let canvas;
+        try {
+          // Default to the computed renderer (most stable).
+          canvas = await html2canvas(pageEl, {
+            ...canvasOptions,
+            foreignObjectRendering: false,
+          });
+        } catch (err) {
+          console.warn('html2canvas capture failed, retrying with foreignObjectRendering', err);
+          canvas = await html2canvas(pageEl, {
+            ...canvasOptions,
+            foreignObjectRendering: true,
+          });
+        }
+
+        if (!canvas || !canvas.width || !canvas.height) {
+          // Defensive: try once more with the alternate renderer.
+          canvas = await html2canvas(pageEl, {
+            ...canvasOptions,
+            foreignObjectRendering: true,
+          });
+        }
+
+        // PNG is more reliable across browsers (prevents occasional black JPEG output in jsPDF).
+        const imgData = canvas.toDataURL('image/png');
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+
+        // Fit the rendered page into the PDF page (keeps 1 form per page).
+        const scale = Math.min(pageW / canvas.width, pageH / canvas.height);
+        const renderW = Math.round(canvas.width * scale);
+        const renderH = Math.round(canvas.height * scale);
+        const x = Math.round((pageW - renderW) / 2);
+        const y = Math.round((pageH - renderH) / 2);
+
+        if (i > 0) {
+          pdf.addPage([PDF_PAGE_WIDTH_PX, PDF_PAGE_HEIGHT_PX], 'landscape');
+        }
+        pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
+
+        // Yield between pages to keep UI responsive (toast paint).
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+
+      pdf.save(filename);
+
+      if (toastId != null) {
+        toast.update(toastId, {
+          render: 'PDF downloaded successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 3000,
+        });
+      } else {
+        toast.success('PDF downloaded successfully!', { autoClose: 3000 });
+      }
       
     } catch (error) {
       console.error('PDF download error:', error);
@@ -754,7 +1289,32 @@ const EventsCard = ({ Events, EventPopup, onEventUpdate, viewerMode = 'default' 
         errorMessage = 'Download timed out - please try again';
       }
       
-      toast.error(errorMessage, { autoClose: 5000 });
+      if (toastId != null) {
+        toast.update(toastId, {
+          render: errorMessage,
+          type: 'error',
+          isLoading: false,
+          autoClose: 5000,
+        });
+      } else {
+        toast.error(errorMessage, { autoClose: 5000 });
+      }
+    } finally {
+      try {
+        root?.unmount();
+      } catch (_) {
+        // ignore cleanup errors
+      }
+      try {
+        if (host?.parentNode) host.parentNode.removeChild(host);
+      } catch (_) {
+        // ignore cleanup errors
+      }
+      try {
+        if (pdfStyleEl?.parentNode) pdfStyleEl.parentNode.removeChild(pdfStyleEl);
+      } catch (_) {
+        // ignore cleanup errors
+      }
     }
   };
 
