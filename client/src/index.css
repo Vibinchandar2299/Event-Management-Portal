@@ -130,3 +130,38 @@ body {
     transform: translateY(0);
   }
 }
+
+@keyframes sece-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes sece-shimmer {
+  0% {
+    transform: translateX(-40%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateX(40%);
+    opacity: 0;
+  }
+}
+
+.sece-float {
+  animation: sece-float 6.5s ease-in-out infinite;
+}
+
+.sece-shimmer {
+  animation: sece-shimmer 7.5s ease-in-out infinite;
+}

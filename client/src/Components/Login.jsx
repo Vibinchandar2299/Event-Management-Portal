@@ -5,6 +5,11 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+function getBackendOriginFromApiUrl(apiUrl) {
+  if (!apiUrl) return "";
+  return String(apiUrl).replace(/\/?api\/?$/i, "").replace(/\/+$/g, "");
+}
+
 // Map backend department to formType
 function mapDeptToFormType(dept) {
   if (!dept) return '';
@@ -38,166 +43,54 @@ function Signup() {
     password: "",
   });
 
-  const HeroIllustration = () => (
-    <svg
-      viewBox="0 0 560 520"
-      role="img"
-      aria-label="People discussing an event request"
-      className="h-full w-full"
+  const backendOrigin = getBackendOriginFromApiUrl(import.meta.env.VITE_API_URL);
+  const heroImageSrc = `${backendOrigin}/uploads/Gemini_Generated_Image_rldd7frldd7frldd.png`;
+
+  const GreenBubbleBackdrop = ({ roundedClassName = "" }) => (
+    <div
+      className={`pointer-events-none absolute inset-0 overflow-hidden ${roundedClassName}`}
+      aria-hidden="true"
     >
-      <defs>
-        <linearGradient id="seceBrand" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="var(--bg-accent)" />
-          <stop offset="1" stopColor="var(--bg)" />
-        </linearGradient>
-      </defs>
+      <div className="absolute inset-0 bg-white/60" />
+      <div className="absolute inset-0 bg-emerald-50/35" />
+      <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-emerald-200/40 blur-2xl" />
+      <div className="absolute -bottom-10 -right-10 h-44 w-44 rounded-full bg-emerald-300/30 blur-2xl" />
+    </div>
+  );
 
-      <rect x="40" y="40" width="480" height="440" rx="36" fill="url(#seceBrand)" />
-
-      {/* Title */}
-      <text x="120" y="110" fill="var(--text)" opacity="0.78" fontSize="18" fontWeight="700">
-        Event Discussion
-      </text>
-      <text x="120" y="136" fill="var(--text)" opacity="0.5" fontSize="12" fontWeight="600">
-        Request • Plan • Approve
-      </text>
-
-      {/* Central event card */}
-      <g>
-        <rect x="120" y="160" width="320" height="150" rx="28" fill="var(--surface)" opacity="0.88" />
-        <rect x="144" y="184" width="220" height="14" rx="7" fill="var(--text)" opacity="0.16" />
-        <text x="144" y="198" fill="var(--text)" opacity="0.78" fontSize="12" fontWeight="700">
-          Event Request
-        </text>
-
-        <rect x="144" y="214" width="254" height="10" rx="5" fill="var(--text)" opacity="0.1" />
-        <rect x="144" y="236" width="210" height="10" rx="5" fill="var(--text)" opacity="0.08" />
-        <rect x="144" y="258" width="170" height="10" rx="5" fill="var(--text)" opacity="0.08" />
-
-        {/* Mini calendar icon */}
-        <g transform="translate(360 196)" fill="none" stroke="var(--brand)" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" opacity="0.85">
-          <rect x="0" y="0" width="52" height="52" rx="16" fill="var(--surface)" opacity="0.75" />
-          <path d="M12 18h28" />
-          <path d="M16 28h0" />
-          <path d="M26 28h0" />
-          <path d="M36 28h0" />
-          <path d="M18 38h0" />
-          <path d="M28 38h0" />
-        </g>
-      </g>
-
-      {/* People */}
-      <g>
-        {/* Left person */}
-        <circle cx="160" cy="350" r="22" fill="var(--surface)" opacity="0.92" />
-        <path d="M128 412c6-24 22-38 32-38s26 14 32 38" fill="var(--surface)" opacity="0.86" />
-        <circle cx="160" cy="350" r="22" fill="none" stroke="var(--brand)" strokeWidth="10" opacity="0.6" />
-
-        {/* Middle person */}
-        <circle cx="280" cy="340" r="26" fill="var(--surface)" opacity="0.96" />
-        <path d="M238 420c8-30 28-46 42-46s34 16 42 46" fill="var(--surface)" opacity="0.9" />
-        <circle cx="280" cy="340" r="26" fill="none" stroke="var(--brand)" strokeWidth="10" opacity="0.7" />
-
-        {/* Right person */}
-        <circle cx="400" cy="350" r="22" fill="var(--surface)" opacity="0.92" />
-        <path d="M368 412c6-24 22-38 32-38s26 14 32 38" fill="var(--surface)" opacity="0.86" />
-        <circle cx="400" cy="350" r="22" fill="none" stroke="var(--brand)" strokeWidth="10" opacity="0.6" />
-      </g>
-
-      {/* Speech bubbles with animated dots */}
-      <g>
-        {/* bubble 1 */}
-        <g transform="translate(120 300)">
-          <rect x="0" y="0" width="120" height="54" rx="18" fill="var(--surface)" opacity="0.9" />
-          <path d="M22 54l14-10" fill="var(--surface)" opacity="0.9" />
-          <text x="16" y="22" fill="var(--text)" opacity="0.6" fontSize="11" fontWeight="700">Discuss</text>
-          <g fill="var(--brand)" opacity="0.65">
-            <circle cx="24" cy="36" r="4">
-              <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.6s" repeatCount="indefinite" />
-            </circle>
-            <circle cx="42" cy="36" r="4">
-              <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.6s" begin="0.2s" repeatCount="indefinite" />
-            </circle>
-            <circle cx="60" cy="36" r="4">
-              <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.6s" begin="0.4s" repeatCount="indefinite" />
-            </circle>
-          </g>
-        </g>
-
-        {/* bubble 2 */}
-        <g transform="translate(300 292)">
-          <rect x="0" y="0" width="140" height="60" rx="20" fill="var(--surface)" opacity="0.9" />
-          <path d="M100 60l18-12" fill="var(--surface)" opacity="0.9" />
-          <text x="16" y="24" fill="var(--text)" opacity="0.6" fontSize="11" fontWeight="700">Finalize</text>
-          <g fill="var(--brand)" opacity="0.65">
-            <circle cx="26" cy="40" r="4">
-              <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.6s" begin="0.1s" repeatCount="indefinite" />
-            </circle>
-            <circle cx="44" cy="40" r="4">
-              <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.6s" begin="0.3s" repeatCount="indefinite" />
-            </circle>
-            <circle cx="62" cy="40" r="4">
-              <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.6s" begin="0.5s" repeatCount="indefinite" />
-            </circle>
-          </g>
-        </g>
-      </g>
-
-      {/* Subtle base */}
-      <path d="M110 438c58 40 280 46 360 0" fill="none" stroke="var(--text)" opacity="0.12" strokeWidth="18" strokeLinecap="round" />
-    </svg>
+  const HeroIllustration = () => (
+    <div className="relative h-full w-full overflow-hidden rounded-3xl bg-emerald-50/40">
+      <img
+        src={heroImageSrc}
+        alt="Login illustration"
+        className="h-full w-full object-contain"
+        loading="lazy"
+        draggable={false}
+      />
+    </div>
   );
 
   const AnimatedHero = () => (
     <div className="relative h-full w-full">
-      <div className="absolute inset-0 rounded-3xl bg-white/60" />
+      <div className="relative flex h-full flex-col p-0">
+        <div className="mx-auto flex h-full w-full max-w-md flex-col px-2 py-2">
+          <div>
+            <p className="text-[11px] font-semibold tracking-wide text-emerald-700/90">
+              Event requests • Department coordination
+            </p>
+            <h3 className="mt-2 text-[22px] font-extrabold tracking-tight text-slate-900">
+              Plan together. Approve faster.
+            </h3>
+            <p className="mt-2 text-[13px] leading-relaxed text-slate-600">
+              One portal to review requests, align departments, and finalize the event flow.
+            </p>
+          </div>
 
-      <div
-        className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-emerald-200/40 blur-2xl"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute -bottom-10 -right-10 h-44 w-44 rounded-full bg-emerald-300/30 blur-2xl"
-        aria-hidden="true"
-      />
-
-      <div className="relative flex h-full items-center justify-center p-8">
-        <div className="w-full">
-          <div className="mx-auto aspect-square w-full max-w-md">
-            <div className="relative h-full w-full">
-              <div
-                className="absolute inset-0 rounded-3xl border border-slate-200/60 bg-white/70"
-                aria-hidden="true"
-              />
-
-              <div className="absolute inset-0 p-8">
-                <div className="absolute right-8 top-8">
-                  <div
-                    className="h-16 w-16 rounded-full border border-emerald-200/70 bg-white/80"
-                    aria-hidden="true"
-                  />
-                  <div
-                    className="absolute inset-0 rounded-full border-2 border-dashed border-emerald-400/50 animate-spin"
-                    style={{ animationDuration: "16s" }}
-                    aria-hidden="true"
-                  />
-                </div>
-
-                <div className="absolute left-8 top-10 h-3 w-3 rounded-full bg-emerald-500/70 animate-pulse" aria-hidden="true" />
-                <div
-                  className="absolute left-14 top-16 h-2.5 w-2.5 rounded-full bg-emerald-600/50 animate-pulse"
-                  style={{ animationDelay: "180ms" }}
-                  aria-hidden="true"
-                />
-                <div
-                  className="absolute left-10 top-24 h-2 w-2 rounded-full bg-emerald-700/40 animate-pulse"
-                  style={{ animationDelay: "360ms" }}
-                  aria-hidden="true"
-                />
-
-                <div className="h-full w-full animate-pulse" style={{ animationDuration: "3.2s" }}>
-                  <HeroIllustration />
-                </div>
+          <div className="mt-6 flex flex-1 items-start">
+            <div className="relative h-[320px] w-full">
+              <div className="absolute inset-0 rounded-3xl bg-white/70" aria-hidden="true" />
+              <div className="absolute inset-0 p-2">
+                <HeroIllustration />
               </div>
             </div>
           </div>
@@ -244,9 +137,11 @@ function Signup() {
   return (
     <div className="min-h-screen px-4 py-10 sm:py-14">
       <ToastContainer />
-      <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-3xl glass-surface">
-        <div className="border-b border-slate-200/60 px-6 py-6 sm:px-10">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-3xl glass-surface !border-x-0">
+        <div className="relative border-b border-slate-200/60 px-6 py-6 sm:px-10">
+          <GreenBubbleBackdrop roundedClassName="rounded-t-3xl" />
+
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-5">
               <img
                 src="https://sece.ac.in/wp-content/uploads/2024/05/clg-logo2-scaled.webp"
@@ -266,8 +161,10 @@ function Signup() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2">
-          <div className="p-6 sm:p-10">
+        <div className="relative grid grid-cols-1 lg:grid-cols-2">
+          <GreenBubbleBackdrop roundedClassName="rounded-b-3xl" />
+
+          <div className="relative p-6 sm:p-10">
             <div className="max-w-md">
               <h2 className="text-[28px] font-extrabold tracking-tight text-slate-900 sm:text-[34px]">Welcome back</h2>
               <p className="mt-2 text-[13px] leading-relaxed text-slate-600">
@@ -325,7 +222,7 @@ function Signup() {
             </div>
           </div>
 
-          <div className="hidden lg:block border-l border-slate-200/60 p-6 sm:p-10">
+          <div className="hidden lg:block p-6 sm:p-10">
             <div className="h-full">
               <AnimatedHero />
             </div>
