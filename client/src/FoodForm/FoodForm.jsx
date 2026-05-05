@@ -139,6 +139,19 @@ function FoodForm({ eventData, nextForm }) {
     
     return { dates: normalizedDates, foodDetails: normalizedFoodDetails };
   };
+
+  const toDateInputValue = (date) => {
+    if (!date) return "";
+    const source =
+      date instanceof Date
+        ? new Date(date.getTime())
+        : typeof date === "object" && date !== null
+          ? new Date(date.start || date.end || date.date || date.value || "")
+          : new Date(date);
+    if (Number.isNaN(source.getTime())) return "";
+    source.setMinutes(source.getMinutes() - source.getTimezoneOffset());
+    return source.toISOString().slice(0, 10);
+  };
   
   // Check if there's an active event at the very beginning
   const endformId = localStorage.getItem('endformId');
@@ -508,7 +521,7 @@ function FoodForm({ eventData, nextForm }) {
             
             setFormData({
               iqacNumber: parsedFoodData.iqacNumber || "",
-              requisitionDate: parsedFoodData.requisitionDate || "",
+              requisitionDate: toDateInputValue(parsedFoodData.requisitionDate),
               department: parsedFoodData.department || "",
               requestorName: parsedFoodData.requestorName || "",
               empId: parsedFoodData.empId || "",
@@ -591,7 +604,7 @@ function FoodForm({ eventData, nextForm }) {
 
             const formattedData = {
               iqacNumber: parsedFoodData.iqacNumber || "",
-              requisitionDate: parsedFoodData.requisitionDate || "",
+              requisitionDate: toDateInputValue(parsedFoodData.requisitionDate),
               department: parsedFoodData.department || "",
               requestorName: parsedFoodData.requestorName || "",
               empId: parsedFoodData.empId || "",
@@ -636,7 +649,7 @@ function FoodForm({ eventData, nextForm }) {
             // Format the data to match our form structure
             const formattedData = {
               iqacNumber: foodData.iqacNumber || "",
-              requisitionDate: foodData.requisitionDate || "",
+              requisitionDate: toDateInputValue(foodData.requisitionDate),
               department: foodData.department || "",
               requestorName: foodData.requestorName || "",
               empId: foodData.empId || "",

@@ -2,7 +2,14 @@ import React, { useCallback } from "react";
 
 function toDateInputValue(date) {
   if (!date) return '';
-  const d = new Date(date);
+  const source =
+    date instanceof Date
+      ? new Date(date.getTime())
+      : typeof date === "object" && date !== null
+        ? new Date(date.start || date.end || date.date || date.value || "")
+        : new Date(date);
+  if (Number.isNaN(source.getTime())) return '';
+  const d = source;
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 10);
 }

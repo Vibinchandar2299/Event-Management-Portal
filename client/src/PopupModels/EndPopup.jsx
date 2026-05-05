@@ -336,17 +336,43 @@ const EndPopup = ({ event, onClose, isOpen }) => {
           }));
         }
 
+        const getDocId = (doc) => {
+          if (!doc) return null;
+          if (typeof doc === 'string') return doc;
+          if (typeof doc === 'object') {
+            const id = doc._id || doc.id || doc._doc?._id || doc._doc?.id;
+            return id ? String(id) : null;
+          }
+          return null;
+        };
+
+        const hasFoodRequisitionDate = (doc) => {
+          if (!doc || typeof doc !== 'object') return false;
+          return Boolean(
+            doc.requisitionDate ||
+            doc.requisitiondate ||
+            doc.requisition_date ||
+            doc.basicDetails?.requisitionDate
+          );
+        };
+
+        const hasGuestRequisitionDate = (doc) => {
+          if (!doc || typeof doc !== 'object') return false;
+          return Boolean(doc.date || doc.requisitionDate || doc.requisitiondate || doc.requisition_date || doc.createdAt);
+        };
+
         // Process food form data
         if (formatted.foodform) {
           console.log("Raw food form data:", formatted.foodform);
           console.log("Food form data type:", typeof formatted.foodform);
           console.log("Food form data keys:", Object.keys(formatted.foodform));
 
-          // If foodform is an ID, fetch the actual food form data
-          if (typeof formatted.foodform === 'string') {
+          // If foodform is an ID OR an id-only stub, fetch the actual food form data
+          const foodId = getDocId(formatted.foodform);
+          if (foodId && (typeof formatted.foodform === 'string' || !hasFoodRequisitionDate(formatted.foodform))) {
             try {
               const foodResponse = await axios.get(
-                `${import.meta.env.VITE_API_URL}/food/${formatted.foodform}`
+                `${import.meta.env.VITE_API_URL}/food/${foodId}`
               );
               formatted.foodform = foodResponse.data?.data || foodResponse.data?.requirement || foodResponse.data;
               console.log("Fetched food form data:", foodResponse.data);
@@ -393,17 +419,20 @@ const EndPopup = ({ event, onClose, isOpen }) => {
           console.log("Processed food form:", newFoodForm);
         }
 
-        // Process guest room data (supports id-only EndForm payloads)
-        if (formatted.guestform && typeof formatted.guestform === 'string') {
+        // Process guest room data (supports id-only EndForm payloads and id-only stubs)
+        {
+          const guestId = getDocId(formatted.guestform);
+          if (guestId && (typeof formatted.guestform === 'string' || !hasGuestRequisitionDate(formatted.guestform))) {
           try {
             const guestResponse = await axios.get(
-              `${import.meta.env.VITE_API_URL}/guestroom/bookings/${formatted.guestform}`
+              `${import.meta.env.VITE_API_URL}/guestroom/bookings/${guestId}`
             );
             formatted.guestform = guestResponse.data?.data || guestResponse.data?.booking || guestResponse.data;
           } catch (error) {
             console.error("Error fetching guest room data:", error);
             formatted.guestform = {};
           }
+        }
         }
 
         console.log("Processed food form data:", formatted.foodform);
